@@ -2,6 +2,7 @@
 
 ## In Arbeit
 
+- Start bergab auf geneigter Bahn: Abheben wird gegenüber der Bahn erkannt, nicht gegenüber der Höhe am Startpunkt
 - Keine Landeansage mehr in der Luft, wenn ohne Bahndaten nur die Platzhöhe bekannt ist (Abfangen knapp unter Platzhöhe)
 - Steile Bahnen (z. B. Courchevel): Landung wird auch erkannt, wenn die Höhe beim Ausrollen bergauf steigt;
   die Landerate wird gegenüber der Bahnneigung berechnet, auch wenn mit Leistung bergauf gerollt wird

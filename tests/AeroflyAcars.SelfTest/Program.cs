@@ -778,6 +778,42 @@ t.Test($"Steile Bahn bergauf ohne Bahndaten (wie Courchevel{(powerUphill ? ", mi
     t.True(tracker.Phase is FlightPhase.Landing or FlightPhase.TaxiIn or FlightPhase.Arrived, "Phase nach der Landung");
 });
 
+t.Test("Start bergab auf steiler Bahn (Courchevel): Abheben wird erkannt", () =>
+{
+    var tracker = new FlightTracker();
+    var b = new SampleBuilder();
+    var start = new DateTimeOffset(2026, 11, 6, 18, 2, 0, TimeSpan.Zero);
+    const double topLat = 45.3970, mPerDeg = 111_200;
+    // Oben flach, dann 537 m mit 18,6 % bergab (Richtung Süden), danach fällt das Gelände steil ab.
+    double Ground(double lat)
+    {
+        double m = (topLat - lat) * mPerDeg;
+        if (m < 0) return 6588;
+        return m <= 537 ? 6588 - 0.186 * m * Geo.FeetPerMeter : 5000;
+    }
+    double lat = topLat + 0.0003, alt = 6588, gs = 0;
+    int sec = 0;
+    DateTimeOffset leftGround = default;
+    void Step(double accel, double climbFpm)
+    {
+        gs += accel;
+        lat -= gs / 3600.0 / 60.0;
+        double g = Ground(lat);
+        if (leftGround == default && (Ground(lat) < 6000 || gs > 75)) leftGround = start.AddSeconds(sec + 1);
+        alt = leftGround == default ? g : alt + climbFpm / 60.0;
+        var smp = b.Add(new GpsMessage("T", 6.633, lat, alt / Geo.FeetPerMeter, 180, gs / Geo.KnotsPerMeterPerSecond), start.AddSeconds(++sec));
+        if (smp is not null) tracker.Add(smp);
+    }
+    for (int i = 0; i < 5; i++) Step(0, 0);
+    for (int i = 0; i < 4; i++) Step(2, 0);          // losrollen
+    while (leftGround == default) Step(4, 0);        // bergab beschleunigen
+    for (int i = 0; i < 30; i++) Step(1, 300);       // fliegen, leicht steigend
+
+    t.True(tracker.Takeoff is not null, "Abheben erkannt");
+    t.Range((tracker.Takeoff!.Value - leftGround).TotalSeconds, -3, 3, "Abhebezeitpunkt");
+    t.True(tracker.Phase.IsAirborne(), "in der Luft");
+});
+
 t.Test("Stop-and-go: nach dem Ausrollen erneut gestartet, zweite Landung wird gewertet", () =>
 {
     var tracker = new FlightTracker(null, 600);

@@ -92,6 +92,8 @@ public sealed class FlightTracker
     private DateTimeOffset _pendingSince;
     private TouchdownCandidate? _candidate;
     private double _approachMinAltFt = double.MaxValue;
+    /// <summary>Startlauf: Strecke (ft) und Höhe der Messpunkte am Boden – für geneigte Bahnen.</summary>
+    private readonly List<(double D, double Alt)> _roll = new();
     private DateTimeOffset? _stoppedSince;
     private int _frozenCount;
     private DateTimeOffset _frozenSince;
@@ -220,13 +222,14 @@ public sealed class FlightTracker
                 {
                     DepartureAirport ??= _airports?.Nearest(s.Latitude, s.Longitude, DepartureAirportRadiusNm);
                     CalibrateGround(s);
+                    _roll.Clear();
                     SetPhase(FlightPhase.TakeoffRoll, s.Time, $"Startlauf auf Kurs {s.HeadingDeg:000}°");
                 }
                 break;
 
             case FlightPhase.TakeoffRoll:
                 DepartureElevationFt ??= s.AltitudeFt;
-                if (s.AltitudeFt > DepartureElevationFt + LiftoffAboveGroundFt)
+                if (LiftedOff(s, prev))
                 {
                     var liftoff = _lastOnGround ?? s.Time;
                     Takeoff ??= liftoff;               // bei Stop-and-go zählt der erste Start
@@ -535,6 +538,30 @@ public sealed class FlightTracker
         return cand;
     }
 
+    /// <summary>
+    /// Abgehoben, sobald die Höhe 15 ft über dem Boden liegt. Der Boden ist die Startbahn, wie sie sich im Startlauf
+    /// zeigt: Höhe über Strecke als Gerade aus den letzten Messpunkten. Auf einer abschüssigen Bahn (Courchevel:
+    /// 19 % bergab) sinkt die Höhe beim Startlauf – gegenüber der Höhe am Startpunkt hebt man dort nie „ab“.
+    /// </summary>
+    private bool LiftedOff(FlightSample s, FlightSample? prev)
+    {
+        double d = _roll.Count == 0 || prev is null
+            ? 0
+            : _roll[^1].D + Geo.DistanceNm(prev.Latitude, prev.Longitude, s.Latitude, s.Longitude) * 6076.12;
+        double ground = DepartureElevationFt ?? s.AltitudeFt;
+        var pts = _roll.Count > 8 ? _roll.GetRange(_roll.Count - 8, 8) : _roll;
+        if (pts.Count >= 3 && pts[^1].D - pts[0].D >= 100)
+        {
+            double mx = pts.Average(p => p.D), my = pts.Average(p => p.Alt);
+            double sxx = pts.Sum(p => (p.D - mx) * (p.D - mx)), sxy = pts.Sum(p => (p.D - mx) * (p.Alt - my));
+            double slope = Math.Clamp(sxy / sxx, -MaxRunwaySlope, MaxRunwaySlope);
+            ground = my + slope * (d - mx);
+        }
+        if (s.AltitudeFt > ground + LiftoffAboveGroundFt) return true;
+        _roll.Add((d, s.AltitudeFt));
+        return false;
+    }
+
     /// <summary>Nach einer Landung wieder beschleunigt: neuer Startlauf (Stop-and-go, Platzrunde).</summary>
     private void Restart(FlightSample s)
     {
@@ -543,6 +570,7 @@ public sealed class FlightTracker
         _settling = false;
         DepartureElevationFt = s.AltitudeFt;
         _lastOnGround = s.Time;
+        _roll.Clear();
         SetPhase(FlightPhase.TakeoffRoll, s.Time, $"Erneuter Startlauf auf Kurs {s.HeadingDeg:000}°");
     }
 
