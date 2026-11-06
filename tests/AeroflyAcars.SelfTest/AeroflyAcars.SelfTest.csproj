@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Bewusst ohne xUnit/NuGet, damit alles offline baut. Start siehe README. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>AeroflyAcars.SelfTest</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AeroflyAcars.Core\AeroflyAcars.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <!-- Programmversion. Beim Veröffentlichen über GitHub wird sie aus dem Tag gesetzt (v0.8.0 → 0.8.0). -->
+    <Version>0.9.0-beta.1</Version>
+    <Authors>EP Design</Authors>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,46 @@
+# Veröffentlicht eine neue Version: Tag "v0.8.0" pushen → GitHub baut, testet und hängt
+# Flarelog.exe an ein neues Release an.
+#
+#   git tag v0.8.0
+#   git push origin v0.8.0
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Version aus dem Tag
+        id: version
+        shell: bash
+        run: echo "number=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Selbsttest
+        run: dotnet run --project tests/AeroflyAcars.SelfTest -c Release -p:Version=${{ steps.version.outputs.number }}
+
+      - name: Flarelog.exe erzeugen
+        run: >
+          dotnet publish src/AeroflyAcars.Desktop -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true -p:DebugType=none
+          -p:Version=${{ steps.version.outputs.number }} -o publish
+
+      - name: Release anlegen
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Flarelog ${{ steps.version.outputs.number }}
+          files: publish/Flarelog.exe
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

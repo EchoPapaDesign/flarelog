@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Programmlogik, die Konsole und Desktop-Programm gemeinsam nutzen: Empfang, Auswertung, Display-Server. -->
+  <PropertyGroup>
+    <RootNamespace>AeroflyAcars.Runtime</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Windows-Datenschutz-API (DPAPI): API-Schlüssel verschlüsselt speichern -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AeroflyAcars.Core\AeroflyAcars.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>AeroflyAcars.SimDummy</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AeroflyAcars.Core\AeroflyAcars.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Konsolenversion für Entwicklung und Fehlersuche. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>AeroflyAcars.App</RootNamespace>
+    <AssemblyName>Flarelog.Console</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AeroflyAcars.Core\AeroflyAcars.Core.csproj" />
+    <ProjectReference Include="..\AeroflyAcars.Runtime\AeroflyAcars.Runtime.csproj" />
+  </ItemGroup>
+
+</Project>

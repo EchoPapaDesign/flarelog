@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Das eigentliche Programm: Windows-Fenster mit dem Display (WebView2), ohne Konsole. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <RootNamespace>AeroflyAcars.Desktop</RootNamespace>
+    <AssemblyName>Flarelog</AssemblyName>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <Product>Flarelog</Product>
+    <AssemblyTitle>Flarelog – ACARS für Aerofly FS 4</AssemblyTitle>
+    <Description>ACARS, Live-Tracking und Landeauswertung für Aerofly FS 4</Description>
+    <!-- WebView2 bringt auch eine WPF-Datei mit (WindowsBase 4.0 vs. 5.0) – für WinForms ohne Bedeutung. -->
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AeroflyAcars.Core\AeroflyAcars.Core.csproj" />
+    <ProjectReference Include="..\AeroflyAcars.Runtime\AeroflyAcars.Runtime.csproj" />
+  </ItemGroup>
+
+</Project>

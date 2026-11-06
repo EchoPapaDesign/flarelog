@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c2631"/>
+      <stop offset="1" stop-color="#0d1318"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#bg)"/>
+  <!-- Landebahn mit Mittellinie -->
+  <rect x="40" y="180" width="176" height="22" rx="11" fill="#e9eef3"/>
+  <rect x="64" y="189" width="22" height="4" rx="2" fill="#0d1318"/>
+  <rect x="104" y="189" width="22" height="4" rx="2" fill="#0d1318"/>
+  <rect x="144" y="189" width="22" height="4" rx="2" fill="#0d1318"/>
+  <!-- Anflug, Flare, Aufsetzen -->
+  <path d="M48 44 L92 88 C122 118 150 166 210 166" fill="none" stroke="#3fd68a" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

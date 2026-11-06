@@ -1,0 +1,23 @@
+# Baut das Projekt und führt den Selbsttest bei jedem Push und Pull Request aus.
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Bauen
+        run: dotnet build -c Release
+
+      - name: Selbsttest
+        run: dotnet run --project tests/AeroflyAcars.SelfTest -c Release --no-build
