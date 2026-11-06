@@ -1,11 +1,13 @@
-# Veröffentlicht eine neue Version: Tag "v0.8.0" pushen → GitHub baut, testet und hängt
-# Flarelog.exe an ein neues Release an.
+# Veröffentlicht eine neue Version und hängt Flarelog.exe an.
 #
-#   git tag v0.8.0
-#   git push origin v0.8.0
+# Weg 1 (Webseite): Releases → "Draft a new release" → neuen Tag wie v0.9.0-beta.2 anlegen → Publish.
+#                   GitHub baut dann, testet und hängt Flarelog.exe an dieses Release an (dauert ein paar Minuten).
+# Weg 2 (Git):      git tag v0.9.0-beta.2 && git push origin v0.9.0-beta.2  → Release wird automatisch angelegt.
 name: Release
 
 on:
+  release:
+    types: [ published ]
   push:
     tags: [ 'v*' ]
 
@@ -25,7 +27,10 @@ jobs:
       - name: Version aus dem Tag
         id: version
         shell: bash
-        run: echo "number=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: |
+          tag="${{ github.event.release.tag_name || github.ref_name }}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "number=${tag#v}" >> "$GITHUB_OUTPUT"
 
       - name: Selbsttest
         run: dotnet run --project tests/AeroflyAcars.SelfTest -c Release -p:Version=${{ steps.version.outputs.number }}
@@ -37,7 +42,17 @@ jobs:
           -p:EnableCompressionInSingleFile=true -p:DebugType=none
           -p:Version=${{ steps.version.outputs.number }} -o publish
 
+      # Auf der Webseite angelegtes Release: nur die Datei anhängen, Titel und Text bleiben wie eingegeben.
+      - name: Flarelog.exe an das Release hängen
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: publish/Flarelog.exe
+
+      # Per Git-Tag: Release komplett anlegen.
       - name: Release anlegen
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           name: Flarelog ${{ steps.version.outputs.number }}
