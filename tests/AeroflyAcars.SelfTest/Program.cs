@@ -774,6 +774,9 @@ t.Test($"Steile Bahn bergauf ohne Bahndaten (wie Courchevel{(powerUphill ? ", mi
     t.Equal(0, tracker.GoArounds);
     t.Equal(1, announced.Count);
     t.True(announced[0].At >= contact, "keine Ansage in der Luft");
+    t.Equal(0, FlightAnalysis.Analyze(tracker).Bounces);
+    t.False(tracker.Events.Any(e => e.Text == "Durchstarten" || e.Phase == FlightPhase.Climb && e.Time > contact.AddSeconds(-10)),
+        "Abfangen gegen den Hang ist kein Steigflug");
     t.False(tracker.Events.Any(e => e.Time > tracker.Touchdown && e.Phase is FlightPhase.Climb), "kein Steigflug nach dem Aufsetzen");
     t.True(tracker.Phase is FlightPhase.Landing or FlightPhase.TaxiIn or FlightPhase.Arrived, "Phase nach der Landung");
 });

@@ -5,7 +5,8 @@
 - Start bergab auf geneigter Bahn: Abheben wird gegenüber der Bahn erkannt, nicht gegenüber der Höhe am Startpunkt
 - Keine Landeansage mehr in der Luft, wenn ohne Bahndaten nur die Platzhöhe bekannt ist (Abfangen knapp unter Platzhöhe)
 - Steile Bahnen (z. B. Courchevel): Landung wird auch erkannt, wenn die Höhe beim Ausrollen bergauf steigt;
-  die Landerate wird gegenüber der Bahnneigung berechnet, auch wenn mit Leistung bergauf gerollt wird
+  die Landerate wird gegenüber der Bahnneigung berechnet, auch wenn mit Leistung bergauf gerollt wird;
+  Ausrollen bergauf zählt nicht als Bounce, das Abfangen gegen den Hang nicht als Durchstarten
 - Stop-and-go / Platzrunden mit Ausrollen: erneuter Start wird erkannt, gewertet wird die letzte Landung
 - Durchstarten nur, wenn der Anflug unter 1000 ft über Platz ging – Manöver in der Platzrunde zählen nicht mehr
 - Flight Log: Landungs-Box und Fußzeile überlappen nicht mehr

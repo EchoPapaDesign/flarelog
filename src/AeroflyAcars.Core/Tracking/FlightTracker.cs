@@ -144,6 +144,8 @@ public sealed class FlightTracker
     public double MaxAltitudeFt { get; private set; } = double.MinValue;
     public double? LandingRateFpm { get; private set; }
     public FlightSample? TouchdownSample { get; private set; }
+    /// <summary>Neigung der Landebahn in Rollrichtung (0,19 = 19 % bergauf), falls aus dem Ausrollen bestimmt.</summary>
+    public double? TouchdownSlope { get; private set; }
     public int GoArounds { get; private set; }
     public bool StartedAirborne { get; private set; }
     public double? LiftoffSpeedKt { get; private set; }
@@ -696,8 +698,10 @@ public sealed class FlightTracker
         if (!any && c >= 1) rate = Math.Min(0, StepRate(c));
         var x = _samples[c];
 
-        // Was nach dem Aufsetzen als Steigen/Durchstarten erschien, war das Ausrollen bergauf.
-        foreach (var e in _events.Where(e => e.Time > x.Time && e.PhaseChange && e.Phase.IsAirborne()).ToList())
+        // Was nach dem Aufsetzen als Steigen/Durchstarten erschien, war das Ausrollen bergauf – und kurz davor das
+        // Abfangen gegen den Hang (bergauf steigt man beim Flare).
+        foreach (var e in _events.Where(e => e.PhaseChange && e.Phase.IsAirborne() &&
+                     (e.Time > x.Time || (e.Phase == FlightPhase.Climb && e.Time > x.Time - TimeSpan.FromSeconds(10)))).ToList())
         {
             if (e.Text == "Durchstarten") GoArounds--;
             _events.Remove(e);
@@ -709,6 +713,7 @@ public sealed class FlightTracker
         Touchdown = x.Time;
         TouchdownSample = x;
         LandingRateFpm = rate;
+        TouchdownSlope = -slope;
         ArrivalAirport = airport;
         SetPhase(FlightPhase.Landing, x.Time, $"Aufsetzen mit {rate:F0} fpm bei {x.GroundSpeedKt:F0} kt" + At(ArrivalAirport));
         return true;

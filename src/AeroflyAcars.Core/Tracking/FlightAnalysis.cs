@@ -59,8 +59,10 @@ public sealed record FlightAnalysis
             {
                 if (s.Time <= td.Time) continue;
                 if (s.Time - td.Time > BounceWindow || s.GroundSpeedKt < 30) break;
-                if (!rising && s.VerticalSpeedFpm > BounceVsFpm) { rising = true; bounces++; }
-                else if (rising && s.VerticalSpeedFpm < 0) rising = false;
+                // Gegenüber der Bahn: Bergauf steigt die Höhe beim Ausrollen, ohne dass das Flugzeug abhebt.
+                double vs = s.VerticalSpeedFpm - (t.TouchdownSlope ?? 0) * s.GroundSpeedKt * 101.27;
+                if (!rising && vs > BounceVsFpm) { rising = true; bounces++; }
+                else if (rising && vs < 0) rising = false;
             }
         }
 
