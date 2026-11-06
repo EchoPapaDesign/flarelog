@@ -751,12 +751,14 @@ t.Test("Steile Bahn bergauf ohne Bahndaten (wie Courchevel): Landung wird trotzd
     }
 
     while (lat < thrLat - 0.0004) Step(alt > 6290 ? -1000 : 0, 0.3);   // Anflug, über der Schwelle ca. 30 ft
-    while (!onGround) Step(-300, 0.3);
-    for (int i = 0; i < 60; i++) Step(onGround ? 0 : -300, gs > 0 ? 3 : 0);   // ausrollen bergauf, oben stehen
+    // Abfangen gegen den Hang: Das Flugzeug steigt fast so schnell wie die Bahn ansteigt (200 fpm Annäherung).
+    double Flare() => lat >= thrLat ? 0.186 * gs * 101.27 - 200 : -300;
+    while (!onGround) Step(Flare(), 0.3);
+    for (int i = 0; i < 60; i++) Step(0, gs > 0 ? 3 : 0);     // ausrollen bergauf, oben stehen
 
     t.True(tracker.Touchdown is not null, "Landung erkannt");
     t.Range((tracker.Touchdown!.Value - contact).TotalSeconds, -2, 2, "Aufsetzzeitpunkt");
-    t.Range(tracker.LandingRateFpm!.Value, -700, 0, "Landerate gegenüber der Bahn");
+    t.Range(tracker.LandingRateFpm!.Value, -450, -50, "Landerate gegenüber der Bahn");
     t.Equal(0, tracker.GoArounds);
     t.Equal(1, announced.Count);
     t.False(tracker.Events.Any(e => e.Time > tracker.Touchdown && e.Phase is FlightPhase.Climb), "kein Steigflug nach dem Aufsetzen");
