@@ -70,6 +70,8 @@ public sealed class FlightTracker
     public const double MaxRunwaySlope = 0.25;
     /// <summary>So nah (ft) an der verlängerten Rollstrecke gilt ein Messpunkt als am Boden.</summary>
     public const double RollLineToleranceFt = 4;
+    /// <summary>Ab dieser Verzögerung (kt/s) gilt das Flugzeug als am Boden abbremsend.</summary>
+    public const double RollDecelKtPerSec = 1.0;
     /// <summary>Nach dem Ausrollen wieder so schnell: neuer Start (Stop-and-go, Platzrunden).</summary>
     public const double RestartTakeoffKt = 40;
 
@@ -564,12 +566,29 @@ public sealed class FlightTracker
             first = i;
         }
 
-        // Bahnneigung aus dem Ausrollen zwischen 8 und 40 kt (ohne Stillstand und Rollen auf einem flachen Vorfeld
-        // am Bahnende, wie oben in Courchevel). Höhe als Gerade über der Strecke.
+        // Bahnneigung aus den ersten Sekunden am Boden: Beim Ausrollen wird deutlich gebremst (bergauf auch durch die
+        // Schwerkraft), in der Luft kaum. Der Beginn dieses Abbremsens liegt nah am Aufsetzen, die Punkte direkt danach
+        // liegen noch auf der Bahn – weiter hinten kann ein flaches Vorfeld kommen (Courchevel oben).
         int last = end;
         while (last > first && _samples[last].GroundSpeedKt < 8) last--;
+        int d0 = last;
+        while (d0 - 1 >= first)
+        {
+            double dtd = (_samples[d0].Time - _samples[d0 - 1].Time).TotalSeconds;
+            if (dtd <= 0 || (_samples[d0 - 1].GroundSpeedKt - _samples[d0].GroundSpeedKt) / dtd < RollDecelKtPerSec) break;
+            d0--;
+        }
         var fit = new List<(double D, double Alt)>();
-        for (int i = last; i >= first && _samples[i].GroundSpeedKt is >= 8 and < 40; i--) fit.Add((dist[i], _samples[i].AltitudeFt));
+        if (last - d0 >= 2)
+        {
+            for (int i = d0; i <= last && _samples[i].Time - _samples[d0].Time <= TimeSpan.FromSeconds(5); i++)
+                fit.Add((dist[i], _samples[i].AltitudeFt));
+        }
+        else
+        {
+            for (int i = last; i >= first && _samples[i].GroundSpeedKt is >= 8 and < 40; i--) fit.Add((dist[i], _samples[i].AltitudeFt));
+        }
+        int anchor = last - d0 >= 2 ? Math.Min(last, d0 + 3) : last;
         double slope = 0, at0;
         if (fit.Count >= 2 && fit[^1].D - fit[0].D >= 100)
         {
@@ -580,23 +599,24 @@ public sealed class FlightTracker
         }
         else
         {
-            at0 = _samples[last].AltitudeFt - slope * dist[last];
+            at0 = _samples[anchor].AltitudeFt - slope * dist[anchor];
         }
         double Off(int i) => _samples[i].AltitudeFt - (at0 + slope * dist[i]);
 
         // Vom Ausrollen rückwärts, solange die Punkte auf der Geraden liegen.
-        int td = last;
-        for (int i = last - 1; i >= first; i--)
+        int td = anchor;
+        for (int i = anchor - 1; i >= first; i--)
         {
             if (Math.Abs(Off(i)) > RollLineToleranceFt + Math.Abs(slope) * 30) break;   // etwas Spiel für die Messung
             td = i;
         }
         // Bodenkontakt: erster Punkt ab td, der dicht an der Geraden liegt (Toleranz je nach Messgenauigkeit der Geraden).
-        double rms = fit.Count >= 3 ? Math.Sqrt(Enumerable.Range(0, last - first + 1).Select(k => first + k)
-            .Where(k => _samples[k].GroundSpeedKt is >= 8 and < 40 && k <= last).Select(k => Off(k) * Off(k)).DefaultIfEmpty(0).Average()) : 0;
+        double rms = fit.Count >= 3
+            ? Math.Sqrt(fit.Average(f => Math.Pow(f.Alt - (at0 + slope * f.D), 2)))
+            : 0;
         double contactFt = Math.Max(FirstContactFt, 2 * rms);
         int c = td;
-        while (c < last && Off(c) > contactFt) c++;
+        while (c < anchor && Off(c) > contactFt) c++;
 
         // Sinkrate gegenüber der Bahn = Änderung der Höhe über der Geraden. So fällt die Bahnneigung heraus:
         // Bergauf steigt das Flugzeug beim Aufsetzen, obwohl es auf die Bahn zu sinkt.
