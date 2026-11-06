@@ -55,6 +55,8 @@ public sealed class FlightTracker
     public const double AnnounceNearRunwayUncalibratedFt = 35;
     /// <summary>Ohne Bahndaten: so nah an der Platzhöhe (ft). Die Platzhöhe kann deutlich von der Bahn abweichen.</summary>
     public const double AnnounceNearFieldFt = 75;
+    /// <summary>Ohne Bahndaten zusätzlich nötig: so viel langsamer (kt) seit dem Aufsetzen.</summary>
+    public const double AnnounceMinDecelKt = 3;
     /// <summary>Über einer bekannten Bahn: höher als das ist kein Aufsetzen, sondern ein Abfangen in der Luft.</summary>
     public const double CandidateMaxAboveRunwayFt = 60;
     /// <summary>So nah an der späteren Rollhöhe gilt ein Messpunkt als Bodenkontakt (erster Kontakt vor Bounces).</summary>
@@ -70,8 +72,6 @@ public sealed class FlightTracker
     public const double MaxRunwaySlope = 0.25;
     /// <summary>So nah (ft) an der verlängerten Rollstrecke gilt ein Messpunkt als am Boden.</summary>
     public const double RollLineToleranceFt = 4;
-    /// <summary>Ab dieser Verzögerung (kt/s) gilt das Flugzeug als am Boden abbremsend.</summary>
-    public const double RollDecelKtPerSec = 1.0;
     /// <summary>Nach dem Ausrollen wieder so schnell: neuer Start (Stop-and-go, Platzrunden).</summary>
     public const double RestartTakeoffKt = 40;
 
@@ -463,7 +463,10 @@ public sealed class FlightTracker
             if (!cand.Announced && cand.FieldElevationKnown &&
                 s.Time - cand.Sample.Time >= TouchdownAnnounceDelay &&
                 Math.Abs(LevelDiff(s, cand.Sample, cand.Airport)) <= TouchdownAnnounceFlatFt &&
-                HeightAboveGround(cand.Sample, cand.Airport) is { Height: { } h } g && Math.Abs(h) <= g.AnnounceLimit)
+                HeightAboveGround(cand.Sample, cand.Airport) is { Height: { } h } g && Math.Abs(h) <= g.AnnounceLimit &&
+                // Nur über die Platzhöhe (keine Bahndaten) ist das ungenau – Courchevel: Platz 6.583 ft, Schwelle rund
+                // 300 ft tiefer, ein Abfangen im Anflug sähe wie ein Aufsetzen aus. Dann muss auch gebremst werden.
+                (g.OverRunway || cand.Sample.GroundSpeedKt - s.GroundSpeedKt >= AnnounceMinDecelKt))
             {
                 cand.Announced = true;
                 var first = FirstContact(cand);
@@ -571,24 +574,45 @@ public sealed class FlightTracker
         // liegen noch auf der Bahn – weiter hinten kann ein flaches Vorfeld kommen (Courchevel oben).
         int last = end;
         while (last > first && _samples[last].GroundSpeedKt < 8) last--;
-        int d0 = last;
-        while (d0 - 1 >= first)
+        // Das Ausrollen beginnt mit deutlichem Abbremsen (Bremsen, bergauf auch die Schwerkraft): Gesucht wird – vom
+        // Ende her – der zusammenhängende Abschnitt, in dem die Geschwindigkeit innerhalb von 6 s um mindestens 12 kt
+        // fällt, und darin die stärkste Verzögerung. Danach ist das Flugzeug sicher am Boden und noch auf der Bahn;
+        // später kann es mit Leistung bergauf rollen oder auf ein flaches Vorfeld kommen.
+        double Decel(int i)
         {
-            double dtd = (_samples[d0].Time - _samples[d0 - 1].Time).TotalSeconds;
-            if (dtd <= 0 || (_samples[d0 - 1].GroundSpeedKt - _samples[d0].GroundSpeedKt) / dtd < RollDecelKtPerSec) break;
-            d0--;
+            double min = _samples[i].GroundSpeedKt;
+            for (int j = i + 1; j <= last && _samples[j].Time - _samples[i].Time <= TimeSpan.FromSeconds(6); j++)
+                min = Math.Min(min, _samples[j].GroundSpeedKt);
+            return _samples[i].GroundSpeedKt - min;
         }
-        var fit = new List<(double D, double Alt)>();
-        if (last - d0 >= 2)
+        int peak = -1;
+        double peakDecel = 0;
+        bool inRegion = false;
+        for (int i = last - 1; i >= first && s.Time - _samples[i].Time <= TimeSpan.FromSeconds(90); i--)
         {
-            for (int i = d0; i <= last && _samples[i].Time - _samples[d0].Time <= TimeSpan.FromSeconds(5); i++)
+            double d = Decel(i);
+            if (d >= 12)
+            {
+                inRegion = true;
+                double dt1 = (_samples[i + 1].Time - _samples[i].Time).TotalSeconds;
+                double step = dt1 > 0 ? (_samples[i].GroundSpeedKt - _samples[i + 1].GroundSpeedKt) / dt1 : 0;
+                if (step >= peakDecel) { peakDecel = step; peak = i + 1; }
+            }
+            else if (inRegion) break;
+        }
+
+        var fit = new List<(double D, double Alt)>();
+        int anchor = last;
+        if (peak >= 0)
+        {
+            for (int i = peak; i <= last && _samples[i].Time - _samples[peak].Time <= TimeSpan.FromSeconds(5); i++)
                 fit.Add((dist[i], _samples[i].AltitudeFt));
+            anchor = peak;
         }
         else
         {
             for (int i = last; i >= first && _samples[i].GroundSpeedKt is >= 8 and < 40; i--) fit.Add((dist[i], _samples[i].AltitudeFt));
         }
-        int anchor = last - d0 >= 2 ? Math.Min(last, d0 + 3) : last;
         double slope = 0, at0;
         if (fit.Count >= 2 && Math.Abs(fit[^1].D - fit[0].D) >= 100)
         {

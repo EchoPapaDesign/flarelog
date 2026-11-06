@@ -720,17 +720,20 @@ t.Test("Platzrunde: Sinken und Steigen hoch über dem Platz ist kein Durchstarte
     t.Equal(1, tracker.GoArounds);
 });
 
-t.Test("Steile Bahn bergauf ohne Bahndaten (wie Courchevel): Landung wird trotzdem erkannt", () =>
+foreach (bool powerUphill in new[] { false, true })
+t.Test($"Steile Bahn bergauf ohne Bahndaten (wie Courchevel{(powerUphill ? ", mit Leistung bergauf rollen" : "")}): Landung erkannt", () =>
 {
     var apt = new Airport("XFLJ", "Altiport", "small_airport", 45.3975, 6.635, 6583, null, "XFLJ");
     var tracker = new FlightTracker(null, null, new AirportDatabase(new[] { apt }));
-    var announced = new List<double>();
-    tracker.TouchdownDetected += (_, r) => announced.Add(r);
+    var announced = new List<(DateTimeOffset At, double Rate)>();
+    DateTimeOffset now = default;
+    tracker.TouchdownDetected += (_, r) => announced.Add((now, r));
 
     const double thrLat = 45.3950, mPerDeg = 111_200;
+    double Meters(double lat) => (lat - thrLat) * mPerDeg;
     double Ground(double lat)
     {
-        double m = (lat - thrLat) * mPerDeg;
+        double m = Meters(lat);
         if (m < 0) return 6000;                       // Tal vor der Bahn
         return m <= 537 ? 6260 + 0.186 * m * Geo.FeetPerMeter : 6588;   // 18,6 % bergauf, oben flach
     }
@@ -746,21 +749,31 @@ t.Test("Steile Bahn bergauf ohne Bahndaten (wie Courchevel): Landung wird trotzd
         lat += gs / 3600.0 / 60.0;
         alt += vsFpm / 60.0;
         if (alt <= Ground(lat)) { alt = Ground(lat); if (!onGround) contact = start.AddSeconds(sec + 1); onGround = true; }
-        var smp = b.Add(new GpsMessage("T", 6.635, lat, alt / Geo.FeetPerMeter, 0, gs / Geo.KnotsPerMeterPerSecond), start.AddSeconds(++sec));
+        now = start.AddSeconds(++sec);
+        var smp = b.Add(new GpsMessage("T", 6.635, lat, alt / Geo.FeetPerMeter, 0, gs / Geo.KnotsPerMeterPerSecond), now);
         if (smp is not null) tracker.Add(smp);
     }
 
-    while (lat < thrLat - 0.0004) Step(alt > 6290 ? -1000 : 0, 0.3);   // Anflug, über der Schwelle ca. 30 ft
+    while (alt > 6560) Step(-1000, 0.3);
+    for (int i = 0; i < 8; i++) Step(0, 0.3);                       // kurz waagerecht knapp unter Platzhöhe – kein Aufsetzen
+    while (lat < thrLat - 0.0004) Step(alt > 6290 ? -1000 : 0, 0.3);   // über der Schwelle ca. 30 ft
     // Abfangen gegen den Hang: Das Flugzeug steigt fast so schnell wie die Bahn ansteigt (200 fpm Annäherung).
     double Flare() => lat >= thrLat - 0.0002 ? 0.186 * gs * 101.27 - 200 : -300;
     while (!onGround) Step(Flare(), 0.3);
-    for (int i = 0; i < 60; i++) Step(0, gs > 0 ? 3 : 0);     // ausrollen bergauf, oben stehen
+    for (int i = 0; i < 90 && gs > 0; i++)
+    {
+        bool climbing = Meters(lat) < 560;
+        double decel = powerUphill && climbing ? (gs > 25 ? 3 : 0) : 3;   // mit Leistung: 25 kt bis oben halten
+        Step(0, decel);
+    }
+    for (int i = 0; i < 40; i++) Step(0, 0);                        // oben stehen
 
     t.True(tracker.Touchdown is not null, "Landung erkannt");
     t.Range((tracker.Touchdown!.Value - contact).TotalSeconds, -2, 2, "Aufsetzzeitpunkt");
     t.Range(tracker.LandingRateFpm!.Value, -450, -50, "Landerate gegenüber der Bahn");
     t.Equal(0, tracker.GoArounds);
     t.Equal(1, announced.Count);
+    t.True(announced[0].At >= contact, "keine Ansage in der Luft");
     t.False(tracker.Events.Any(e => e.Time > tracker.Touchdown && e.Phase is FlightPhase.Climb), "kein Steigflug nach dem Aufsetzen");
     t.True(tracker.Phase is FlightPhase.Landing or FlightPhase.TaxiIn or FlightPhase.Arrived, "Phase nach der Landung");
 });
