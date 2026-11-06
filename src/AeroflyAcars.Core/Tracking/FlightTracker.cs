@@ -27,6 +27,9 @@ public sealed class FlightTracker
     public const double ClimbVsFpm = 300;
     public const double DescentVsFpm = -300;
     public const double ApproachHeightFt = 3000;
+    /// <summary>Als Durchstarten zählt erneutes Steigen nur, wenn der Anflug tiefer als das (ft über Platz) war.
+    /// Höher ist es Manövrieren, etwa in der Platzrunde oder beim Warten.</summary>
+    public const double GoAroundMaxHeightFt = 1000;
     public const int PhaseConfirmSamples = 5;
     public const double TouchdownMaxAltChangeFtPerSec = 1.0;
     public const double TouchdownMaxSampleGapSec = 3;
@@ -74,6 +77,7 @@ public sealed class FlightTracker
     private int _pendingCount;
     private DateTimeOffset _pendingSince;
     private TouchdownCandidate? _candidate;
+    private double _approachMinAltFt = double.MaxValue;
     private DateTimeOffset? _stoppedSince;
     private int _frozenCount;
     private DateTimeOffset _frozenSince;
@@ -258,6 +262,7 @@ public sealed class FlightTracker
     {
         double groundRef = DestinationElevationFt ?? DepartureElevationFt ?? 0;
         double departureRef = DepartureElevationFt ?? groundRef;
+        if (Phase == FlightPhase.Approach) _approachMinAltFt = Math.Min(_approachMinAltFt, s.AltitudeFt);
 
         FlightPhase target;
         if (s.VerticalSpeedFpm > ClimbVsFpm)
@@ -296,7 +301,7 @@ public sealed class FlightTracker
         if (++_pendingCount < PhaseConfirmSamples) return;
 
         string text;
-        if (Phase == FlightPhase.Approach && target == FlightPhase.Climb)
+        if (Phase == FlightPhase.Approach && target == FlightPhase.Climb && _approachMinAltFt - groundRef < GoAroundMaxHeightFt)
         {
             GoArounds++;
             text = "Durchstarten";
@@ -311,6 +316,7 @@ public sealed class FlightTracker
         }
 
         _pendingPhase = null;
+        if (target == FlightPhase.Approach) _approachMinAltFt = s.AltitudeFt;
         SetPhase(target, _pendingSince, text);
     }
 

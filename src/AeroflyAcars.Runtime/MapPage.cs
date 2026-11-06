@@ -99,8 +99,12 @@ public static class MapPage
   .Good { color: var(--accent); } .Mediocre { color: var(--warn); } .Hard { color: var(--bad); }
 
   /* rechte Spalte */
-  .log { background: var(--panel); border-left: 1px solid var(--line); display: grid;
-    grid-template-rows: 52px auto auto minmax(0, 1fr) auto auto; min-height: 0; }
+  /* Spalte: Kopf, Bedingungen, Route (optional), Flight Log (scrollt), Landung (optional), Fußzeile.
+     Flex statt Grid: ausgeblendete Blöcke verschieben sonst die Zeilen, und Landung und Fußzeile überlappen. */
+  .log { background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column;
+    min-height: 0; overflow: hidden; }
+  .log > * { flex: none; }
+  .log > #events { flex: 1 1 auto; min-height: 0; }
   .conds { border-bottom: 1px solid var(--line); padding: 10px 18px; font-size: 12px; }
   .conds .cond { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
   .conds .cond > span { color: var(--muted); letter-spacing: .06em; text-transform: uppercase; font-size: 11px; }
@@ -121,7 +125,7 @@ public static class MapPage
   .routecard .rc-wpts { color: var(--dim); margin: 5px 0 5px 10px; padding-left: 26px; border-left: 1px dashed var(--line);
     line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .routecard .rc-src { color: var(--dim); font-size: 11px; margin-top: 4px; }
-  .log h2 { margin: 0; padding: 0 18px; display: flex; align-items: center; font-size: 13px; letter-spacing: .1em; color: var(--muted); border-bottom: 1px solid var(--line); }
+  .log h2 { margin: 0; height: 52px; padding: 0 18px; display: flex; align-items: center; font-size: 13px; letter-spacing: .1em; color: var(--muted); border-bottom: 1px solid var(--line); }
   #events { overflow-y: auto; padding: 8px 18px 14px; }
   .ev { position: relative; padding: 8px 0 8px 14px; }
   .ev time { display: block; font-size: 12px; color: var(--dim); }

@@ -2,6 +2,9 @@
 
 ## In Arbeit
 
+- Durchstarten nur, wenn der Anflug unter 1000 ft über Platz ging – Manöver in der Platzrunde zählen nicht mehr
+- Flight Log: Landungs-Box und Fußzeile überlappen nicht mehr
+- Wetter: Ein eingetragener Flugplatz wird verworfen, sobald Aerofly an einem anderen Platz steht
 - Höhenmesser verstellt: Aerofly sendet die angezeigte Höhe. Wird am Höhenmesser gedreht (z. B. auf 0 am
   Abflugplatz), gleicht Flarelog den Sprung aus – Abheben, Bodenhöhe am Ziel und Positionen für die Airline stimmen wieder
 - Landung mit Bounces: Gewertet wird der erste Bodenkontakt (auf 1,5 ft an der Rollhöhe), nicht erst das

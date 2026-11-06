@@ -488,6 +488,9 @@ public sealed class AcarsEngine : IDisposable
         }
         if (here is null || here.Equals(Settings.LastAirport, StringComparison.OrdinalIgnoreCase)) return;
         Settings.LastAirport = here;
+        // Neuer Standort: Ein früher eingetragener Wetter-Flugplatz gehört zum alten Flug und gilt nicht mehr.
+        if (!string.IsNullOrWhiteSpace(Settings.WeatherIcao) && !here.Equals(Settings.WeatherIcao, StringComparison.OrdinalIgnoreCase))
+            Settings.WeatherIcao = null;
         try { Settings.Save(); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 
