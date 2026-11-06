@@ -590,7 +590,7 @@ public sealed class FlightTracker
         }
         int anchor = last - d0 >= 2 ? Math.Min(last, d0 + 3) : last;
         double slope = 0, at0;
-        if (fit.Count >= 2 && fit[^1].D - fit[0].D >= 100)
+        if (fit.Count >= 2 && Math.Abs(fit[^1].D - fit[0].D) >= 100)
         {
             double mx = fit.Average(f => f.D), my = fit.Average(f => f.Alt);
             double sxx = fit.Sum(f => (f.D - mx) * (f.D - mx)), sxy = fit.Sum(f => (f.D - mx) * (f.Alt - my));
