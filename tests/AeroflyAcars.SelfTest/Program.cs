@@ -720,6 +720,75 @@ t.Test("Platzrunde: Sinken und Steigen hoch über dem Platz ist kein Durchstarte
     t.Equal(1, tracker.GoArounds);
 });
 
+t.Test("Steile Bahn bergauf ohne Bahndaten (wie Courchevel): Landung wird trotzdem erkannt", () =>
+{
+    var apt = new Airport("XFLJ", "Altiport", "small_airport", 45.3975, 6.635, 6583, null, "XFLJ");
+    var tracker = new FlightTracker(null, null, new AirportDatabase(new[] { apt }));
+    var announced = new List<double>();
+    tracker.TouchdownDetected += (_, r) => announced.Add(r);
+
+    const double thrLat = 45.3950, mPerDeg = 111_200;
+    double Ground(double lat)
+    {
+        double m = (lat - thrLat) * mPerDeg;
+        if (m < 0) return 6000;                       // Tal vor der Bahn
+        return m <= 537 ? 6260 + 0.186 * m * Geo.FeetPerMeter : 6588;   // 18,6 % bergauf, oben flach
+    }
+    var b = new SampleBuilder();
+    var start = new DateTimeOffset(2026, 11, 6, 14, 54, 0, TimeSpan.Zero);
+    double lat = thrLat - 0.03, alt = 7300, gs = 85;
+    int sec = 0;
+    bool onGround = false;
+    DateTimeOffset contact = default;
+    void Step(double vsFpm, double decel)
+    {
+        gs = Math.Max(0, gs - decel);
+        lat += gs / 3600.0 / 60.0;
+        alt += vsFpm / 60.0;
+        if (alt <= Ground(lat)) { alt = Ground(lat); if (!onGround) contact = start.AddSeconds(sec + 1); onGround = true; }
+        var smp = b.Add(new GpsMessage("T", 6.635, lat, alt / Geo.FeetPerMeter, 0, gs / Geo.KnotsPerMeterPerSecond), start.AddSeconds(++sec));
+        if (smp is not null) tracker.Add(smp);
+    }
+
+    while (lat < thrLat - 0.0004) Step(alt > 6290 ? -1000 : 0, 0.3);   // Anflug, über der Schwelle ca. 30 ft
+    while (!onGround) Step(-300, 0.3);
+    for (int i = 0; i < 60; i++) Step(onGround ? 0 : -300, gs > 0 ? 3 : 0);   // ausrollen bergauf, oben stehen
+
+    t.True(tracker.Touchdown is not null, "Landung erkannt");
+    t.Range((tracker.Touchdown!.Value - contact).TotalSeconds, -2, 2, "Aufsetzzeitpunkt");
+    t.Range(tracker.LandingRateFpm!.Value, -700, 0, "Landerate gegenüber der Bahn");
+    t.Equal(0, tracker.GoArounds);
+    t.Equal(1, announced.Count);
+    t.False(tracker.Events.Any(e => e.Time > tracker.Touchdown && e.Phase is FlightPhase.Climb), "kein Steigflug nach dem Aufsetzen");
+    t.True(tracker.Phase is FlightPhase.Landing or FlightPhase.TaxiIn or FlightPhase.Arrived, "Phase nach der Landung");
+});
+
+t.Test("Stop-and-go: nach dem Ausrollen erneut gestartet, zweite Landung wird gewertet", () =>
+{
+    var tracker = new FlightTracker(null, 600);
+    var b = new SampleBuilder();
+    var start = new DateTimeOffset(2026, 11, 6, 15, 0, 0, TimeSpan.Zero);
+    double lat = 50.0, alt = 1600, gs = 90;
+    int sec = 0;
+    void Step(double vsFpm, double dGs)
+    {
+        gs = Math.Max(0, gs + dGs);
+        lat += gs / 3600.0 / 60.0;
+        alt = Math.Max(605, alt + vsFpm / 60.0);
+        var smp = b.Add(new GpsMessage("T", 8.0, lat, alt / Geo.FeetPerMeter, 0, gs / Geo.KnotsPerMeterPerSecond), start.AddSeconds(++sec));
+        if (smp is not null) tracker.Add(smp);
+    }
+    void Land() { while (alt > 605) Step(-600, 0); for (int i = 0; i < 30; i++) Step(0, -3); }
+    Land();
+    var first = tracker.Touchdown;
+    t.True(first is not null, "erste Landung");
+    for (int i = 0; i < 30; i++) Step(0, 3);                 // wieder beschleunigen
+    for (int i = 0; i < 60; i++) Step(1000, 0);              // abheben, steigen
+    Land();
+    t.True(tracker.Events.Any(e => e.Text.StartsWith("Erneuter Startlauf")), "erneuter Startlauf im Flight Log");
+    t.True(tracker.Touchdown > first, "zweite Landung gewertet");
+});
+
 t.Test("METAR lesen (Europa, USA, CAVOK, Meilenbrüche)", () =>
 {
     var a = Metar.Parse("LOWI 061220Z 25008KT 9999 FEW045 BKN080 08/02 Q1018 NOSIG")!;

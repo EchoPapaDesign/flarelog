@@ -2,6 +2,9 @@
 
 ## In Arbeit
 
+- Steile Bahnen (z. B. Courchevel): Landung wird auch erkannt, wenn die Höhe beim Ausrollen bergauf steigt;
+  die Landerate wird gegenüber der Bahnneigung berechnet
+- Stop-and-go / Platzrunden mit Ausrollen: erneuter Start wird erkannt, gewertet wird die letzte Landung
 - Durchstarten nur, wenn der Anflug unter 1000 ft über Platz ging – Manöver in der Platzrunde zählen nicht mehr
 - Flight Log: Landungs-Box und Fußzeile überlappen nicht mehr
 - Wetter: Ein eingetragener Flugplatz wird verworfen, sobald Aerofly an einem anderen Platz steht

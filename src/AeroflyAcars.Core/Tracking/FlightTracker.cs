@@ -60,6 +60,18 @@ public sealed class FlightTracker
     /// <summary>So nah an der späteren Rollhöhe gilt ein Messpunkt als Bodenkontakt (erster Kontakt vor Bounces).</summary>
     public const double FirstContactFt = 1.5;
     public static readonly TimeSpan FirstContactLookBack = TimeSpan.FromSeconds(30);
+    /// <summary>
+    /// So langsam fliegt kein Flächenflugzeug: Ist das Flugzeug „in der Luft“ (laut Phase) und am Platz so langsam,
+    /// ist es gelandet, ohne dass das Aufsetzen erkannt wurde – typisch für stark geneigte Bahnen wie Courchevel,
+    /// wo die Höhe beim Ausrollen bergauf weiter steigt.
+    /// </summary>
+    public const double SlowLandingKt = 20;
+    /// <summary>Größte Bahnneigung, die beim Ausrollen angenommen wird (Courchevel: ca. 19 %).</summary>
+    public const double MaxRunwaySlope = 0.25;
+    /// <summary>So nah (ft) an der verlängerten Rollstrecke gilt ein Messpunkt als am Boden.</summary>
+    public const double RollLineToleranceFt = 4;
+    /// <summary>Nach dem Ausrollen wieder so schnell: neuer Start (Stop-and-go, Platzrunden).</summary>
+    public const double RestartTakeoffKt = 40;
 
     private static readonly CultureInfo De = CultureInfo.GetCultureInfo("de-DE");
 
@@ -214,9 +226,10 @@ public sealed class FlightTracker
                 DepartureElevationFt ??= s.AltitudeFt;
                 if (s.AltitudeFt > DepartureElevationFt + LiftoffAboveGroundFt)
                 {
-                    Takeoff = _lastOnGround ?? s.Time;
-                    LiftoffSpeedKt = s.GroundSpeedKt;
-                    SetPhase(FlightPhase.Climb, Takeoff.Value,
+                    var liftoff = _lastOnGround ?? s.Time;
+                    Takeoff ??= liftoff;               // bei Stop-and-go zählt der erste Start
+                    LiftoffSpeedKt ??= s.GroundSpeedKt;
+                    SetPhase(FlightPhase.Climb, liftoff,
                         string.Create(De, $"Abheben mit {s.GroundSpeedKt:F0} kt, Pitch {s.PitchDeg:F1}°, Querlage {Math.Abs(s.RollDeg):F1}°"));
                 }
                 else
@@ -231,16 +244,18 @@ public sealed class FlightTracker
             case FlightPhase.Cruise:
             case FlightPhase.Descent:
             case FlightPhase.Approach:
-                if (!DetectTouchdown(s, prev))
+                if (!DetectTouchdown(s, prev) && !DetectSlowLanding(s))
                     UpdateAirbornePhase(s);
                 break;
 
             case FlightPhase.Landing:
+                if (s.GroundSpeedKt >= RestartTakeoffKt && s.GroundSpeedKt > (prev?.GroundSpeedKt ?? 0)) { Restart(s); break; }
                 if (s.GroundSpeedKt < TaxiInKt)
                     SetPhase(FlightPhase.TaxiIn, s.Time, "Rollen zur Parkposition");
                 break;
 
             case FlightPhase.TaxiIn:
+                if (s.GroundSpeedKt >= RestartTakeoffKt) { Restart(s); break; }
                 if (s.GroundSpeedKt < StoppedKt)
                 {
                     _stoppedSince ??= s.Time;
@@ -513,6 +528,111 @@ public sealed class FlightTracker
             };
         }
         return cand;
+    }
+
+    /// <summary>Nach einer Landung wieder beschleunigt: neuer Startlauf (Stop-and-go, Platzrunde).</summary>
+    private void Restart(FlightSample s)
+    {
+        _stoppedSince = null;
+        _candidate = null;
+        _settling = false;
+        DepartureElevationFt = s.AltitudeFt;
+        _lastOnGround = s.Time;
+        SetPhase(FlightPhase.TakeoffRoll, s.Time, $"Erneuter Startlauf auf Kurs {s.HeadingDeg:000}°");
+    }
+
+    /// <summary>
+    /// Rückfall, wenn das Aufsetzen nicht erkannt wurde: Das Flugzeug ist „in der Luft“, aber am Platz langsamer als
+    /// <see cref="SlowLandingKt"/>. Die Rollstrecke wird als Gerade (Höhe über Strecke) rückwärts verlängert – das
+    /// gibt die Bahnneigung auch ohne Bahndaten. Aufgesetzt wurde am ersten Punkt, der auf dieser Geraden liegt.
+    /// </summary>
+    private bool DetectSlowLanding(FlightSample s)
+    {
+        if (s.GroundSpeedKt >= SlowLandingKt || _samples.Count < 3) return false;
+        var airport = _airports?.Nearest(s.Latitude, s.Longitude, ArrivalAirportRadiusNm);
+        if (_airports is not null && airport is null) return false;   // fernab jedes Platzes: eher starker Gegenwind
+
+        // Strecke rückwärts vom aktuellen Punkt (ft).
+        int end = _samples.Count - 1;
+        var dist = new double[_samples.Count];
+        int first = end;
+        for (int i = end - 1; i >= 0; i--)
+        {
+            if (s.Time - _samples[i].Time > TimeSpan.FromSeconds(120)) break;
+            dist[i] = dist[i + 1] + Geo.DistanceNm(_samples[i].Latitude, _samples[i].Longitude,
+                _samples[i + 1].Latitude, _samples[i + 1].Longitude) * 6076.12;
+            first = i;
+        }
+
+        // Bahnneigung aus dem Ausrollen zwischen 8 und 40 kt (ohne Stillstand und Rollen auf einem flachen Vorfeld
+        // am Bahnende, wie oben in Courchevel). Höhe als Gerade über der Strecke.
+        int last = end;
+        while (last > first && _samples[last].GroundSpeedKt < 8) last--;
+        var fit = new List<(double D, double Alt)>();
+        for (int i = last; i >= first && _samples[i].GroundSpeedKt is >= 8 and < 40; i--) fit.Add((dist[i], _samples[i].AltitudeFt));
+        double slope = 0, at0;
+        if (fit.Count >= 2 && fit[^1].D - fit[0].D >= 100)
+        {
+            double mx = fit.Average(f => f.D), my = fit.Average(f => f.Alt);
+            double sxx = fit.Sum(f => (f.D - mx) * (f.D - mx)), sxy = fit.Sum(f => (f.D - mx) * (f.Alt - my));
+            slope = Math.Clamp(sxy / sxx, -MaxRunwaySlope, MaxRunwaySlope);
+            at0 = my - slope * mx;
+        }
+        else
+        {
+            at0 = _samples[last].AltitudeFt - slope * dist[last];
+        }
+        double Off(int i) => _samples[i].AltitudeFt - (at0 + slope * dist[i]);
+
+        // Vom Ausrollen rückwärts, solange die Punkte auf der Geraden liegen.
+        int td = last;
+        for (int i = last - 1; i >= first; i--)
+        {
+            if (Math.Abs(Off(i)) > RollLineToleranceFt + Math.Abs(slope) * 30) break;   // etwas Spiel für die Messung
+            td = i;
+        }
+        // Bodenkontakt: erster Punkt ab td, der dicht an der Geraden liegt (Toleranz je nach Messgenauigkeit der Geraden).
+        double rms = fit.Count >= 3 ? Math.Sqrt(Enumerable.Range(0, last - first + 1).Select(k => first + k)
+            .Where(k => _samples[k].GroundSpeedKt is >= 8 and < 40 && k <= last).Select(k => Off(k) * Off(k)).DefaultIfEmpty(0).Average()) : 0;
+        double contactFt = Math.Max(FirstContactFt, 2 * rms);
+        int c = td;
+        while (c < last && Off(c) > contactFt) c++;
+
+        // Sinkrate gegenüber der Bahn = Änderung der Höhe über der Geraden. So fällt die Bahnneigung heraus:
+        // Bergauf steigt das Flugzeug beim Aufsetzen, obwohl es auf die Bahn zu sinkt.
+        // Gewertet werden die letzten Fuß vor dem Kontakt (wie bei der Landerate auf flacher Bahn), nicht der Anflug.
+        double StepRate(int k)
+        {
+            double dt = (_samples[k].Time - _samples[k - 1].Time).TotalSeconds;
+            return dt <= 0 || dt > TouchdownMaxSampleGapSec ? 0 : (Off(k) - Off(k - 1)) / dt * 60;
+        }
+        double rate = 0;
+        bool any = false;
+        for (int k = Math.Max(td, 1); k <= c; k++)
+        {
+            if (Off(k - 1) > 6) continue;
+            rate = Math.Min(rate, StepRate(k));
+            any = true;
+        }
+        if (!any && c >= 1) rate = Math.Min(0, StepRate(c));
+        var x = _samples[c];
+
+        // Was nach dem Aufsetzen als Steigen/Durchstarten erschien, war das Ausrollen bergauf.
+        foreach (var e in _events.Where(e => e.Time > x.Time && e.PhaseChange && e.Phase.IsAirborne()).ToList())
+        {
+            if (e.Text == "Durchstarten") GoArounds--;
+            _events.Remove(e);
+        }
+
+        _candidate = null;
+        _settling = false;
+        TouchdownDetected?.Invoke(x, rate);
+        Touchdown = x.Time;
+        TouchdownSample = x;
+        LandingRateFpm = rate;
+        ArrivalAirport = airport;
+        SetPhase(FlightPhase.Landing, x.Time, $"Aufsetzen mit {rate:F0} fpm bei {x.GroundSpeedKt:F0} kt" + At(ArrivalAirport));
+        return true;
     }
 
     private static bool SamePosition(FlightSample a, FlightSample b) =>
