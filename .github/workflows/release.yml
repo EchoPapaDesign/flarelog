@@ -1,15 +1,12 @@
 # Veröffentlicht eine neue Version und hängt Flarelog.exe an.
 #
-# Weg 1 (Webseite): Releases → "Draft a new release" → neuen Tag wie v0.9.0-beta.2 anlegen → Publish.
-#                   GitHub baut dann, testet und hängt Flarelog.exe an dieses Release an (dauert ein paar Minuten).
-# Weg 2 (Git):      git tag v0.9.0-beta.2 && git push origin v0.9.0-beta.2  → Release wird automatisch angelegt.
+# Releases → "Draft a new release" → neuen Tag wie v0.9.0-beta.2 anlegen → Publish.
+# GitHub baut dann, testet und hängt Flarelog.exe an dieses Release an (dauert ein paar Minuten).
 name: Release
 
 on:
   release:
     types: [ published ]
-  push:
-    tags: [ 'v*' ]
 
 permissions:
   contents: write
@@ -28,9 +25,15 @@ jobs:
         id: version
         shell: bash
         run: |
-          tag="${{ github.event.release.tag_name || github.ref_name }}"
+          tag="${{ github.event.release.tag_name }}"
+          number="${tag#[vV]}"
+          number="${number#.}"          # auch "v.0.9.0" zulassen
+          if ! [[ "$number" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Tag '$tag' ist keine Versionsnummer. Erwartet z. B. v0.9.0 oder v0.9.0-beta.1"
+            exit 1
+          fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "number=${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "number=$number" >> "$GITHUB_OUTPUT"
 
       - name: Selbsttest
         run: dotnet run --project tests/AeroflyAcars.SelfTest -c Release -p:Version=${{ steps.version.outputs.number }}
@@ -42,20 +45,9 @@ jobs:
           -p:EnableCompressionInSingleFile=true -p:DebugType=none
           -p:Version=${{ steps.version.outputs.number }} -o publish
 
-      # Auf der Webseite angelegtes Release: nur die Datei anhängen, Titel und Text bleiben wie eingegeben.
+      # Titel und Text des Releases bleiben wie auf der Webseite eingegeben – nur die Datei kommt dazu.
       - name: Flarelog.exe an das Release hängen
-        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           files: publish/Flarelog.exe
-
-      # Per Git-Tag: Release komplett anlegen.
-      - name: Release anlegen
-        if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Flarelog ${{ steps.version.outputs.number }}
-          files: publish/Flarelog.exe
-          generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
