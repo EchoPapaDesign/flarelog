@@ -599,7 +599,7 @@ t.Test("Harte Landung mit Bounces: erster Bodenkontakt zählt, nicht das später
     const double floor = 605;
     var b = new SampleBuilder();
     var start = new DateTimeOffset(2026, 11, 6, 12, 50, 0, TimeSpan.Zero);
-    double lat = 32.823, alt = 2000, gs = 65;
+    double lat = 32.807, alt = 2000, gs = 90;   // > 80 kt: Aufzeichnung beginnt im Flug
     int sec = 0;
     DateTimeOffset contact = default;
     void Step(double vsFpm, double decelKt = 0)
@@ -616,7 +616,7 @@ t.Test("Harte Landung mit Bounces: erster Bodenkontakt zählt, nicht das später
     contact = start.AddSeconds(sec);
     Step(420); Step(420); Step(-300); Step(-300); Step(-300);    // Bounce ~14 ft
     Step(150); Step(-200); Step(-200);                            // zweiter, kleiner Bounce
-    for (int i = 0; i < 30 && gs > 0; i++) Step(0, decelKt: 2);  // ausrollen
+    for (int i = 0; i < 40 && gs > 0; i++) Step(0, decelKt: 2);  // ausrollen
 
     t.True(tracker.Touchdown is not null, "Landung erkannt");
     t.Range((tracker.Touchdown!.Value - contact).TotalSeconds, -1.5, 1.5, "Aufsetzzeitpunkt (s ggü. erstem Kontakt)");
