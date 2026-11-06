@@ -24,6 +24,8 @@ public sealed class FlightTracker
     public const double RejectTakeoffKt = 30;
     public const double AirborneStartKt = 80;
     public const double LiftoffAboveGroundFt = 15;
+    /// <summary>Im Startlauf: bis so hoch über der Bahn (ft) gilt ein Messpunkt sicher als am Boden.</summary>
+    public const double RollOnGroundFt = 3;
     public const double ClimbVsFpm = 300;
     public const double DescentVsFpm = -300;
     public const double ApproachHeightFt = 3000;
@@ -94,6 +96,7 @@ public sealed class FlightTracker
     private double _approachMinAltFt = double.MaxValue;
     /// <summary>Startlauf: Strecke (ft) und Höhe der Messpunkte am Boden – für geneigte Bahnen.</summary>
     private readonly List<(double D, double Alt)> _roll = new();
+    private double _rollDistFt;
     private DateTimeOffset? _stoppedSince;
     private int _frozenCount;
     private DateTimeOffset _frozenSince;
@@ -222,7 +225,7 @@ public sealed class FlightTracker
                 {
                     DepartureAirport ??= _airports?.Nearest(s.Latitude, s.Longitude, DepartureAirportRadiusNm);
                     CalibrateGround(s);
-                    _roll.Clear();
+                    _roll.Clear(); _rollDistFt = 0;
                     SetPhase(FlightPhase.TakeoffRoll, s.Time, $"Startlauf auf Kurs {s.HeadingDeg:000}°");
                 }
                 break;
@@ -239,7 +242,6 @@ public sealed class FlightTracker
                 }
                 else
                 {
-                    _lastOnGround = s.Time;
                     if (s.GroundSpeedKt < RejectTakeoffKt)
                         SetPhase(FlightPhase.TaxiOut, s.Time, "Startabbruch – wieder Rollen");
                 }
@@ -545,9 +547,8 @@ public sealed class FlightTracker
     /// </summary>
     private bool LiftedOff(FlightSample s, FlightSample? prev)
     {
-        double d = _roll.Count == 0 || prev is null
-            ? 0
-            : _roll[^1].D + Geo.DistanceNm(prev.Latitude, prev.Longitude, s.Latitude, s.Longitude) * 6076.12;
+        if (prev is not null) _rollDistFt += Geo.DistanceNm(prev.Latitude, prev.Longitude, s.Latitude, s.Longitude) * 6076.12;
+        double d = _rollDistFt;
         double ground = DepartureElevationFt ?? s.AltitudeFt;
         var pts = _roll.Count > 8 ? _roll.GetRange(_roll.Count - 8, 8) : _roll;
         if (pts.Count >= 3 && pts[^1].D - pts[0].D >= 100)
@@ -557,8 +558,14 @@ public sealed class FlightTracker
             double slope = Math.Clamp(sxy / sxx, -MaxRunwaySlope, MaxRunwaySlope);
             ground = my + slope * (d - mx);
         }
-        if (s.AltitudeFt > ground + LiftoffAboveGroundFt) return true;
-        _roll.Add((d, s.AltitudeFt));
+        double above = s.AltitudeFt - ground;
+        if (above > LiftoffAboveGroundFt) return true;
+        // Nur eindeutig am Boden liegende Punkte bilden die Bahn – sonst wanderte die Gerade beim flachen Steigen mit.
+        if (above <= RollOnGroundFt)
+        {
+            _roll.Add((d, s.AltitudeFt));
+            _lastOnGround = s.Time;
+        }
         return false;
     }
 
@@ -570,7 +577,7 @@ public sealed class FlightTracker
         _settling = false;
         DepartureElevationFt = s.AltitudeFt;
         _lastOnGround = s.Time;
-        _roll.Clear();
+        _roll.Clear(); _rollDistFt = 0;
         SetPhase(FlightPhase.TakeoffRoll, s.Time, $"Erneuter Startlauf auf Kurs {s.HeadingDeg:000}°");
     }
 
