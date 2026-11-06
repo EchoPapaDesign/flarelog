@@ -752,7 +752,7 @@ t.Test("Steile Bahn bergauf ohne Bahndaten (wie Courchevel): Landung wird trotzd
 
     while (lat < thrLat - 0.0004) Step(alt > 6290 ? -1000 : 0, 0.3);   // Anflug, über der Schwelle ca. 30 ft
     // Abfangen gegen den Hang: Das Flugzeug steigt fast so schnell wie die Bahn ansteigt (200 fpm Annäherung).
-    double Flare() => lat >= thrLat ? 0.186 * gs * 101.27 - 200 : -300;
+    double Flare() => lat >= thrLat - 0.0002 ? 0.186 * gs * 101.27 - 200 : -300;
     while (!onGround) Step(Flare(), 0.3);
     for (int i = 0; i < 60; i++) Step(0, gs > 0 ? 3 : 0);     // ausrollen bergauf, oben stehen
 
