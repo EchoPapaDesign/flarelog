@@ -440,6 +440,16 @@ t.Test("Aerofly-Flugzeug aus main.mcf und Abgleich mit der Buchung", () =>
     t.Equal("Boeing 737-800", AeroflyConfig.AircraftDisplayName("b737_800"));
     t.Equal("Cessna 172", sel.DisplayName == "Cessna 172" ? "Cessna 172" : AeroflyConfig.AircraftDisplayName("c172"));
     t.Equal("XYZ 9", AeroflyConfig.AircraftDisplayName("xyz_9"));
+    t.Equal("Airbus A320neo", AeroflyConfig.AircraftDisplayName("a320_neo"));
+    // Aus Aeroflys Protokoll: zuletzt geladenes Flugzeug zählt
+    const string log = """
+            4.66-tmsimulator:             done loading model a320_neo
+           28.04-tmmodelmanager:              model: (name='c172') (directory='aircraft/c172/')
+           29.42-tmsimulator:             done loading model c172
+           32.81-tmsimulator_placement:   aircraft 0 position = -682521.82 -5310670.64 3454545.72
+    """;
+    t.Equal("c172", AeroflyConfig.LastLoadedModel(log));
+    t.True(AeroflyConfig.LastLoadedModel("nichts geladen") is null, "ohne Eintrag");
 
     t.Equal(true, AircraftCheck.Compare("C172", "c172", 61).Ok);
     t.Equal(true, AircraftCheck.Compare("B738", "b737", 145).Ok);

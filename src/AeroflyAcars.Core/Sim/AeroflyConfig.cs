@@ -20,7 +20,7 @@ public static class AeroflyConfig
 
     private static readonly Dictionary<string, string> KnownAircraft = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["a319"] = "Airbus A319", ["a320"] = "Airbus A320", ["a321"] = "Airbus A321", ["a350_1000"] = "Airbus A350-1000",
+        ["a319"] = "Airbus A319", ["a320"] = "Airbus A320", ["a320_neo"] = "Airbus A320neo", ["a321"] = "Airbus A321", ["a350_1000"] = "Airbus A350-1000",
         ["a380"] = "Airbus A380", ["antares"] = "Lange Antares", ["apache"] = "AH-64 Apache", ["asg29"] = "Schleicher ASG 29",
         ["ask21"] = "Schleicher ASK 21", ["b58"] = "Beechcraft Baron 58", ["b737"] = "Boeing 737", ["b737_800"] = "Boeing 737-800",
         ["b737_900"] = "Boeing 737-900", ["b737_max9"] = "Boeing 737 MAX 9", ["b747"] = "Boeing 747", ["b777_300er"] = "Boeing 777-300ER",
@@ -36,6 +36,49 @@ public static class AeroflyConfig
     /// <summary>Lesbarer Name zu einer Aerofly-Flugzeugkennung; unbekannte Kennungen in Großbuchstaben.</summary>
     public static string AircraftDisplayName(string name) =>
         KnownAircraft.TryGetValue(name.Trim(), out var known) ? known : name.Trim().Replace('_', ' ').ToUpperInvariant();
+
+    /// <summary>Aeroflys laufendes Protokoll (wird bei jedem Start neu geschrieben).</summary>
+    public static string DefaultLogPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Aerofly FS 4", "tm.log");
+
+    private static readonly Regex LoadedModel = new(@"tmsimulator:\s+done loading model\s+(\S+)", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Das gerade geflogene Flugzeug. Aerofly schreibt einen Flugzeugwechsel nicht sofort in main.mcf, wohl aber
+    /// „done loading model …“ ins Protokoll tm.log. Ist das Protokoll neuer als main.mcf, gilt es, sonst main.mcf.
+    /// </summary>
+    public static SelectedAircraft? ReadCurrentAircraft(string? mcfPath = null, string? logPath = null)
+    {
+        mcfPath ??= DefaultPath;
+        logPath ??= DefaultLogPath;
+        var fromMcf = ReadSelectedAircraft(mcfPath);
+        try
+        {
+            if (File.Exists(logPath) && (!File.Exists(mcfPath) || File.GetLastWriteTimeUtc(logPath) >= File.GetLastWriteTimeUtc(mcfPath)) &&
+                LastLoadedModel(ReadTail(logPath, 512 * 1024)) is { } loaded)
+            {
+                return new SelectedAircraft(loaded,
+                    fromMcf is not null && fromMcf.Name.Equals(loaded, StringComparison.OrdinalIgnoreCase) ? fromMcf.Paintscheme : null);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        return fromMcf;
+    }
+
+    /// <summary>Letztes „done loading model …“ im Protokolltext.</summary>
+    public static string? LastLoadedModel(string log)
+    {
+        var matches = LoadedModel.Matches(log);
+        return matches.Count == 0 ? null : matches[^1].Groups[1].Value.Trim();
+    }
+
+    private static string ReadTail(string path, int maxBytes)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        if (stream.Length > maxBytes) stream.Seek(-maxBytes, SeekOrigin.End);
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
 
     public static SelectedAircraft? ReadSelectedAircraft(string? path = null)
     {

@@ -189,7 +189,7 @@ public sealed class AcarsEngine : IDisposable
             // Beim Losrollen festhalten, welches Flugzeug in Aerofly gewählt ist.
             if (e.PhaseChange && e.Phase == FlightPhase.TaxiOut)
             {
-                _aeroflyAircraft = AeroflyConfig.ReadSelectedAircraft() ?? _aeroflyAircraft;
+                _aeroflyAircraft = AeroflyConfig.ReadCurrentAircraft() ?? _aeroflyAircraft;
                 if (Settings.LiveTracking && Settings.HasAirlineApiKey) _ = Task.Run(StartLiveAsync);
             }
             FlightEventRaised?.Invoke(e);
@@ -414,6 +414,7 @@ public sealed class AcarsEngine : IDisposable
 
     private AeroflyConfig.SelectedAircraft? _simAircraftNow;
     private DateTime _mainMcfWriteTime;
+    private DateTime _logWriteTime;
 
     /// <summary>Aktuell in Aerofly gewähltes Flugzeug für die Statusleiste (liest main.mcf nur, wenn sie sich geändert hat).</summary>
     private void RefreshSimAircraft()
@@ -422,11 +423,13 @@ public sealed class AcarsEngine : IDisposable
         try
         {
             var path = AeroflyConfig.DefaultPath;
-            if (!File.Exists(path)) return;
-            var write = File.GetLastWriteTimeUtc(path);
-            if (write == _mainMcfWriteTime) return;
+            var log = AeroflyConfig.DefaultLogPath;
+            var write = File.Exists(path) ? File.GetLastWriteTimeUtc(path) : default;
+            var logWrite = File.Exists(log) ? File.GetLastWriteTimeUtc(log) : default;
+            if (write == _mainMcfWriteTime && logWrite == _logWriteTime) return;
             _mainMcfWriteTime = write;
-            var selected = AeroflyConfig.ReadSelectedAircraft(path);
+            _logWriteTime = logWrite;
+            var selected = AeroflyConfig.ReadCurrentAircraft(path, log);
             lock (_gate)
             {
                 _simAircraftNow = selected ?? _simAircraftNow;
@@ -726,7 +729,7 @@ public sealed class AcarsEngine : IDisposable
         try
         {
             var (fleet, info) = await client.GetFleetAsync().ConfigureAwait(false);
-            var selected = AeroflyConfig.ReadSelectedAircraft();
+            var selected = AeroflyConfig.ReadCurrentAircraft();
             lock (_gate)
             {
                 if (_tracker.BlockOff is null && selected is not null) _aeroflyAircraft = selected;
