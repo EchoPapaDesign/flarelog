@@ -2,8 +2,8 @@
 
 ## In Arbeit
 
-- Harte Landung mit Bounces: Gewertet wird jetzt der erste Bodenkontakt, nicht das spätere sanfte Ausrollen
-  (vorher z. B. −124 fpm statt ca. −600 fpm und 0 statt mehrerer Bounces)
+- Landung mit Bounces: Gewertet wird der erste Bodenkontakt (auf 1,5 ft an der Rollhöhe), nicht erst das
+  spätere sanfte Ausrollen. Ein Wiederansteigen im Flare ohne Bodenkontakt zählt weiterhin nicht als Bounce.
 
 ## 0.9.0-beta.1 – erste öffentliche Beta
 

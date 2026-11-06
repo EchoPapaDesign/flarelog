@@ -56,10 +56,6 @@ public sealed class FlightTracker
     public const double CandidateMaxAboveRunwayFt = 60;
     /// <summary>So nah an der späteren Rollhöhe gilt ein Messpunkt als Bodenkontakt (erster Kontakt vor Bounces).</summary>
     public const double FirstContactFt = 1.5;
-    /// <summary>Kehrt sich das Sinken so dicht über der Rollhöhe um, war das ein Bodenkontakt (Bounce).</summary>
-    public const double FirstContactReversalFt = 6;
-    /// <summary>Um so viel muss es nach einer Umkehr wieder hochgehen, damit sie als Bounce zählt.</summary>
-    public const double BounceRiseFt = 2;
     public static readonly TimeSpan FirstContactLookBack = TimeSpan.FromSeconds(30);
 
     private static readonly CultureInfo De = CultureInfo.GetCultureInfo("de-DE");
@@ -470,7 +466,7 @@ public sealed class FlightTracker
     /// Sucht vor dem Kandidaten (Flugzeug rollt auf der Bahn) den ersten Bodenkontakt. Bei einer harten Landung
     /// springt das Flugzeug wieder hoch; jedes erneute Sinken gilt dann als Ausschweben, und der Kandidat landet
     /// erst beim letzten, sanften Kontakt. Die Höhe beim Ausrollen ist die echte Bodenhöhe im Simulator – der
-    /// erste Messpunkt, der ihr nahekommt (oder dicht darüber wieder hochgeht), ist das eigentliche Aufsetzen.
+    /// erste Messpunkt, der ihr auf 1,5 ft nahekommt, ist das eigentliche Aufsetzen.
     /// </summary>
     private TouchdownCandidate FirstContact(TouchdownCandidate cand)
     {
@@ -493,17 +489,9 @@ public sealed class FlightTracker
         for (int i = start; i < ci; i++)
         {
             double h = H(i);
-            bool contact = h <= FirstContactFt;
-            if (!contact && h <= FirstContactReversalFt && i > 0 && H(i - 1) > h)
-            {
-                // Tiefster Punkt (zwischen zwei Messpunkten verpasst): danach geht es deutlich wieder hoch.
-                for (int j = i + 1; j <= ci && _samples[j].Time - _samples[i].Time <= TimeSpan.FromSeconds(3); j++)
-                {
-                    if (H(j) < h) break;
-                    if (H(j) >= h + BounceRiseFt) { contact = true; break; }
-                }
-            }
-            if (!contact) continue;
+            // Nur echte Bodennähe zählt. Ein Wiederansteigen im Flare (Ballooning) ein paar Fuß über der Bahn ist
+            // kein Kontakt und darf nicht als Bounce gewertet werden.
+            if (h > FirstContactFt) continue;
             if (i == 0) return cand;
 
             var x = _samples[i];
