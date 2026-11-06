@@ -664,6 +664,37 @@ t.Test("Flare mit leichtem Wiederansteigen (Ballooning): kein Bounce, sanfte Lan
     t.Equal(0, FlightAnalysis.Analyze(tracker, runways).Bounces);
 });
 
+t.Test("Höhenmesser verstellt (Aerofly sendet die angezeigte Höhe): Sprung wird ausgeglichen", () =>
+{
+    var b = new SampleBuilder();
+    var start = new DateTimeOffset(2026, 11, 6, 12, 40, 0, TimeSpan.Zero);
+    double lat = 32.99;
+    var alts = new List<double>();
+    void Gps(int sec, double altFt, double gsKt)
+    {
+        lat += gsKt / 3600.0 / 60.0;
+        var smp = b.Add(new GpsMessage("T", -97.3, lat, altFt / Geo.FeetPerMeter, 0, gsKt / Geo.KnotsPerMeterPerSecond), start.AddSeconds(sec));
+        if (smp is not null) alts.Add(smp.AltitudeFt);
+    }
+    int t0 = 0;
+    for (; t0 < 5; t0++) Gps(t0, 704, 0);
+    Gps(t0++, 450, 0); Gps(t0++, 200, 0); Gps(t0++, 0, 0);          // Pilot dreht den Höhenmesser auf 0
+    for (int i = 0; i < 5; i++) Gps(t0++, 0, 10);                    // rollen
+    t.Near(704, alts[^1], 1);
+    t.Equal(3, b.AltimeterChanges);
+    t.Range(Math.Abs(alts.Max() - alts.Min()), 0, 1, "Höhe bleibt konstant");
+
+    // Normaler Steigflug wird nicht verändert.
+    var c = new SampleBuilder();
+    c.Add(new AttitudeMessage("T", 0, 10, 0), start);
+    FlightSample? last = null;
+    for (int i = 0; i < 10; i++)
+        last = c.Add(new GpsMessage("T", -97.3, 33.0 + i * 0.0006, (1000 + i * 70.0) / Geo.FeetPerMeter, 0, 140 / Geo.KnotsPerMeterPerSecond),
+            start.AddSeconds(i)) ?? last;
+    t.Equal(0, c.AltimeterChanges);
+    t.Near(1630, last!.AltitudeFt, 1);
+});
+
 t.Test("METAR lesen (Europa, USA, CAVOK, Meilenbrüche)", () =>
 {
     var a = Metar.Parse("LOWI 061220Z 25008KT 9999 FEW045 BKN080 08/02 Q1018 NOSIG")!;
