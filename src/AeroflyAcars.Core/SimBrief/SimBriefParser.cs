@@ -45,6 +45,7 @@ public static class SimBriefParser
                 Airline = Str(root, "general", "icao_airline"),
                 FlightNumber = Str(root, "general", "flight_number"),
                 AircraftType = Str(root, "aircraft", "icaocode") ?? Str(root, "aircraft", "icao_code"),
+                AircraftRegistration = Str(root, "aircraft", "reg"),
                 Airac = Str(root, "params", "airac"),
 
                 OriginIcao = origin,

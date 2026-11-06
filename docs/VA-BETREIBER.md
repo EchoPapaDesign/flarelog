@@ -35,6 +35,15 @@ Schlüssel verwenden. Hilfreich ist es, wenn das Pilotenprofil den Schlüssel an
 | `GET /api/user/fleet`, ersatzweise `GET /api/fleet?page=…` | Flugzeugauswahl beim Einreichen |
 | `GET /api/fleet/aircraft/{Kennzeichen}?type=registration` | Flugzeug per Kennzeichen |
 
+## Live-Tracking
+
+Mit eingeschaltetem Live-Tracking (Standard) meldet Flarelog den Flug **beim Losrollen** an
+(`POST /api/pireps/prefile`), sendet dann alle 15 s neue Positionen (`/acars/position`, alle 10 s ein Punkt) und die
+Flugphase (`POST /api/pireps/{id}/update` mit `status` = `TXI`, `TOF`, `ICL`, `ENR`, `TEN`, `LAN`, `ONB`, `ARR`).
+Der Flug erscheint so auf Ihrer Live-Karte. Nach dem Flug wird derselbe PIREP eingereicht; wird ein Flug verworfen,
+zieht Flarelog ihn zurück (`cancel`). Das Flugzeug kommt aus der Buchung, sonst aus dem SimBrief-Kennzeichen,
+sonst wird ein passender Typ am Abflugort aus der Flotte gewählt.
+
 ## Was gesendet wird
 
 Erst **nach dem Flug** und erst, wenn der Pilot es bestätigt. Mit Buchung werden `flight_id`, Flugnummer und

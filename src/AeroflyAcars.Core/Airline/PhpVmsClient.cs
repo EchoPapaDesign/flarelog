@@ -45,6 +45,19 @@ public sealed record AirlineBooking(
 public sealed record AirlineAircraft(string Id, string Registration, string? Icao, string? SubfleetType, string? SubfleetName,
     string? AirportId, string? Status, int? State);
 
+/// <summary>Statuscodes laufender PIREPs in phpVMS 7 (PirepStatus).</summary>
+public static class PirepStatus
+{
+    public const string Taxi = "TXI";
+    public const string Takeoff = "TOF";
+    public const string InitialClimb = "ICL";
+    public const string Enroute = "ENR";
+    public const string Approach = "TEN";
+    public const string Landing = "LAN";
+    public const string Landed = "ONB";
+    public const string Arrived = "ARR";
+}
+
 /// <summary>Daten zum Anmelden eines Flugs (POST /api/pireps/prefile).</summary>
 public sealed record PirepPrefile(
     string AirlineId, string AircraftId, string? FlightId, string FlightNumber, string? RouteCode, string? RouteLeg,
@@ -243,6 +256,13 @@ public sealed class PhpVmsClient
             ["source_name"] = f.SourceName,
         };
         await SendAsync(HttpMethod.Post, $"api/pireps/{Uri.EscapeDataString(pirepId)}/file", Clean(body), ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Laufenden PIREP aktualisieren (POST /api/pireps/{id}/update), z. B. { status: "ENR" }.</summary>
+    public async Task UpdateAsync(string pirepId, IReadOnlyDictionary<string, object?> values, CancellationToken ct = default)
+    {
+        await SendAsync(HttpMethod.Post, $"api/pireps/{Uri.EscapeDataString(pirepId)}/update",
+            Clean(new Dictionary<string, object?>(values)), ct).ConfigureAwait(false);
     }
 
     public async Task CancelAsync(string pirepId, CancellationToken ct = default)

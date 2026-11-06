@@ -33,6 +33,9 @@ public sealed class AcarsSettings
     /// <summary>API-Schlüssel, unter Windows mit DPAPI für den angemeldeten Benutzer verschlüsselt.</summary>
     public string? AirlineApiKeyProtected { get; set; }
 
+    /// <summary>Flug ab dem Losrollen live an die Airline melden (erscheint auf deren Live-Karte).</summary>
+    public bool LiveTracking { get; set; } = true;
+
     [JsonIgnore]
     public bool HasAirlineApiKey => !string.IsNullOrEmpty(AirlineApiKeyProtected);
 

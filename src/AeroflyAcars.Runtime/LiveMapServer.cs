@@ -141,6 +141,7 @@ public sealed class LiveMapServer : IDisposable
                 "/api/airline/select" => _engine.SelectBooking(
                     JsonSerializer.Deserialize<BookingSelectRequest>(json, Json)?.FlightId),
                 "/api/airline/fleet" => await _engine.LoadFleetAsync().ConfigureAwait(false),
+                "/api/airline/live" => _engine.SetLiveTracking(JsonSerializer.Deserialize<LiveRequest>(json, Json)?.On ?? true),
                 "/api/airline/submit" => await _engine.SubmitPirepAsync(
                     JsonSerializer.Deserialize<PirepSubmitRequest>(json, Json) ?? new PirepSubmitRequest(null, null)).ConfigureAwait(false),
                 "/api/simbrief" => await _engine.LoadSimBriefAsync(

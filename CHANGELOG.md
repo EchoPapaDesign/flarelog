@@ -9,6 +9,7 @@
 - SimBrief: Plan laden, Route auf der Karte, Routenübersicht (SID, Strecke, STAR), Soll-Ist-Vergleich
 - Virtuelle Airlines mit phpVMS 7: Buchungen laden, PIREP einreichen (auch freie Flüge),
   Airline-Edition über `airline.json`
+- Live-Tracking: Flug ab dem Losrollen auf der Live-Karte der Airline
 - „Daten kopieren“ für manuelle PIREP-Formulare
 - Wetter-Fenster mit METAR und TAF; auf Wunsch echte Zeit und Abflug-Wetter beim Start von Aerofly
 - Flugberichte als Text und JSON

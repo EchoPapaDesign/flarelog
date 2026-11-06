@@ -19,6 +19,7 @@ public sealed record WeatherRequest(string? Icao);
 public sealed record ConditionsRequest(bool? RealTime, bool? RealWeather, string? WeatherIcao = null);
 public sealed record AirlineConnectRequest(string? Url, string? ApiKey);
 public sealed record BookingSelectRequest(string? FlightId);
+public sealed record LiveRequest(bool On);
 public sealed record PirepSubmitRequest(string? AircraftId, string? Notes, string? Registration = null, string? FlightNumber = null);
 
 /// <summary>
@@ -112,6 +113,7 @@ public sealed class AcarsEngine : IDisposable
         if (Settings.Voice) _speech = SpeechAnnouncer.Create();
         _ = Task.Run(LoadInBackgroundAsync);
         _ = Task.Run(() => WatchAeroflyAsync(_cts.Token));
+        _ = Task.Run(() => LiveLoopAsync(_cts.Token));
     }
 
     private LiveMapServer? StartServer()
@@ -186,7 +188,10 @@ public sealed class AcarsEngine : IDisposable
         {
             // Beim Losrollen festhalten, welches Flugzeug in Aerofly gewählt ist.
             if (e.PhaseChange && e.Phase == FlightPhase.TaxiOut)
+            {
                 _aeroflyAircraft = AeroflyConfig.ReadSelectedAircraft() ?? _aeroflyAircraft;
+                if (Settings.LiveTracking && Settings.HasAirlineApiKey) _ = Task.Run(StartLiveAsync);
+            }
             FlightEventRaised?.Invoke(e);
         };
         tracker.TouchdownDetected += (sample, rate) =>
@@ -483,6 +488,193 @@ public sealed class AcarsEngine : IDisposable
         try { Settings.Save(); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 
+    // ---------- Live-Tracking (phpVMS) ----------
+
+    private string? _livePirepId;
+    private string? _liveAircraftId;
+    private readonly HashSet<DateTimeOffset> _liveSent = new();
+    private string? _liveStatusCode;
+    private string? _liveInfo;
+    private int _liveStarting;
+
+    public ActionResult SetLiveTracking(bool on)
+    {
+        Settings.LiveTracking = on;
+        try { Settings.Save(); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        return new ActionResult(true, on ? "Live-Tracking an: Der Flug erscheint ab dem Losrollen bei der Airline."
+                                         : "Live-Tracking aus: Der Flug wird erst nach der Landung gesendet.");
+    }
+
+    /// <summary>Beim Losrollen: Flug bei der Airline anmelden, damit er auf ihrer Live-Karte erscheint.</summary>
+    private async Task StartLiveAsync()
+    {
+        if (Interlocked.Exchange(ref _liveStarting, 1) == 1) return;
+        try
+        {
+            var client = CreateAirlineClient(out _);
+            if (client is null) return;
+
+            string? dep, arr, airlineId, flightNumber, bookedAircraft, reg, typeHint, flightId, routeCode, routeLeg, route;
+            int? level, plannedMin;
+            double? plannedNm;
+            DateTimeOffset? blockOff;
+            lock (_gate)
+            {
+                if (_livePirepId is not null || _pilot is null) return;
+                var t = _tracker;
+                var b = _selectedBooking;
+                var plan = _plan ?? t.Plan;
+                dep = b?.Departure ?? plan?.OriginIcao ?? t.DepartureAirport?.Ident;
+                arr = b?.Arrival ?? plan?.DestinationIcao;
+                airlineId = b?.AirlineId ?? _pilot.AirlineId;
+                flightNumber = b is not null
+                    ? b.FlightNumber ?? new string(b.ShortIdent.Where(char.IsDigit).ToArray())
+                    : CleanFlightNumber(plan?.FlightNumber);
+                bookedAircraft = b?.AircraftId;
+                reg = plan?.AircraftRegistration;
+                typeHint = b?.AircraftIcao ?? plan?.AircraftType;
+                flightId = b?.FlightId;
+                routeCode = b?.RouteCode;
+                routeLeg = b?.RouteLeg;
+                bool planFits = plan is not null && dep is not null && arr is not null &&
+                                plan.OriginIcao.Equals(dep, StringComparison.OrdinalIgnoreCase) &&
+                                plan.DestinationIcao.Equals(arr, StringComparison.OrdinalIgnoreCase);
+                route = (planFits ? plan!.Route : null) ?? b?.Route;
+                level = planFits && plan!.CruiseAltitudeFt is { } c ? (int)Math.Round(c / 100) : null;
+                plannedNm = b?.DistanceNm ?? (planFits ? plan!.RouteDistanceNm : null);
+                plannedMin = b?.FlightTimeMin;
+                blockOff = t.BlockOff;
+            }
+
+            string? missing = dep is null ? "Abflugplatz" : arr is null ? "Ziel (Buchung oder SimBrief-Plan)"
+                : airlineId is null ? "Airline-ID" : string.IsNullOrEmpty(flightNumber) ? "Flugnummer (Buchung oder SimBrief-Plan)" : null;
+            if (missing is not null)
+            {
+                SetLiveInfo($"Live-Tracking nicht gestartet – es fehlt: {missing}. Der Flug wird nach der Landung gesendet.");
+                return;
+            }
+
+            // Flugzeug: aus der Buchung, sonst SimBrief-Kennzeichen, sonst passender Typ am Abflugort.
+            string? aircraftId = bookedAircraft;
+            try
+            {
+                if (aircraftId is null && !string.IsNullOrWhiteSpace(reg))
+                    aircraftId = (await client.FindAircraftByRegistrationAsync(reg).ConfigureAwait(false))?.Id;
+                if (aircraftId is null && typeHint is not null)
+                {
+                    var (fleet, _) = await client.GetFleetAsync().ConfigureAwait(false);
+                    aircraftId = fleet.FirstOrDefault(a =>
+                        string.Equals(a.AirportId, dep, StringComparison.OrdinalIgnoreCase) &&
+                        (string.Equals(a.Icao, typeHint, StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(a.SubfleetType, typeHint, StringComparison.OrdinalIgnoreCase)))?.Id;
+                }
+            }
+            catch (AirlineException) { /* dann ohne Flugzeug – siehe unten */ }
+            if (aircraftId is null)
+            {
+                SetLiveInfo("Live-Tracking nicht gestartet – kein Flugzeug bestimmbar (Buchung mit Flugzeug oder SimBrief-Kennzeichen). " +
+                            "Der Flug wird nach der Landung gesendet.");
+                return;
+            }
+
+            var prefile = new PirepPrefile(airlineId!, aircraftId, flightId, flightNumber!, routeCode, routeLeg, dep!, arr!, level,
+                route, plannedNm, plannedMin, blockOff, SourceName);
+            try
+            {
+                var id = await client.PrefileAsync(prefile).ConfigureAwait(false);
+                lock (_gate)
+                {
+                    _livePirepId = id;
+                    _liveAircraftId = aircraftId;
+                    _liveInfo = $"Live bei der Airline: {dep} → {arr}";
+                }
+                AddNotice($"Live-Tracking gestartet: {dep} → {arr} erscheint auf der Karte der Airline.");
+                await LiveTickAsync().ConfigureAwait(false);
+            }
+            catch (AirlineException ex)
+            {
+                SetLiveInfo($"Live-Tracking nicht gestartet: {ex.Message}. Der Flug wird nach der Landung gesendet.");
+            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _liveStarting, 0);
+        }
+    }
+
+    private void SetLiveInfo(string text)
+    {
+        lock (_gate) _liveInfo = text;
+        AddNotice(text);
+    }
+
+    private async Task LiveLoopAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try { await Task.Delay(TimeSpan.FromSeconds(15), ct).ConfigureAwait(false); }
+            catch (OperationCanceledException) { return; }
+            try { await LiveTickAsync().ConfigureAwait(false); }
+            catch (Exception ex) when (ex is AirlineException or HttpRequestException or TaskCanceledException)
+            {
+                lock (_gate) _liveInfo = $"Live-Verbindung gestört: {ex.Message} – wird erneut versucht.";
+            }
+        }
+    }
+
+    /// <summary>Neue Positionen (alle 10 s) und die Flugphase an den laufenden PIREP senden.</summary>
+    private async Task LiveTickAsync()
+    {
+        string? id;
+        List<PirepPosition> batch;
+        string? code;
+        lock (_gate)
+        {
+            id = _livePirepId;
+            if (id is null || _submittedPirepId is not null || _submitting) return;
+            var t = _tracker;
+            batch = new List<PirepPosition>();
+            DateTimeOffset? last = _liveSent.Count > 0 ? _liveSent.Max() : null;
+            double? groundRef = t.DepartureElevationFt;
+            foreach (var s in t.Samples)
+            {
+                if (last is not null && s.Time - last.Value < TimeSpan.FromSeconds(10)) continue;
+                batch.Add(new PirepPosition(s.Latitude, s.Longitude, s.AltitudeFt, s.HeadingDeg, s.VerticalSpeedFpm,
+                    s.GroundSpeedKt, s.Time, groundRef is { } g ? s.AltitudeFt - g : null));
+                last = s.Time;
+            }
+            code = t.Phase switch
+            {
+                FlightPhase.TaxiOut => PirepStatus.Taxi,
+                FlightPhase.TakeoffRoll => PirepStatus.Takeoff,
+                FlightPhase.Climb => PirepStatus.InitialClimb,
+                FlightPhase.Cruise or FlightPhase.Descent => PirepStatus.Enroute,
+                FlightPhase.Approach => PirepStatus.Approach,
+                FlightPhase.Landing => PirepStatus.Landing,
+                FlightPhase.TaxiIn => PirepStatus.Landed,
+                FlightPhase.Arrived => PirepStatus.Arrived,
+                _ => null,
+            };
+            if (code == _liveStatusCode) code = null;
+        }
+
+        var client = CreateAirlineClient(out _);
+        if (client is null) return;
+        if (batch.Count > 0)
+        {
+            await client.SendPositionsAsync(id, batch).ConfigureAwait(false);
+            lock (_gate) foreach (var p in batch) _liveSent.Add(p.Time);
+        }
+        if (code is not null)
+        {
+            await client.UpdateAsync(id, new Dictionary<string, object?> { ["status"] = code }).ConfigureAwait(false);
+            lock (_gate) _liveStatusCode = code;
+        }
+        lock (_gate)
+            if (_livePirepId == id && _liveInfo?.StartsWith("Live-Verbindung gestört", StringComparison.Ordinal) == true)
+                _liveInfo = "Live bei der Airline – Verbindung wieder da.";
+    }
+
     // ---------- Airline (phpVMS) – nur lesend ----------
 
     /// <summary>Speichert Adresse/Schlüssel (falls angegeben), meldet den Piloten an und lädt die Buchungen.</summary>
@@ -561,7 +753,7 @@ public sealed class AcarsEngine : IDisposable
         if (client is null) return new ActionResult(false, error!);
         // Nichts gewählt, aber die Buchung trägt ein Flugzeug: das nehmen.
         string? bookedAircraft;
-        lock (_gate) bookedAircraft = _selectedBooking?.AircraftId;
+        lock (_gate) bookedAircraft = _selectedBooking?.AircraftId ?? _liveAircraftId;
         if (string.IsNullOrWhiteSpace(request.AircraftId) && string.IsNullOrWhiteSpace(request.Registration) && bookedAircraft is not null)
             request = request with { AircraftId = bookedAircraft };
 
@@ -587,6 +779,7 @@ public sealed class AcarsEngine : IDisposable
         PirepFile file;
         Dictionary<string, string> fields;
         List<PirepPosition> positions;
+        string? livePirep, liveAircraft;
         lock (_gate)
         {
             var problem = SubmitProblemLocked();
@@ -642,12 +835,27 @@ public sealed class AcarsEngine : IDisposable
                 level, route, string.Join("\n", notes), SourceName);
 
             positions = BuildPositions(t);
+            livePirep = _livePirepId;
+            liveAircraft = _liveAircraftId;
+            // Schon live gesendete Punkte nicht noch einmal schicken
+            // (Der Aufsetzpunkt geht trotzdem mit – er trägt die gemessene Landerate.)
+            var tdTime = t.TouchdownSample?.Time;
+            if (livePirep is not null) positions = positions.Where(p => !_liveSent.Contains(p.Time) || p.Time == tdTime).ToList();
         }
 
         string? pirepId = null;
         try
         {
-            pirepId = await client.PrefileAsync(prefile).ConfigureAwait(false);
+            if (livePirep is not null)
+            {
+                pirepId = livePirep;
+                if (request.AircraftId is not null && request.AircraftId != liveAircraft)
+                    await client.UpdateAsync(pirepId, new Dictionary<string, object?> { ["aircraft_id"] = request.AircraftId }).ConfigureAwait(false);
+            }
+            else
+            {
+                pirepId = await client.PrefileAsync(prefile).ConfigureAwait(false);
+            }
             if (positions.Count > 0) await client.SendPositionsAsync(pirepId, positions).ConfigureAwait(false);
             try
             {
@@ -673,7 +881,8 @@ public sealed class AcarsEngine : IDisposable
         }
         catch (AirlineException ex)
         {
-            if (pirepId is not null)
+            // Ein Live-Flug bleibt bestehen (erneut einreichen möglich); nur ein eben angelegter wird zurückgezogen.
+            if (pirepId is not null && livePirep is null)
             {
                 try { await client.CancelAsync(pirepId).ConfigureAwait(false); }
                 catch (AirlineException) { /* Rückzug fehlgeschlagen – Meldung unten reicht */ }
@@ -1043,6 +1252,9 @@ public sealed class AcarsEngine : IDisposable
                 airline = new
                 {
                     presetName = Preset?.Name,
+                    liveTracking = Settings.LiveTracking,
+                    live = _livePirepId is not null,
+                    liveInfo = _liveInfo,
                     url = Settings.AirlineUrl,
                     hasKey = Settings.HasAirlineApiKey,
                     pilot = _pilot?.Display,
@@ -1152,6 +1364,21 @@ public sealed class AcarsEngine : IDisposable
 
     private void ResetLocked()
     {
+        if (_livePirepId is { } live && _submittedPirepId is null)
+        {
+            // Nicht eingereichter Live-Flug: bei der Airline zurückziehen.
+            var client = CreateAirlineClient(out _);
+            if (client is not null) _ = Task.Run(async () =>
+            {
+                try { await client.CancelAsync(live).ConfigureAwait(false); AddNotice("Live-Flug bei der Airline zurückgezogen."); }
+                catch (AirlineException) { /* verfällt bei der Airline von selbst */ }
+            });
+        }
+        _livePirepId = null;
+        _liveAircraftId = null;
+        _liveSent.Clear();
+        _liveStatusCode = null;
+        _liveInfo = null;
         _builder = new SampleBuilder();
         _tracker = CreateTracker();
         _reportSaved = false;

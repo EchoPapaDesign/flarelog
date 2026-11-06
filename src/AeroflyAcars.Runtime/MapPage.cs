@@ -238,6 +238,7 @@ public static class MapPage
       <span id="rt">–</span>
       <span id="sb" class="badge">SB ✓</span>
       <span id="bookingTag">Buchung</span>
+      <span id="liveTag" class="badge" style="display:none" title="Der Flug wird live an die Airline gesendet">LIVE</span>
       <span id="ac"></span>
       <span class="spacer"></span>
       <span id="tod" class="num"></span>
@@ -353,6 +354,10 @@ public static class MapPage
       <div class="hint" id="alKeyHint">Wird verschlüsselt auf diesem PC gespeichert und nur an die Airline gesendet.</div>
     </div>
     <div class="row"><button class="btn primary" id="btnAlConnect">Verbinden &amp; Buchungen laden</button></div>
+    <label class="check" style="margin-top:12px"><input type="checkbox" id="alLive"> Live-Tracking: Flug ab dem Losrollen an die Airline melden</label>
+    <div class="hint">Der Flug erscheint dann während des Flugs auf der Live-Karte der Airline. Dafür braucht es eine Buchung
+      oder einen SimBrief-Plan (Ziel, Flugnummer) und ein bestimmbares Flugzeug.</div>
+    <div class="hint" id="alLiveInfo"></div>
     <div class="hint" id="alPilot" style="margin-top:12px"></div>
     <hr>
     <div class="field">
@@ -573,6 +578,7 @@ $('weatherOverlay').onclick = e => { if (e.target.id === 'weatherOverlay') $('we
 $('btnWxFetch').onclick = () => fetchWeather($('wxStation').value.trim());
 $('wxStation').onkeydown = e => { if (e.key === 'Enter') fetchWeather($('wxStation').value.trim()); };
 function segSet(id, on) { [...$(id).children].forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === !!on)); }
+$('alLive').onchange = () => post('/api/airline/live', { on: $('alLive').checked });
 $('segTime').onclick = e => { if (e.target.dataset.v) post('/api/conditions', { realTime: e.target.dataset.v === '1' }); };
 $('segWx').onclick = e => { if (e.target.dataset.v) post('/api/conditions', { realWeather: e.target.dataset.v === '1' }); };
 $('wxIcao').onchange = () => post('/api/conditions', { weatherIcao: $('wxIcao').value });
@@ -598,7 +604,8 @@ $('btnCopy').onclick = async () => {
 function fillAirline(inputs) {
   const a = lastState && lastState.airline;
   if (!a) return;
-  if (inputs) { $('alUrl').value = a.url || ''; $('alKey').value = ''; }
+  if (inputs) { $('alUrl').value = a.url || ''; $('alKey').value = ''; $('alLive').checked = !!a.liveTracking; }
+  $('alLiveInfo').textContent = a.liveInfo || '';
   $('alTitle').textContent = a.presetName || 'Airline';
   $('alKeyHint').textContent = a.hasKey
     ? 'Ein Schlüssel ist gespeichert. Nur ausfüllen, um ihn zu ersetzen.'
@@ -792,6 +799,8 @@ async function tick() {
   }
   $('bookingTag').style.display = h.booking ? 'inline-block' : 'none';
   if (h.booking) $('bookingTag').textContent = `Buchung ${h.booking}`;
+  $('liveTag').style.display = s.airline && s.airline.live ? 'inline-block' : 'none';
+  if (s.airline) $('liveTag').title = s.airline.liveInfo || 'Live an die Airline';
   if ($('airlineOverlay').classList.contains('show')) fillAirline(false);
   $('ac').textContent = h.aircraft ?? '';
   $('tod').textContent = s.progress && s.progress.todNm != null ? `TOD in ${de(s.progress.todNm)} nm` : '';

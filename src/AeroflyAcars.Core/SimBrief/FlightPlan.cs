@@ -10,6 +10,8 @@ public sealed record FlightPlan
     public string? Airline { get; init; }
     public string? FlightNumber { get; init; }
     public string? AircraftType { get; init; }
+    /// <summary>Kennzeichen aus SimBrief, z. B. "D-AXVA".</summary>
+    public string? AircraftRegistration { get; init; }
     public string? Airac { get; init; }
 
     public string OriginIcao { get; init; } = "";

@@ -62,6 +62,11 @@ Start war. Niederschlag, Gewitter, Temperatur und Luftdruck kann Aerofly nicht �
 
 Ob deine VA PIREPs von Flarelog annimmt, entscheidet die VA. Frag im Zweifel vorher nach.
 
+**Live-Tracking:** Ist es im Airline-Fenster eingeschaltet (Standard), meldet Flarelog den Flug beim Losrollen an die
+VA – du erscheinst dann auf ihrer Live-Karte, oben steht **LIVE**. Dafür braucht es eine Buchung oder einen
+SimBrief-Plan und ein Flugzeug (aus der Buchung oder das SimBrief-Kennzeichen). Klappt das nicht, steht der Grund im
+Airline-Fenster und der Flug geht wie bisher nach der Landung raus.
+
 ## 5. Fliegen
 
 - Am **Gate oder auf dem Vorfeld stehend** beginnen, nicht in der Luft.
