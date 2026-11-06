@@ -584,6 +584,48 @@ t.Test("Landung auf geneigter Bahn: kein Fehlalarm im Endanflug, Aufsetzen nach 
     t.Range((announced[0].Time - contact).TotalSeconds, 0, 4, "Ansage kurz nach dem Aufsetzen");
 });
 
+t.Test("Harte Landung mit Bounces: erster Bodenkontakt zählt, nicht das spätere Ausrollen", () =>
+{
+    const string rwyCsv = """
+"id","airport_ref","airport_ident","length_ft","width_ft","surface","lighted","closed","le_ident","le_latitude_deg","le_longitude_deg","le_elevation_ft","le_heading_degT","le_displaced_threshold_ft","he_ident","he_latitude_deg","he_longitude_deg","he_elevation_ft","he_heading_degT","he_displaced_threshold_ft"
+1,1,"XDFW",13400,150,"CON",1,0,"36",32.860,-97.0,600,0,,"18",32.897,-97.0,600,180,
+""";
+    var runways = RunwayDatabase.ParseCsv(new StringReader(rwyCsv));
+    var apt = new Airport("XDFW", "Testplatz", "large_airport", 32.88, -97.0, 607, null, "XDFW");
+    var tracker = new FlightTracker(null, null, new AirportDatabase(new[] { apt }), runways);
+    var announced = new List<double>();
+    tracker.TouchdownDetected += (_, r) => announced.Add(r);
+
+    const double floor = 605;
+    var b = new SampleBuilder();
+    var start = new DateTimeOffset(2026, 11, 6, 12, 50, 0, TimeSpan.Zero);
+    double lat = 32.823, alt = 2000, gs = 65;
+    int sec = 0;
+    DateTimeOffset contact = default;
+    void Step(double vsFpm, double decelKt = 0)
+    {
+        gs = Math.Max(0, gs - decelKt);
+        lat += gs / 3600.0 / 60.0;
+        alt = Math.Max(floor, alt + vsFpm / 60.0);
+        var smp = b.Add(new GpsMessage("T", -97.0, lat, Math.Round(alt / Geo.FeetPerMeter, 1), 0, gs / Geo.KnotsPerMeterPerSecond),
+            start.AddSeconds(++sec));
+        if (smp is not null) tracker.Add(smp);
+    }
+
+    while (alt > floor) Step(-600);                               // Endanflug ohne Abfangen, Bodenkontakt über der Bahn
+    contact = start.AddSeconds(sec);
+    Step(420); Step(420); Step(-300); Step(-300); Step(-300);    // Bounce ~14 ft
+    Step(150); Step(-200); Step(-200);                            // zweiter, kleiner Bounce
+    for (int i = 0; i < 30 && gs > 0; i++) Step(0, decelKt: 2);  // ausrollen
+
+    t.True(tracker.Touchdown is not null, "Landung erkannt");
+    t.Range((tracker.Touchdown!.Value - contact).TotalSeconds, -1.5, 1.5, "Aufsetzzeitpunkt (s ggü. erstem Kontakt)");
+    t.Range(tracker.LandingRateFpm!.Value, -800, -450, "Landerate des ersten Kontakts");
+    t.Equal(1, announced.Count);
+    t.Range(announced[0], -800, -450, "angesagte Landerate");
+    t.Range(FlightAnalysis.Analyze(tracker, runways).Bounces, 1, 3, "Bounces");
+});
+
 t.Test("METAR lesen (Europa, USA, CAVOK, Meilenbrüche)", () =>
 {
     var a = Metar.Parse("LOWI 061220Z 25008KT 9999 FEW045 BKN080 08/02 Q1018 NOSIG")!;

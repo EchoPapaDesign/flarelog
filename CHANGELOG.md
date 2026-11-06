@@ -1,5 +1,10 @@
 # Änderungen
 
+## In Arbeit
+
+- Harte Landung mit Bounces: Gewertet wird jetzt der erste Bodenkontakt, nicht das spätere sanfte Ausrollen
+  (vorher z. B. −124 fpm statt ca. −600 fpm und 0 statt mehrerer Bounces)
+
 ## 0.9.0-beta.1 – erste öffentliche Beta
 
 - Live-Tracking über den UDP-Broadcast von Aerofly FS 4, Flugphasen und Pausen-Erkennung

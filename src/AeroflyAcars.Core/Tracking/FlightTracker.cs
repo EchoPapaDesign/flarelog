@@ -54,6 +54,13 @@ public sealed class FlightTracker
     public const double AnnounceNearFieldFt = 75;
     /// <summary>Über einer bekannten Bahn: höher als das ist kein Aufsetzen, sondern ein Abfangen in der Luft.</summary>
     public const double CandidateMaxAboveRunwayFt = 60;
+    /// <summary>So nah an der späteren Rollhöhe gilt ein Messpunkt als Bodenkontakt (erster Kontakt vor Bounces).</summary>
+    public const double FirstContactFt = 1.5;
+    /// <summary>Kehrt sich das Sinken so dicht über der Rollhöhe um, war das ein Bodenkontakt (Bounce).</summary>
+    public const double FirstContactReversalFt = 6;
+    /// <summary>Um so viel muss es nach einer Umkehr wieder hochgehen, damit sie als Bounce zählt.</summary>
+    public const double BounceRiseFt = 2;
+    public static readonly TimeSpan FirstContactLookBack = TimeSpan.FromSeconds(30);
 
     private static readonly CultureInfo De = CultureInfo.GetCultureInfo("de-DE");
 
@@ -440,12 +447,15 @@ public sealed class FlightTracker
                 HeightAboveGround(cand.Sample, cand.Airport) is { Height: { } h } g && Math.Abs(h) <= g.AnnounceLimit)
             {
                 cand.Announced = true;
-                TouchdownDetected?.Invoke(cand.Sample, cand.LandingRateFpm);
+                var first = FirstContact(cand);
+                TouchdownDetected?.Invoke(first.Sample, first.LandingRateFpm);
             }
             return false;
         }
 
         _candidate = null;
+        // Nach Bounces liegt der Kandidat erst beim endgültigen Ausrollen – gezählt wird der erste Bodenkontakt.
+        cand = FirstContact(cand);
         if (!cand.Announced) TouchdownDetected?.Invoke(cand.Sample, cand.LandingRateFpm);
         Touchdown = cand.Sample.Time;
         TouchdownSample = cand.Sample;
@@ -454,6 +464,61 @@ public sealed class FlightTracker
         SetPhase(FlightPhase.Landing, cand.Sample.Time,
             $"Aufsetzen mit {cand.LandingRateFpm:F0} fpm bei {cand.Sample.GroundSpeedKt:F0} kt" + At(ArrivalAirport));
         return true;
+    }
+
+    /// <summary>
+    /// Sucht vor dem Kandidaten (Flugzeug rollt auf der Bahn) den ersten Bodenkontakt. Bei einer harten Landung
+    /// springt das Flugzeug wieder hoch; jedes erneute Sinken gilt dann als Ausschweben, und der Kandidat landet
+    /// erst beim letzten, sanften Kontakt. Die Höhe beim Ausrollen ist die echte Bodenhöhe im Simulator – der
+    /// erste Messpunkt, der ihr nahekommt (oder dicht darüber wieder hochgeht), ist das eigentliche Aufsetzen.
+    /// </summary>
+    private TouchdownCandidate FirstContact(TouchdownCandidate cand)
+    {
+        int ci = _samples.LastIndexOf(cand.Sample);
+        if (ci <= 0) return cand;
+
+        double? gCand = cand.Airport is null ? null : _runways?.GroundElevationAt(cand.Airport, cand.Sample.Latitude, cand.Sample.Longitude);
+        double Ground(FlightSample x) =>
+            (cand.Airport is null ? null : _runways?.GroundElevationAt(cand.Airport, x.Latitude, x.Longitude)) ?? gCand ?? 0;
+        double H(int i) => _samples[i].AltitudeFt - Ground(_samples[i]) - (cand.Sample.AltitudeFt - Ground(cand.Sample));
+
+        // Rückwärts nur der zusammenhängende tiefe Teil direkt vor dem Kandidaten.
+        int start = ci;
+        for (int i = ci - 1; i >= 0; i--)
+        {
+            if (cand.Sample.Time - _samples[i].Time > FirstContactLookBack || H(i) > TouchdownToleranceFt) break;
+            start = i;
+        }
+
+        for (int i = start; i < ci; i++)
+        {
+            double h = H(i);
+            bool contact = h <= FirstContactFt;
+            if (!contact && h <= FirstContactReversalFt && i > 0 && H(i - 1) > h)
+            {
+                // Tiefster Punkt (zwischen zwei Messpunkten verpasst): danach geht es deutlich wieder hoch.
+                for (int j = i + 1; j <= ci && _samples[j].Time - _samples[i].Time <= TimeSpan.FromSeconds(3); j++)
+                {
+                    if (H(j) < h) break;
+                    if (H(j) >= h + BounceRiseFt) { contact = true; break; }
+                }
+            }
+            if (!contact) continue;
+            if (i == 0) return cand;
+
+            var x = _samples[i];
+            var p = _samples[i - 1];
+            double dt = (x.Time - p.Time).TotalSeconds;
+            // Sinkrate gegenüber der Bahn direkt vor dem Kontakt (berechnete VS, Bahnneigung herausgerechnet).
+            double slope = dt > 0 ? (Ground(x) - Ground(p)) / dt * 60 : 0;
+            double rate = Math.Min(p.VerticalSpeedFpm, x.VerticalSpeedFpm) - slope;
+            if (dt > 0) rate = Math.Min(rate, (H(i) - H(i - 1)) / dt * 60);
+            return new TouchdownCandidate(x, Math.Min(rate, cand.LandingRateFpm), cand.FieldElevationKnown, cand.Airport)
+            {
+                Announced = cand.Announced,
+            };
+        }
+        return cand;
     }
 
     private static bool SamePosition(FlightSample a, FlightSample b) =>
