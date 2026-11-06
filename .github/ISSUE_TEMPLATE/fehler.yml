@@ -1,0 +1,41 @@
+name: Fehler melden
+description: Etwas funktioniert nicht wie erwartet
+title: "[Fehler] "
+labels: ["fehler"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke, dass du hilfst, Flarelog besser zu machen! Bitte trag keine API-Schlüssel oder Passwörter ein.
+  - type: textarea
+    id: was
+    attributes:
+      label: Was ist passiert?
+      description: Was hast du gemacht, was ist passiert, und was hättest du erwartet?
+      placeholder: z. B. Die Landung wurde schon 3 Sekunden vor dem Aufsetzen angesagt.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Flarelog-Version
+      description: steht unter dem Zahnrad ganz unten
+      placeholder: z. B. 0.9.0-beta.1
+    validations:
+      required: true
+  - type: input
+    id: flug
+    attributes:
+      label: Flugzeug und Flughäfen
+      placeholder: z. B. Cessna 172, KAFW → KDFW
+  - type: input
+    id: airline
+    attributes:
+      label: Virtuelle Airline (falls betroffen)
+      placeholder: z. B. phpVMS-Airline, ohne Airline
+  - type: textarea
+    id: bericht
+    attributes:
+      label: Flugbericht
+      description: Inhalt der .txt-Datei aus Dokumente\Flarelog\Fluege – oder die Datei hier hineinziehen.
+      render: text

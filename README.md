@@ -1,50 +1,97 @@
-<img src="docs/flarelog.png" width="96" alt="Flarelog-Logo">
+<p align="center"><img src="docs/flarelog.png" width="110" alt="Flarelog-Logo"></p>
 
-# Flarelog
+<h1 align="center">Flarelog</h1>
+<p align="center"><b>ACARS für Aerofly FS 4</b> – Live-Tracking, Landeauswertung mit Sprachansage,<br>
+SimBrief, Wetter und PIREPs an virtuelle Airlines</p>
 
-ACARS für **Aerofly FS 4**: Live-Tracking, Landeauswertung mit Sprachansage, SimBrief-Flugpläne und
-PIREPs an virtuelle Airlines mit **phpVMS 7**.
+> [!IMPORTANT]
+> **Flarelog ist eine Beta.** Das Programm ist neu und wird gerade von den ersten Piloten getestet.
+> **Dein Feedback ist dringend erbeten:** Was funktioniert, was nicht, was fehlt dir?
+> → [Fehler melden oder Wunsch äußern](https://github.com/EchoPapaDesign/flarelog/issues/new/choose)
 
-Aerofly FS 4 bietet keine SimConnect-Schnittstelle, deshalb unterstützen die gängigen ACARS-Programme
-Aerofly nicht. Flarelog liest stattdessen den eingebauten UDP-Broadcast von Aerofly mit.
+## Worum geht es?
+
+Aerofly FS 4 hat keine SimConnect-Schnittstelle – deshalb laufen die üblichen ACARS-Programme wie smartCARS,
+vmsACARS oder Stratos nicht mit Aerofly. **Flarelog** schließt diese Lücke: Es liest den eingebauten
+Daten-Broadcast von Aerofly mit, zeichnet deinen Flug auf, bewertet deine Landung und meldet den Flug auf Wunsch
+an deine virtuelle Airline – live während des Flugs und als PIREP danach.
+
+Flarelog ist kostenlos, läuft komplett auf deinem PC und braucht keine Installation.
 
 ## Funktionen
 
-- **Display** im eigenen Fenster: Karte mit geflogener und geplanter Route, Höhe, Groundspeed, Vertikalgeschwindigkeit,
-  Air Time, Distanz zum Ziel, nächster Wegpunkt, ETA, Flight Log
-- **Flugphasen** automatisch: Rollen, Startlauf, Steig-/Reise-/Sinkflug, Anflug, Landung, Block on;
-  Pausen werden erkannt
-- **Landung:** Landerate mit Sprachansage („Touchdown with 180 feet per minute. Good.“), Bounces,
-  Stabilität im Endanflug, Rollout, Start- und Landebahn
-- **Uhrzeit und Wetter:** auf Wunsch echte Zeit und METAR-Wetter des Abflugplatzes beim Start von Aerofly
-- **Kontrolle:** Zeitraffer- und Slew-Erkennung, Abgleich des in Aerofly gewählten Flugzeugs mit der Buchung
-- **SimBrief:** letzten Flugplan laden, Route auf der Karte, Routenübersicht (SID, Strecke, STAR), Soll-Ist-Vergleich im Bericht
-- **Virtuelle Airlines (phpVMS 7):** gebuchte Flüge laden, nach dem Flug PIREP einreichen – inklusive
-  Positionen und Auswertung
-- **Flugbericht** als Text und JSON in `Dokumente\Flarelog\Fluege`
+**Flug verfolgen**
+- Eigenes Fenster mit Karte: geflogene und geplante Route, Höhe, Groundspeed, Vertikalgeschwindigkeit,
+  Air Time, Distanz zum Ziel, nächster Wegpunkt, ETA
+- Flugphasen automatisch: Block off, Rollen, Start, Steig-, Reise- und Sinkflug, Anflug, Landung, Block on
+- Pausen, Zeitraffer und Slew werden erkannt und im Bericht vermerkt
+- Anzeige, welches Flugzeug in Aerofly gerade geflogen wird
 
-> **Beta:** Flarelog ist neu. Fehler und Wünsche bitte unter [Issues](https://github.com/EchoPapaDesign/flarelog/issues) melden.
+**Landung bewerten**
+- Landerate mit Sprachansage: *„Touchdown with 180 feet per minute. Good.“*
+- Bounces, Stabilität im Endanflug, Rollout, Start- und Landebahn, Tag/Nacht
+- Berücksichtigt geneigte Bahnen und erkennt das Ausschweben über der Bahn
 
-## Download und Start
+**Planen und Wetter**
+- SimBrief: letzten Flugplan laden, Route auf der Karte, Übersicht mit SID, Strecke und STAR
+- Wetter-Fenster mit aktuellem **METAR und TAF** für jeden Flugplatz
+- Auf Wunsch **echte Uhrzeit** und **echtes Wetter** des Abflugplatzes beim Start von Aerofly
 
-1. Unter [**Releases**](https://github.com/EchoPapaDesign/flarelog/releases) die neueste `Flarelog.exe` herunterladen.
-2. An einen beliebigen Ort legen (z. B. Desktop) und starten. Eine Installation ist nicht nötig, .NET ist enthalten.
-3. Windows zeigt beim ersten Start eventuell „Der Computer wurde durch Windows geschützt“, weil das Programm
-   (noch) nicht signiert ist: **Weitere Informationen → Trotzdem ausführen**.
-4. Fragt die Windows-Firewall nach: Zugriff für **private Netzwerke** erlauben.
+**Virtuelle Airlines (phpVMS 7)**
+- Gebuchte Flüge laden – oder als freier Flug ohne Buchung
+- **Live-Tracking:** Ab dem Losrollen erscheinst du auf der Live-Karte deiner Airline
+- **PIREP** nach dem Flug: Zeiten, Strecke, Landerate, Positionen und die komplette Auswertung
+- Abgleich des gebuchten Flugzeugs mit dem in Aerofly gewählten
+- Für Airlines ohne passende Schnittstelle: **„Daten kopieren“** für das manuelle PIREP-Formular
 
-Voraussetzung: Windows 10 oder 11 (64 Bit), Aerofly FS 4.
+**Berichte**
+- Jeder Flug als Text- und JSON-Datei in `Dokumente\Flarelog\Fluege`
 
-Ausführliche Anleitung: **[docs/PILOTEN.md](docs/PILOTEN.md)**
+## Schnellstart
 
-## Kurz eingerichtet
+**1. Herunterladen**
+Unter [**Releases**](https://github.com/EchoPapaDesign/flarelog/releases) die neueste `Flarelog.exe`
+herunterladen und an einen beliebigen Ort legen, z. B. auf den Desktop.
+Voraussetzung: Windows 10 oder 11 (64 Bit) und Aerofly FS 4.
 
-1. **Aerofly:** Einstellungen → Sonstige Einstellungen → „Sende Fluginformation an IP Addresse“ **an**,
-   Broadcast IP Addresse **127.000.000.001**, Broadcast IP port **49002**.
-2. **SimBrief (optional):** Zahnrad → SimBrief-Benutzer eintragen → „Plan laden“.
-3. **Airline (optional):** Koffer-Symbol → Webseite der VA und persönlichen API-Schlüssel eintragen →
-   „Verbinden & Buchungen laden“ → gebuchten Flug anklicken.
-4. Fliegen. Nach dem Block on im Flight Log **„An Airline senden“**.
+**2. Starten**
+Doppelklick auf `Flarelog.exe`. Beim ersten Start:
+- „Der Computer wurde durch Windows geschützt“ → **Weitere Informationen** → **Trotzdem ausführen**
+  (das Programm ist noch nicht digital signiert)
+- Windows-Firewall → Zugriff für **private Netzwerke** erlauben
+
+**3. Aerofly einstellen** – Einstellungen → **Sonstige Einstellungen**:
+
+| Einstellung | Wert |
+|---|---|
+| Sende Fluginformation an IP Addresse | **an** |
+| Broadcast IP Addresse | **127.000.000.001** |
+| Broadcast IP port | **49002** |
+
+Oben in Flarelog steht dann grün **„Verbunden mit Aerofly FS 4“**.
+
+**4. Optional einrichten**
+- **SimBrief:** Zahnrad → SimBrief-Benutzername → **Plan laden**
+- **Airline:** Koffer-Symbol → Webseite der VA und persönlicher API-Schlüssel → **Verbinden & Buchungen laden**
+  → gebuchten Flug anklicken
+- **Uhrzeit/Wetter:** rechts oben auf **Real** stellen, bevor du Aerofly startest
+
+**5. Fliegen**
+Am Gate oder Vorfeld beginnen und losrollen – Flarelog zeichnet alles automatisch auf. Nach der Landung
+30 Sekunden an der Parkposition stehen bleiben (oder **Beenden** klicken), dann im Flight Log
+**„An Airline senden“**.
+
+📖 Ausführliche Anleitung mit Problemlösungen: **[docs/PILOTEN.md](docs/PILOTEN.md)**
+
+## Feedback
+
+Flarelog wird mit deinen Rückmeldungen besser. Bitte melde:
+- **Fehler** – z. B. Landung falsch erkannt, PIREP abgelehnt, Programm hängt
+- **Wünsche** – was dir im Flug oder bei deiner Airline fehlt
+
+→ [**Neue Meldung anlegen**](https://github.com/EchoPapaDesign/flarelog/issues/new/choose)
+(kostenloses GitHub-Konto nötig). Am meisten hilft der Flugbericht (`.txt` aus `Dokumente\Flarelog\Fluege`),
+dazu Flugzeug, Flughafen und was genau passiert ist.
 
 ## Für VA-Betreiber
 
@@ -56,7 +103,6 @@ werden. Was genau ankommt und was Aerofly nicht liefern kann: **[docs/VA-BETREIB
 Aerofly sendet Position, GPS-Höhe, Track, Groundspeed sowie Steuerkurs, Pitch und Roll. Daraus berechnet
 Flarelog alles Weitere. **Nicht verfügbar** sind Treibstoff, Gewichte, Fahrwerk, Klappen, Wind,
 Höhe über Grund und ein „am Boden“-Signal. Die Landerate wird deshalb aus der GPS-Höhe berechnet.
-Hubschrauber werden noch nicht unterstützt (Schwebeflug, Landungen ohne Ausrollen).
 
 ## Bekannte Grenzen
 
@@ -121,8 +167,8 @@ Das Programm meldet neue Versionen über `GitHubRepository` in `src/AeroflyAcars
 | Steig-/Sinkflug | berechnete Vertikalgeschwindigkeit > +300 / < −300 fpm (5 s bestätigt) |
 | Reiseflug | Höhe hält sich; mit SimBrief: ab geplanter Höhe − 1000 ft |
 | Anflug | Sinken unter 3000 ft über Platzhöhe |
-| Aufsetzen | Sinken endet, Position läuft weiter, Höhe bleibt stehen; bestätigt bei < 50 kt und mind. 8 kt langsamer |
-| Landerate | Vertikalgeschwindigkeit der letzten 2 s vor dem Aufsetzen |
+| Aufsetzen | Sinken endet über der Bahn (Bahnneigung herausgerechnet), weiteres Sinken = Ausschweben; bestätigt bei < 50 kt und mind. 8 kt langsamer |
+| Landerate | Vertikalgeschwindigkeit der letzten 2 s vor dem Aufsetzen, gegenüber der Bahn |
 | Pause | Position steht ≥ 3 s, obwohl das Flugzeug laut Groundspeed > 50 m weit gekommen wäre |
 | Zeitraffer | gefahrene Strecke / (Groundspeed × Zeit), Median über 5 s |
 | Slew | Sprung > 0,3 NM schneller als max(250 kt, 4,5 × Groundspeed) oder > 2000 ft Höhe |

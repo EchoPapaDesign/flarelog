@@ -1,0 +1,17 @@
+name: Wunsch oder Idee
+description: Etwas fehlt dir oder könnte besser sein
+title: "[Wunsch] "
+labels: ["wunsch"]
+body:
+  - type: textarea
+    id: wunsch
+    attributes:
+      label: Was wünschst du dir?
+      placeholder: z. B. Unterstützung für Hubschrauber-Landungen
+    validations:
+      required: true
+  - type: textarea
+    id: warum
+    attributes:
+      label: Wofür brauchst du es?
+      description: Hilft beim Einschätzen – z. B. was deine Airline verlangt.
