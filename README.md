@@ -30,7 +30,7 @@ Flarelog ist kostenlos, läuft komplett auf deinem PC und braucht keine Installa
 **Landung bewerten**
 - Landerate mit Sprachansage: *„Touchdown with 180 feet per minute. Good.“*
 - Bounces, Stabilität im Endanflug, Rollout, Start- und Landebahn, Tag/Nacht
-- Berücksichtigt geneigte Bahnen und erkennt das Ausschweben über der Bahn
+- Berücksichtigt geneigte Bahnen (auch Courchevel) und erkennt das Ausschweben über der Bahn
 
 **Planen und Wetter**
 - SimBrief: letzten Flugplan laden, Route auf der Karte, Übersicht mit SID, Strecke und STAR
@@ -133,7 +133,7 @@ src/AeroflyAcars.App        Konsolenversion (Fehlersuche)
 src/AeroflyAcars.SimDummy   Aerofly-Ersatz: sendet einen künstlichen 13-Minuten-Flug
 tests/AeroflyAcars.SelfTest Selbsttest (ohne Testframework)
 publish.cmd                 Erzeugt lokal publish\Flarelog.exe
-.github/workflows           Build bei jedem Push, Release mit .exe bei Tag v*
+.github/workflows           Build bei jedem Push, Flarelog.exe an jedes veröffentlichte Release
 ```
 
 Die Projektordner heißen noch `AeroflyAcars.*` (Name bis Version 0.9); das Programm selbst heißt Flarelog.
@@ -147,14 +147,9 @@ dotnet run --project src\AeroflyAcars.Desktop
 dotnet run --project src\AeroflyAcars.SimDummy         # Testflug ohne Aerofly
 ```
 
-**Neue Version veröffentlichen:** Version in `Directory.Build.props` anpassen, Eintrag in `CHANGELOG.md` ergänzen, dann
-
-```
-git tag v0.9.0-beta.1
-git push origin v0.9.0-beta.1
-```
-
-GitHub baut, testet und legt ein Release mit `Flarelog.exe` an (Versionen mit `-` als Vorabversion).
+**Neue Version veröffentlichen:** Version in `Directory.Build.props` anpassen, Eintrag in `CHANGELOG.md` ergänzen,
+dann auf GitHub unter Releases → *Draft a new release* einen neuen Tag wie `v0.9.0-beta.2` anlegen und veröffentlichen.
+GitHub baut, testet und hängt `Flarelog.exe` an das Release an.
 Das Programm meldet neue Versionen über `GitHubRepository` in `src/AeroflyAcars.Core/AppInfo.cs`.
 
 ### Wie die Erkennung funktioniert

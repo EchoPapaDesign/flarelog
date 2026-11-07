@@ -1,21 +1,5 @@
 # Änderungen
 
-## In Arbeit
-
-- Start bergab auf geneigter Bahn: Abheben wird gegenüber der Bahn erkannt, nicht gegenüber der Höhe am Startpunkt
-- Keine Landeansage mehr in der Luft, wenn ohne Bahndaten nur die Platzhöhe bekannt ist (Abfangen knapp unter Platzhöhe)
-- Steile Bahnen (z. B. Courchevel): Landung wird auch erkannt, wenn die Höhe beim Ausrollen bergauf steigt;
-  die Landerate wird gegenüber der Bahnneigung berechnet, auch wenn mit Leistung bergauf gerollt wird;
-  Ausrollen bergauf zählt nicht als Bounce, das Abfangen gegen den Hang nicht als Durchstarten
-- Stop-and-go / Platzrunden mit Ausrollen: erneuter Start wird erkannt, gewertet wird die letzte Landung
-- Durchstarten nur, wenn der Anflug unter 1000 ft über Platz ging – Manöver in der Platzrunde zählen nicht mehr
-- Flight Log: Landungs-Box und Fußzeile überlappen nicht mehr
-- Wetter: Ein eingetragener Flugplatz wird verworfen, sobald Aerofly an einem anderen Platz steht
-- Höhenmesser verstellt: Aerofly sendet die angezeigte Höhe. Wird am Höhenmesser gedreht (z. B. auf 0 am
-  Abflugplatz), gleicht Flarelog den Sprung aus – Abheben, Bodenhöhe am Ziel und Positionen für die Airline stimmen wieder
-- Landung mit Bounces: Gewertet wird der erste Bodenkontakt (auf 1,5 ft an der Rollhöhe), nicht erst das
-  spätere sanfte Ausrollen. Ein Wiederansteigen im Flare ohne Bodenkontakt zählt weiterhin nicht als Bounce.
-
 ## 0.9.0-beta.1 – erste öffentliche Beta
 
 - Live-Tracking über den UDP-Broadcast von Aerofly FS 4, Flugphasen und Pausen-Erkennung
@@ -29,3 +13,7 @@
 - „Daten kopieren“ für manuelle PIREP-Formulare
 - Wetter-Fenster mit METAR und TAF; auf Wunsch echte Zeit und Abflug-Wetter beim Start von Aerofly
 - Flugberichte als Text und JSON
+- Steile Bahnen wie Courchevel: Start bergab und Landung bergauf werden erkannt, Landerate gegenüber der Bahnneigung
+- Bounces: Gewertet wird der erste Bodenkontakt; Abfangen im Flare zählt nicht als Bounce
+- Verstellter Höhenmesser (Aerofly sendet die angezeigte Höhe) wird ausgeglichen
+- Platzrunden und Stop-and-go: kein falsches Durchstarten, erneuter Start wird erkannt
