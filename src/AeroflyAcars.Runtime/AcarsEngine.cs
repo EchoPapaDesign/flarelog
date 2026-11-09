@@ -13,7 +13,7 @@ namespace AeroflyAcars.Runtime;
 
 public sealed record ActionResult(bool Ok, string Message, string? Text = null, object? Data = null);
 public sealed record SettingsUpdate(string? SimBriefUser, bool? Voice, bool? LoadSimBriefOnStart,
-    string? AirlineUrl = null, string? AirlineApiKey = null);
+    string? AirlineUrl = null, string? AirlineApiKey = null, string? Language = null);
 public sealed record SimBriefRequest(string? User);
 public sealed record WeatherRequest(string? Icao);
 public sealed record ConditionsRequest(bool? RealTime, bool? RealWeather, string? WeatherIcao = null);
@@ -71,6 +71,7 @@ public sealed class AcarsEngine : IDisposable
     public AcarsEngine(AcarsSettings settings, AirlinePreset? preset = null)
     {
         Settings = settings;
+        Settings.ApplyLanguage();
         Preset = preset ?? AirlinePreset.Load();
         // Airline-Edition: Adresse beim ersten Start übernehmen, eine eigene Eingabe des Piloten bleibt.
         if (Preset?.Url is { } presetUrl && string.IsNullOrWhiteSpace(Settings.AirlineUrl))
@@ -100,15 +101,18 @@ public sealed class AcarsEngine : IDisposable
     /// </summary>
     public event Action? QuitRequested;
 
+    private static string L(string de, string en) => Lang.T(de, en);
+    private static string LiveTroublePrefix => L("Live-Verbindung gestört: ", "Live connection disrupted: ");
+
     public ActionResult RequestQuit()
     {
-        if (QuitRequested is null) return new ActionResult(false, "Bitte das Programmfenster schließen.");
+        if (QuitRequested is null) return new ActionResult(false, L("Bitte das Programmfenster schließen.", "Please close the program window."));
         _ = Task.Run(async () =>
         {
             await Task.Delay(300).ConfigureAwait(false);   // Antwort noch an die Seite schicken
             QuitRequested?.Invoke();
         });
-        return new ActionResult(true, "Flarelog wird beendet …");
+        return new ActionResult(true, L("Flarelog wird beendet …", "Flarelog is quitting …"));
     }
 
     /// <summary>Es wird gerade ein Flug aufgezeichnet, dessen Bericht noch nicht gespeichert ist.</summary>
@@ -149,7 +153,7 @@ public sealed class AcarsEngine : IDisposable
                 server.Dispose();
             }
         }
-        AddNotice($"Display konnte nicht gestartet werden (Ports {Settings.DisplayPort}–{Settings.DisplayPort + 9} belegt).");
+        AddNotice(L($"Display konnte nicht gestartet werden (Ports {Settings.DisplayPort}–{Settings.DisplayPort + 9} belegt).", $"Display could not be started (ports {Settings.DisplayPort}–{Settings.DisplayPort + 9} in use)."));
         return null;
     }
 
@@ -160,7 +164,7 @@ public sealed class AcarsEngine : IDisposable
             var update = await UpdateChecker.CheckAsync(AppInfo.GitHubRepository, AppInfo.Version).ConfigureAwait(false);
             if (update is null) return;
             lock (_gate) _update = update;
-            AddNotice($"Neue Version {update.Version} verfügbar.");
+            AddNotice(L($"Neue Version {update.Version} verfügbar.", $"New version {update.Version} available."));
         });
 
         var airportsTask = AirportDataLoader.LoadAsync();
@@ -234,12 +238,12 @@ public sealed class AcarsEngine : IDisposable
     {
         lock (_gate)
         {
-            if (_reportSaved) return new ActionResult(true, "Bericht ist bereits gespeichert.");
-            if (_tracker.Samples.Count == 0) return new ActionResult(false, "Noch keine Flugdaten aufgezeichnet.");
+            if (_reportSaved) return new ActionResult(true, L("Bericht ist bereits gespeichert.", "Report has already been saved."));
+            if (_tracker.Samples.Count == 0) return new ActionResult(false, L("Noch keine Flugdaten aufgezeichnet.", "No flight data recorded yet."));
             var path = SaveReportLocked();
             return path is null
-                ? new ActionResult(false, "Bericht konnte nicht gespeichert werden.")
-                : new ActionResult(true, $"Bericht gespeichert: {Path.GetFileName(path)}");
+                ? new ActionResult(false, L("Bericht konnte nicht gespeichert werden.", "Report could not be saved."))
+                : new ActionResult(true, L("Bericht gespeichert: ", "Report saved: ") + Path.GetFileName(path));
         }
     }
 
@@ -251,11 +255,11 @@ public sealed class AcarsEngine : IDisposable
             if (_tracker.Samples.Count > 0 && _tracker.Phase != FlightPhase.Preflight && !_reportSaved)
             {
                 SaveReportLocked();
-                extra = " Der bisherige Flug wurde als Teilbericht gespeichert.";
+                extra = L(" Der bisherige Flug wurde als Teilbericht gespeichert.", " The previous flight was saved as a partial report.");
             }
             ResetLocked();
-            AddNotice("Neuer Flug – bereit zur Aufzeichnung.");
-            return new ActionResult(true, "Neuer Flug gestartet." + extra);
+            AddNotice(L("Neuer Flug – bereit zur Aufzeichnung.", "New flight – ready to record."));
+            return new ActionResult(true, L("Neuer Flug gestartet.", "New flight started.") + extra);
         }
     }
 
@@ -263,7 +267,7 @@ public sealed class AcarsEngine : IDisposable
     {
         user = string.IsNullOrWhiteSpace(user) ? Settings.SimBriefUser : user.Trim();
         if (string.IsNullOrWhiteSpace(user))
-            return new ActionResult(false, "Kein SimBrief-Benutzer eingetragen.");
+            return new ActionResult(false, L("Kein SimBrief-Benutzer eingetragen.", "No SimBrief user entered."));
 
         FlightPlan plan;
         try
@@ -288,7 +292,7 @@ public sealed class AcarsEngine : IDisposable
             }
             else
             {
-                message = $"SimBrief: {plan.Summary} – gilt ab dem nächsten Flug";
+                message = $"SimBrief: {plan.Summary}" + L(" – gilt ab dem nächsten Flug", " – applies from the next flight");
             }
         }
         AddNotice(message);
@@ -319,7 +323,7 @@ public sealed class AcarsEngine : IDisposable
         if (!Settings.RealTime && !Settings.RealWeather)
         {
             lock (_gate) { _conditionsStatus = null; _conditionsPending = false; }
-            return new ActionResult(true, "Zeit und Wetter stellst du wieder in Aerofly ein.");
+            return new ActionResult(true, L("Zeit und Wetter stellst du wieder in Aerofly ein.", "Time and weather are set in Aerofly again."));
         }
         return await ApplyConditionsAsync().ConfigureAwait(false);
     }
@@ -330,11 +334,11 @@ public sealed class AcarsEngine : IDisposable
     /// </summary>
     private (string? Icao, string Source) DepartureForWeatherLocked()
     {
-        if (_plan?.OriginIcao is { Length: > 0 } p) return (p, "SimBrief-Plan");
-        if (_selectedBooking?.Departure is { Length: > 0 } b) return (b, "Buchung");
-        if (!string.IsNullOrWhiteSpace(Settings.WeatherIcao)) return (Settings.WeatherIcao, "eingetragen");
-        if (_tracker.LastSample is { } s && _airports.Nearest(s.Latitude, s.Longitude, 3)?.Ident is { } here) return (here, "Standort");
-        if (!string.IsNullOrWhiteSpace(Settings.LastAirport)) return (Settings.LastAirport, "letzter Standort");
+        if (_plan?.OriginIcao is { Length: > 0 } p) return (p, L("SimBrief-Plan", "SimBrief plan"));
+        if (_selectedBooking?.Departure is { Length: > 0 } b) return (b, L("Buchung", "booking"));
+        if (!string.IsNullOrWhiteSpace(Settings.WeatherIcao)) return (Settings.WeatherIcao, L("eingetragen", "entered"));
+        if (_tracker.LastSample is { } s && _airports.Nearest(s.Latitude, s.Longitude, 3)?.Ident is { } here) return (here, L("Standort", "current position"));
+        if (!string.IsNullOrWhiteSpace(Settings.LastAirport)) return (Settings.LastAirport, L("letzter Standort", "last position"));
         return (null, "");
     }
 
@@ -353,9 +357,9 @@ public sealed class AcarsEngine : IDisposable
                 lock (_gate)
                 {
                     _conditionsPending = true;
-                    _conditionsStatus = "Aerofly läuft – wird beim nächsten Aerofly-Start übernommen.";
+                    _conditionsStatus = L("Aerofly läuft – wird beim nächsten Aerofly-Start übernommen.", "Aerofly is running – will be applied the next time Aerofly starts.");
                 }
-                return new ActionResult(true, "Aerofly läuft – Zeit/Wetter werden nach dem Beenden für den nächsten Start eingetragen.");
+                return new ActionResult(true, L("Aerofly läuft – Zeit/Wetter werden nach dem Beenden für den nächsten Start eingetragen.", "Aerofly is running – time/weather will be set for the next start after you quit Aerofly."));
             }
 
             string? icao;
@@ -366,7 +370,7 @@ public sealed class AcarsEngine : IDisposable
             string? weatherProblem = null;
             if (Settings.RealWeather)
             {
-                if (icao is null) weatherProblem = "Abflugplatz unbekannt – bitte ICAO eintragen";
+                if (icao is null) weatherProblem = L("Abflugplatz unbekannt – bitte ICAO eintragen", "departure airport unknown – please enter ICAO");
                 else
                 {
                     // Aktueller METAR; der aus dem SimBrief-Plan ist nur Ersatz (er kann Stunden alt sein).
@@ -374,7 +378,7 @@ public sealed class AcarsEngine : IDisposable
                     if (raw is null && plan is not null && plan.OriginIcao.Equals(icao, StringComparison.OrdinalIgnoreCase))
                         raw = plan.OriginMetar;
                     metar = Metar.Parse(raw);
-                    if (metar is null) weatherProblem = $"kein METAR für {icao}";
+                    if (metar is null) weatherProblem = L($"kein METAR für {icao}", $"no METAR for {icao}");
                 }
             }
 
@@ -382,18 +386,18 @@ public sealed class AcarsEngine : IDisposable
             int changed = AeroflyConditions.WriteToMainMcf(Settings.RealTime ? now : null, metar);
 
             var parts = new List<string>();
-            if (Settings.RealTime) parts.Add($"Zeit {now:HH:mm}z");
-            if (metar is not null) parts.Add($"Wetter {icao}: {metar.Summary}");
-            if (weatherProblem is not null) parts.Add($"Wetter nicht übernommen ({weatherProblem})");
-            string text = changed > 0 ? "✓ " + string.Join(" · ", parts) : "Aerofly-Einstellungen nicht erkannt – nichts geändert.";
+            if (Settings.RealTime) parts.Add(L("Zeit", "Time") + $" {now:HH:mm}z");
+            if (metar is not null) parts.Add(L("Wetter", "Weather") + $" {icao}: {metar.Summary}");
+            if (weatherProblem is not null) parts.Add(L("Wetter nicht übernommen", "Weather not applied") + $" ({weatherProblem})");
+            string text = changed > 0 ? "✓ " + string.Join(" · ", parts) : L("Aerofly-Einstellungen nicht erkannt – nichts geändert.", "Aerofly settings not recognised – nothing changed.");
             lock (_gate) { _conditionsStatus = text; _conditionsPending = false; }
-            if (changed > 0) AddNotice("An Aerofly übergeben: " + string.Join(" · ", parts));
+            if (changed > 0) AddNotice(L("An Aerofly übergeben: ", "Passed to Aerofly: ") + string.Join(" · ", parts));
             return new ActionResult(changed > 0, text);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
         {
-            lock (_gate) _conditionsStatus = "Nicht übernommen: " + ex.Message;
-            return new ActionResult(false, "Zeit/Wetter nicht übernommen: " + ex.Message);
+            lock (_gate) _conditionsStatus = L("Nicht übernommen: ", "Not applied: ") + ex.Message;
+            return new ActionResult(false, L("Zeit/Wetter nicht übernommen: ", "Time/weather not applied: ") + ex.Message);
         }
         finally
         {
@@ -465,7 +469,7 @@ public sealed class AcarsEngine : IDisposable
             : new string(icao.Trim().ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
         if (station is null) lock (_gate) station = DepartureForWeatherLocked().Icao;
         if (string.IsNullOrEmpty(station) || station.Length is < 3 or > 6)
-            return new ActionResult(false, "Bitte einen ICAO-Code eingeben, z. B. EDDF.");
+            return new ActionResult(false, L("Bitte einen ICAO-Code eingeben, z. B. EDDF.", "Please enter an ICAO code, e.g. EGLL."));
 
         var client = new MetarClient();
         var metarTask = client.FetchAsync(station);
@@ -474,7 +478,7 @@ public sealed class AcarsEngine : IDisposable
         var metarRaw = metarTask.Result;
         var taf = tafTask.Result;
         if (metarRaw is null && taf is null)
-            return new ActionResult(false, $"Kein METAR/TAF für {station} – Code prüfen oder Wetterdienst nicht erreichbar.");
+            return new ActionResult(false, L($"Kein METAR/TAF für {station} – Code prüfen oder Wetterdienst nicht erreichbar.", $"No METAR/TAF for {station} – check the code, or the weather service is unreachable."));
 
         var metar = Metar.Parse(metarRaw);
         var data = new
@@ -486,7 +490,7 @@ public sealed class AcarsEngine : IDisposable
             taf,
             fetched = DateTime.Now.ToString("HH:mm", CultureInfo.InvariantCulture),
         };
-        return new ActionResult(true, $"Wetter {station} abgerufen.", null, data);
+        return new ActionResult(true, L($"Wetter {station} abgerufen.", $"Weather for {station} retrieved."), null, data);
     }
 
     private DateTimeOffset _lastAirportCheck;
@@ -524,8 +528,8 @@ public sealed class AcarsEngine : IDisposable
     {
         Settings.LiveTracking = on;
         try { Settings.Save(); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
-        return new ActionResult(true, on ? "Live-Tracking an: Der Flug erscheint ab dem Losrollen bei der Airline."
-                                         : "Live-Tracking aus: Der Flug wird erst nach der Landung gesendet.");
+        return new ActionResult(true, on ? L("Live-Tracking an: Der Flug erscheint ab dem Losrollen bei der Airline.", "Live tracking on: the flight appears at the airline from taxi-out.")
+                                         : L("Live-Tracking aus: Der Flug wird erst nach der Landung gesendet.", "Live tracking off: the flight is sent after landing."));
     }
 
     /// <summary>Beim Losrollen: Flug bei der Airline anmelden, damit er auf ihrer Live-Karte erscheint.</summary>
@@ -569,11 +573,11 @@ public sealed class AcarsEngine : IDisposable
                 blockOff = t.BlockOff;
             }
 
-            string? missing = dep is null ? "Abflugplatz" : arr is null ? "Ziel (Buchung oder SimBrief-Plan)"
-                : airlineId is null ? "Airline-ID" : string.IsNullOrEmpty(flightNumber) ? "Flugnummer (Buchung oder SimBrief-Plan)" : null;
+            string? missing = dep is null ? L("Abflugplatz", "departure airport") : arr is null ? L("Ziel (Buchung oder SimBrief-Plan)", "destination (booking or SimBrief plan)")
+                : airlineId is null ? L("Airline-ID", "airline ID") : string.IsNullOrEmpty(flightNumber) ? L("Flugnummer (Buchung oder SimBrief-Plan)", "flight number (booking or SimBrief plan)") : null;
             if (missing is not null)
             {
-                SetLiveInfo($"Live-Tracking nicht gestartet – es fehlt: {missing}. Der Flug wird nach der Landung gesendet.");
+                SetLiveInfo(L($"Live-Tracking nicht gestartet – es fehlt: {missing}. Der Flug wird nach der Landung gesendet.", $"Live tracking not started – missing: {missing}. The flight will be sent after landing."));
                 return;
             }
 
@@ -595,8 +599,10 @@ public sealed class AcarsEngine : IDisposable
             catch (AirlineException) { /* dann ohne Flugzeug – siehe unten */ }
             if (aircraftId is null)
             {
-                SetLiveInfo("Live-Tracking nicht gestartet – kein Flugzeug bestimmbar (Buchung mit Flugzeug oder SimBrief-Kennzeichen). " +
-                            "Der Flug wird nach der Landung gesendet.");
+                SetLiveInfo(L("Live-Tracking nicht gestartet – kein Flugzeug bestimmbar (Buchung mit Flugzeug oder SimBrief-Kennzeichen). " +
+                            "Der Flug wird nach der Landung gesendet.",
+                            "Live tracking not started – no aircraft could be determined (booking with aircraft or SimBrief registration). " +
+                            "The flight will be sent after landing."));
                 return;
             }
 
@@ -609,14 +615,14 @@ public sealed class AcarsEngine : IDisposable
                 {
                     _livePirepId = id;
                     _liveAircraftId = aircraftId;
-                    _liveInfo = $"Live bei der Airline: {dep} → {arr}";
+                    _liveInfo = L("Live bei der Airline: ", "Live at the airline: ") + $"{dep} → {arr}";
                 }
-                AddNotice($"Live-Tracking gestartet: {dep} → {arr} erscheint auf der Karte der Airline.");
+                AddNotice(L($"Live-Tracking gestartet: {dep} → {arr} erscheint auf der Karte der Airline.", $"Live tracking started: {dep} → {arr} appears on the airline's map."));
                 await LiveTickAsync().ConfigureAwait(false);
             }
             catch (AirlineException ex)
             {
-                SetLiveInfo($"Live-Tracking nicht gestartet: {ex.Message}. Der Flug wird nach der Landung gesendet.");
+                SetLiveInfo(L($"Live-Tracking nicht gestartet: {ex.Message}. Der Flug wird nach der Landung gesendet.", $"Live tracking not started: {ex.Message}. The flight will be sent after landing."));
             }
         }
         finally
@@ -640,7 +646,7 @@ public sealed class AcarsEngine : IDisposable
             try { await LiveTickAsync().ConfigureAwait(false); }
             catch (Exception ex) when (ex is AirlineException or HttpRequestException or TaskCanceledException)
             {
-                lock (_gate) _liveInfo = $"Live-Verbindung gestört: {ex.Message} – wird erneut versucht.";
+                lock (_gate) _liveInfo = LiveTroublePrefix + $"{ex.Message} – " + L("wird erneut versucht.", "retrying.");
             }
         }
     }
@@ -694,8 +700,8 @@ public sealed class AcarsEngine : IDisposable
             lock (_gate) _liveStatusCode = code;
         }
         lock (_gate)
-            if (_livePirepId == id && _liveInfo?.StartsWith("Live-Verbindung gestört", StringComparison.Ordinal) == true)
-                _liveInfo = "Live bei der Airline – Verbindung wieder da.";
+            if (_livePirepId == id && _liveInfo?.StartsWith(LiveTroublePrefix, StringComparison.Ordinal) == true)
+                _liveInfo = L("Live bei der Airline – Verbindung wieder da.", "Live at the airline – connection restored.");
     }
 
     // ---------- Airline (phpVMS) – nur lesend ----------
@@ -714,8 +720,8 @@ public sealed class AcarsEngine : IDisposable
     {
         var url = Settings.AirlineUrl;
         var key = Settings.GetAirlineApiKey();
-        if (string.IsNullOrWhiteSpace(url)) return new ActionResult(false, "Keine Airline-Adresse eingetragen.");
-        if (string.IsNullOrWhiteSpace(key)) return new ActionResult(false, "Kein API-Schlüssel eingetragen.");
+        if (string.IsNullOrWhiteSpace(url)) return new ActionResult(false, L("Keine Airline-Adresse eingetragen.", "No airline address entered."));
+        if (string.IsNullOrWhiteSpace(key)) return new ActionResult(false, L("Kein API-Schlüssel eingetragen.", "No API key entered."));
 
         try
         {
@@ -730,7 +736,7 @@ public sealed class AcarsEngine : IDisposable
                 if (_selectedBooking is { } current)
                     _selectedBooking = bookings.FirstOrDefault(b => b.FlightId == current.FlightId);
             }
-            var message = $"Airline: angemeldet als {pilot.Display} – {bookings.Count} gebuchte(r) Flug/Flüge";
+            var message = L($"Airline: angemeldet als {pilot.Display} – {bookings.Count} gebuchte(r) Flug/Flüge", $"Airline: signed in as {pilot.Display} – {bookings.Count} booked flight(s)");
             if (announce) AddNotice(message);
             return new ActionResult(true, message);
         }
@@ -757,12 +763,12 @@ public sealed class AcarsEngine : IDisposable
                 _fleetInfo = info;
             }
             return fleet.Count > 0
-                ? new ActionResult(true, $"{fleet.Count} Flugzeuge geladen.")
-                : new ActionResult(false, "Die Airline hat keine Flugzeuge geliefert – bitte Kennzeichen eingeben.");
+                ? new ActionResult(true, L($"{fleet.Count} Flugzeuge geladen.", $"{fleet.Count} aircraft loaded."))
+                : new ActionResult(false, L("Die Airline hat keine Flugzeuge geliefert – bitte Kennzeichen eingeben.", "The airline returned no aircraft – please enter a registration."));
         }
         catch (AirlineException ex)
         {
-            return new ActionResult(false, $"Flotte konnte nicht geladen werden: {ex.Message}");
+            return new ActionResult(false, L("Flotte konnte nicht geladen werden: ", "Could not load the fleet: ") + ex.Message);
         }
     }
 
@@ -783,7 +789,7 @@ public sealed class AcarsEngine : IDisposable
         if (string.IsNullOrWhiteSpace(request.AircraftId))
         {
             if (string.IsNullOrWhiteSpace(request.Registration))
-                return new ActionResult(false, "Bitte ein Flugzeug auswählen oder ein Kennzeichen eingeben.");
+                return new ActionResult(false, L("Bitte ein Flugzeug auswählen oder ein Kennzeichen eingeben.", "Please select an aircraft or enter a registration."));
             AirlineAircraft? found;
             try
             {
@@ -791,10 +797,10 @@ public sealed class AcarsEngine : IDisposable
             }
             catch (AirlineException ex)
             {
-                return new ActionResult(false, $"Kennzeichen konnte nicht gesucht werden: {ex.Message}");
+                return new ActionResult(false, L("Kennzeichen konnte nicht gesucht werden: ", "Could not look up the registration: ") + ex.Message);
             }
             if (found is null)
-                return new ActionResult(false, $"Kennzeichen {request.Registration.Trim().ToUpperInvariant()} ist bei der Airline nicht bekannt.");
+                return new ActionResult(false, L($"Kennzeichen {request.Registration.Trim().ToUpperInvariant()} ist bei der Airline nicht bekannt.", $"Registration {request.Registration.Trim().ToUpperInvariant()} is not known to the airline."));
             request = request with { AircraftId = found.Id };
         }
 
@@ -826,7 +832,7 @@ public sealed class AcarsEngine : IDisposable
             if (string.IsNullOrEmpty(flightNumber))
             {
                 _submitting = false;
-                return new ActionResult(false, "Bitte eine Flugnummer eingeben (freier Flug ohne Buchung).");
+                return new ActionResult(false, L("Bitte eine Flugnummer eingeben (freier Flug ohne Buchung).", "Please enter a flight number (free flight without booking)."));
             }
 
             var report = FlightReportBuilder.Build(t, DateTimeOffset.UtcNow, booking, _runways);
@@ -842,8 +848,10 @@ public sealed class AcarsEngine : IDisposable
 
             var notes = new List<string>();
             if (!string.IsNullOrWhiteSpace(request.Notes)) notes.Add(request.Notes.Trim());
-            notes.Add($"Aufgezeichnet mit {SourceName} {Version} (Aerofly FS 4, UDP-Broadcast). " +
-                      "Landerate aus GPS-Höhe berechnet, Treibstoff nicht verfügbar.");
+            notes.Add(L($"Aufgezeichnet mit {SourceName} {Version} (Aerofly FS 4, UDP-Broadcast). " +
+                      "Landerate aus GPS-Höhe berechnet, Treibstoff nicht verfügbar.",
+                      $"Recorded with {SourceName} {Version} (Aerofly FS 4, UDP broadcast). " +
+                      "Landing rate calculated from GPS altitude, fuel not available."));
             notes.Add(AnalysisSummary(an, t));
 
             fields = AnalysisFields(an, t);
@@ -887,7 +895,7 @@ public sealed class AcarsEngine : IDisposable
             catch (AirlineException ex)
             {
                 // Zusatzfelder sind nicht entscheidend – der PIREP geht trotzdem raus.
-                AddNotice($"PIREP: Zusatzfelder nicht übernommen ({ex.Message})");
+                AddNotice(L("PIREP: Zusatzfelder nicht übernommen", "PIREP: extra fields not accepted") + $" ({ex.Message})");
             }
             await client.FileAsync(pirepId, file).ConfigureAwait(false);
 
@@ -898,7 +906,7 @@ public sealed class AcarsEngine : IDisposable
                 _submittedUrl = url;
                 _submitting = false;
             }
-            var message = $"PIREP {prefile.FlightNumber} eingereicht ({positions.Count} Positionen).";
+            var message = L($"PIREP {prefile.FlightNumber} eingereicht ({positions.Count} Positionen).", $"PIREP {prefile.FlightNumber} submitted ({positions.Count} positions).");
             AddNotice(message);
             return new ActionResult(true, message);
         }
@@ -911,9 +919,9 @@ public sealed class AcarsEngine : IDisposable
                 catch (AirlineException) { /* Rückzug fehlgeschlagen – Meldung unten reicht */ }
             }
             lock (_gate) _submitting = false;
-            var step = pirepId is null ? "Anmelden" : "Einreichen";
-            AddNotice($"PIREP: Fehler beim {step} – {ex.Message}");
-            return new ActionResult(false, $"Fehler beim {step}: {ex.Message}");
+            var step = pirepId is null ? L("Fehler beim Anmelden", "Error filing") : L("Fehler beim Einreichen", "Error submitting");
+            AddNotice($"PIREP: {step} – {ex.Message}");
+            return new ActionResult(false, $"{step}: {ex.Message}");
         }
     }
 
@@ -952,17 +960,17 @@ public sealed class AcarsEngine : IDisposable
     {
         var parts = new List<string>
         {
-            $"Landerate {t.LandingRateFpm:F0} fpm",
+            L("Landerate", "Landing rate") + $" {t.LandingRateFpm:F0} fpm",
             $"Bounces {a.Bounces}",
         };
-        if (a.ApproachVsSigmaFpm is { } sig) parts.Add($"Endanflug {a.ApproachRating} (σ {sig:F0} fpm, Ø {a.ApproachVsMeanFpm:F0} fpm)");
+        if (a.ApproachVsSigmaFpm is { } sig) parts.Add(L("Endanflug", "Final approach") + $" {a.ApproachRating} (σ {sig:F0} fpm, Ø {a.ApproachVsMeanFpm:F0} fpm)");
         if (a.RolloutM is { } ro) parts.Add($"Rollout {ro:F0} m");
         if (a.DepartureRunway is not null || a.ArrivalRunway is not null)
-            parts.Add($"Bahnen {a.DepartureRunway ?? "?"} → {a.ArrivalRunway ?? "?"}");
-        parts.Add($"Zeitraffer max. {a.MaxSimRate:0.#}×");
+            parts.Add(L("Bahnen", "Runways") + $" {a.DepartureRunway ?? "?"} → {a.ArrivalRunway ?? "?"}");
+        parts.Add(L("Zeitraffer", "Sim rate") + $" max. {a.MaxSimRate:0.#}×");
         parts.Add($"Slew {a.SlewEvents}×");
-        parts.Add($"Pausen {a.PausedTime:hh\\:mm\\:ss}");
-        if (a.DaylightTakeoff is not null) parts.Add($"Tageslicht {a.DaylightTakeoff} → {a.DaylightLanding}");
+        parts.Add(L("Pausen", "Paused") + $" {a.PausedTime:hh\\:mm\\:ss}");
+        if (a.DaylightTakeoff is not null) parts.Add(L("Tageslicht", "Daylight") + $" {a.DaylightTakeoff} → {a.DaylightLanding}");
         return string.Join(" · ", parts);
     }
 
@@ -1023,19 +1031,19 @@ public sealed class AcarsEngine : IDisposable
 
     private string? SubmitProblemLocked()
     {
-        if (_submitting) return "Wird bereits gesendet …";
-        if (_submittedPirepId is not null) return "Dieser Flug wurde bereits eingereicht.";
+        if (_submitting) return L("Wird bereits gesendet …", "Already sending …");
+        if (_submittedPirepId is not null) return L("Dieser Flug wurde bereits eingereicht.", "This flight has already been submitted.");
         if (_selectedBooking is null)
         {
             // Freier Flug ohne Buchung: Airline des Piloten, Plätze aus der Aufzeichnung.
-            if (_pilot is null) return "Erst bei der Airline anmelden (Koffer-Symbol → Verbinden).";
-            if (_pilot.AirlineId is null) return "Die Airline hat keine Airline-ID zum Piloten geliefert – bitte einen gebuchten Flug verwenden.";
+            if (_pilot is null) return L("Erst bei der Airline anmelden (Koffer-Symbol → Verbinden).", "Sign in to the airline first (briefcase icon → Connect).");
+            if (_pilot.AirlineId is null) return L("Die Airline hat keine Airline-ID zum Piloten geliefert – bitte einen gebuchten Flug verwenden.", "The airline returned no airline ID for the pilot – please use a booked flight.");
             if (_tracker.DepartureAirport is null || _tracker.ArrivalAirport is null)
-                return "Abflug- oder Zielplatz unbekannt – bitte einen gebuchten Flug verwenden.";
+                return L("Abflug- oder Zielplatz unbekannt – bitte einen gebuchten Flug verwenden.", "Departure or destination unknown – please use a booked flight.");
         }
-        else if (_selectedBooking.AirlineId is null) return "Die Buchung enthält keine Airline-ID.";
-        if (_tracker.Takeoff is null || _tracker.Touchdown is null) return "Start und Landung müssen aufgezeichnet sein.";
-        if (!_reportSaved) return "Erst den Flug beenden (Block on oder „Beenden“).";
+        else if (_selectedBooking.AirlineId is null) return L("Die Buchung enthält keine Airline-ID.", "The booking contains no airline ID.");
+        if (_tracker.Takeoff is null || _tracker.Touchdown is null) return L("Start und Landung müssen aufgezeichnet sein.", "Takeoff and landing must be recorded.");
+        if (!_reportSaved) return L("Erst den Flug beenden (Block on oder „Beenden“).", "Finish the flight first (block on or \"Finish\").");
         return null;
     }
 
@@ -1043,8 +1051,8 @@ public sealed class AcarsEngine : IDisposable
     {
         var url = Settings.AirlineUrl;
         var key = Settings.GetAirlineApiKey();
-        error = string.IsNullOrWhiteSpace(url) ? "Keine Airline-Adresse eingetragen."
-            : string.IsNullOrWhiteSpace(key) ? "Kein API-Schlüssel eingetragen." : null;
+        error = string.IsNullOrWhiteSpace(url) ? L("Keine Airline-Adresse eingetragen.", "No airline address entered.")
+            : string.IsNullOrWhiteSpace(key) ? L("Kein API-Schlüssel eingetragen.", "No API key entered.") : null;
         if (error is not null) return null;
         try
         {
@@ -1064,10 +1072,10 @@ public sealed class AcarsEngine : IDisposable
             if (string.IsNullOrEmpty(flightId))
             {
                 _selectedBooking = null;
-                return new ActionResult(true, "Keine Buchung ausgewählt.");
+                return new ActionResult(true, L("Keine Buchung ausgewählt.", "No booking selected."));
             }
             var booking = _bookings.FirstOrDefault(b => b.FlightId == flightId);
-            if (booking is null) return new ActionResult(false, "Buchung nicht gefunden – bitte Liste aktualisieren.");
+            if (booking is null) return new ActionResult(false, L("Buchung nicht gefunden – bitte Liste aktualisieren.", "Booking not found – please refresh the list."));
             _selectedBooking = booking;
 
             // Passt der SimBrief-Plan nicht zur Buchung, wird er verworfen. Vor dem Flug sofort,
@@ -1082,14 +1090,14 @@ public sealed class AcarsEngine : IDisposable
                 if (_tracker.Phase == FlightPhase.Preflight)
                 {
                     ResetLocked();
-                    extra = $" SimBrief-Plan {plan.OriginIcao} → {plan.DestinationIcao} passt nicht und wurde entfernt.";
+                    extra = L($" SimBrief-Plan {plan.OriginIcao} → {plan.DestinationIcao} passt nicht und wurde entfernt.", $" SimBrief plan {plan.OriginIcao} → {plan.DestinationIcao} does not match and was removed.");
                 }
                 else
                 {
-                    extra = $" SimBrief-Plan {plan.OriginIcao} → {plan.DestinationIcao} passt nicht – gilt nur noch für den laufenden Flug.";
+                    extra = L($" SimBrief-Plan {plan.OriginIcao} → {plan.DestinationIcao} passt nicht – gilt nur noch für den laufenden Flug.", $" SimBrief plan {plan.OriginIcao} → {plan.DestinationIcao} does not match – only applies to the current flight.");
                 }
             }
-            var message = $"Flug {booking.ShortIdent} {booking.Departure} → {booking.Arrival} ausgewählt.{extra}";
+            var message = L($"Flug {booking.ShortIdent} {booking.Departure} → {booking.Arrival} ausgewählt.", $"Flight {booking.ShortIdent} {booking.Departure} → {booking.Arrival} selected.") + extra;
             AddNotice(message);
             _ = Task.Run(ApplyConditionsAsync);   // Abflugplatz kann sich geändert haben
             return new ActionResult(true, message);
@@ -1102,6 +1110,11 @@ public sealed class AcarsEngine : IDisposable
         if (!string.IsNullOrWhiteSpace(update.AirlineApiKey)) Settings.SetAirlineApiKey(update.AirlineApiKey);
         if (update.SimBriefUser is not null) Settings.SimBriefUser = update.SimBriefUser.Trim();
         if (update.LoadSimBriefOnStart is { } load) Settings.LoadSimBriefOnStart = load;
+        if (update.Language is { } language)
+        {
+            Settings.Language = language is "de" or "en" ? language : "auto";
+            Settings.ApplyLanguage();
+        }
         if (update.Voice is { } voice)
         {
             Settings.Voice = voice;
@@ -1111,20 +1124,20 @@ public sealed class AcarsEngine : IDisposable
         try
         {
             Settings.Save();
-            return new ActionResult(true, "Einstellungen gespeichert.");
+            return new ActionResult(true, L("Einstellungen gespeichert.", "Settings saved."));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return new ActionResult(false, $"Einstellungen konnten nicht gespeichert werden: {ex.Message}");
+            return new ActionResult(false, L("Einstellungen konnten nicht gespeichert werden: ", "Settings could not be saved: ") + ex.Message);
         }
     }
 
     public ActionResult VoiceTest()
     {
         _speech ??= SpeechAnnouncer.Create();
-        if (!_speech.Available) return new ActionResult(false, _speech.Problem ?? "Sprachausgabe nicht verfügbar.");
+        if (!_speech.Available) return new ActionResult(false, _speech.Problem ?? L("Sprachausgabe nicht verfügbar.", "Speech output not available."));
         _speech.Say(LandingCallout.Text(-153));
-        return new ActionResult(true, $"Test mit {_speech.VoiceName ?? "Standardstimme"}");
+        return new ActionResult(true, L("Test mit ", "Test with ") + (_speech.VoiceName ?? L("Standardstimme", "default voice")));
     }
 
     /// <summary>Flugdaten als Text zum Einfügen in ein manuelles PIREP-Formular (für Airlines ohne API-Schlüssel).</summary>
@@ -1134,7 +1147,7 @@ public sealed class AcarsEngine : IDisposable
         {
             var t = _tracker;
             if (t.Touchdown is null)
-                return new ActionResult(false, "Noch keine Landung aufgezeichnet.");
+                return new ActionResult(false, L("Noch keine Landung aufgezeichnet.", "No landing recorded yet."));
 
             var r = FlightReportBuilder.Build(t, DateTimeOffset.UtcNow, _selectedBooking, _runways);
             var an = FlightAnalysis.Analyze(t, _runways);
@@ -1143,21 +1156,21 @@ public sealed class AcarsEngine : IDisposable
 
             var lines = new List<string>
             {
-                $"Flug: {r.Flight ?? r.Booking ?? "–"}",
-                $"Strecke: {r.Origin ?? "?"} → {r.Destination ?? "?"}",
+                L("Flug: ", "Flight: ") + (r.Flight ?? r.Booking ?? "–"),
+                L("Strecke: ", "Route: ") + $"{r.Origin ?? "?"} → {r.Destination ?? "?"}",
             };
-            var aircraft = new[] { r.Aircraft, _aeroflyAircraft is { } ac ? $"in Aerofly: {ac.Name}" : null }.Where(x => x is not null);
-            if (aircraft.Any()) lines.Add("Flugzeug: " + string.Join(" · ", aircraft));
-            lines.Add($"Block off {Time(r.BlockOffUtc)} · Abheben {Time(r.TakeoffUtc)} · Aufsetzen {Time(r.TouchdownUtc)} · Block on {Time(r.BlockOnUtc)}");
-            lines.Add($"Flugzeit {Dur(r.AirTime)} · Blockzeit {Dur(r.BlockTime)}");
-            if (r.DistanceFlownNm is { } d) lines.Add($"Distanz: {d:F0} NM");
-            if (r.MaxAltitudeFt is { } m) lines.Add($"Max. Höhe: {FlightTracker.FormatAltitude(m)}");
-            lines.Add($"Landerate: {r.LandingRateFpm:F0} fpm ({r.LandingRating})");
+            var aircraft = new[] { r.Aircraft, _aeroflyAircraft is { } ac ? L("in Aerofly: ", "in Aerofly: ") + ac.Name : null }.Where(x => x is not null);
+            if (aircraft.Any()) lines.Add(L("Flugzeug: ", "Aircraft: ") + string.Join(" · ", aircraft));
+            lines.Add($"Block off {Time(r.BlockOffUtc)} · {L("Abheben", "Takeoff")} {Time(r.TakeoffUtc)} · {L("Aufsetzen", "Touchdown")} {Time(r.TouchdownUtc)} · Block on {Time(r.BlockOnUtc)}");
+            lines.Add($"{L("Flugzeit", "Air time")} {Dur(r.AirTime)} · {L("Blockzeit", "Block time")} {Dur(r.BlockTime)}");
+            if (r.DistanceFlownNm is { } d) lines.Add(L("Distanz: ", "Distance: ") + $"{d:F0} NM");
+            if (r.MaxAltitudeFt is { } m) lines.Add(L("Max. Höhe: ", "Max. altitude: ") + FlightTracker.FormatAltitude(m));
+            lines.Add(L("Landerate: ", "Landing rate: ") + $"{r.LandingRateFpm:F0} fpm ({r.LandingRating})");
             if (r.Route is not null) lines.Add($"Route: {r.Route}");
-            lines.Add("Auswertung: " + AnalysisSummary(an, t));
-            lines.Add($"Simulator: Aerofly FS 4 · aufgezeichnet mit {SourceName} {Version}");
+            lines.Add(L("Auswertung: ", "Analysis: ") + AnalysisSummary(an, t));
+            lines.Add($"Simulator: Aerofly FS 4 · {L("aufgezeichnet mit", "recorded with")} {SourceName} {Version}");
 
-            return new ActionResult(true, "Flugdaten in die Zwischenablage kopiert.", string.Join(Environment.NewLine, lines));
+            return new ActionResult(true, L("Flugdaten in die Zwischenablage kopiert.", "Flight data copied to the clipboard."), string.Join(Environment.NewLine, lines));
         }
     }
 
@@ -1172,7 +1185,7 @@ public sealed class AcarsEngine : IDisposable
         }
         catch (Exception ex)
         {
-            return new ActionResult(false, $"Ordner konnte nicht geöffnet werden: {ex.Message}");
+            return new ActionResult(false, L("Ordner konnte nicht geöffnet werden: ", "Could not open the folder: ") + ex.Message);
         }
     }
 
@@ -1375,6 +1388,8 @@ public sealed class AcarsEngine : IDisposable
                     udpPort = Settings.UdpPort,
                     version = AppInfo.Version,
                     canQuit = QuitRequested is not null,
+                    lang = Lang.Code,
+                    language = Settings.Language,
                 },
                 update = _update is null ? null : new { version = _update.Version, url = _update.Url },
             };
@@ -1394,7 +1409,7 @@ public sealed class AcarsEngine : IDisposable
             var client = CreateAirlineClient(out _);
             if (client is not null) _ = Task.Run(async () =>
             {
-                try { await client.CancelAsync(live).ConfigureAwait(false); AddNotice("Live-Flug bei der Airline zurückgezogen."); }
+                try { await client.CancelAsync(live).ConfigureAwait(false); AddNotice(L("Live-Flug bei der Airline zurückgezogen.", "Live flight withdrawn at the airline.")); }
                 catch (AirlineException) { /* verfällt bei der Airline von selbst */ }
             });
         }
@@ -1425,7 +1440,7 @@ public sealed class AcarsEngine : IDisposable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            AddNotice($"Bericht konnte nicht gespeichert werden: {ex.Message}");
+            AddNotice(L("Bericht konnte nicht gespeichert werden: ", "Report could not be saved: ") + ex.Message);
             return null;
         }
     }

@@ -23,6 +23,8 @@ public sealed class AcarsSettings
     /// <summary>Platz, an dem das Flugzeug zuletzt stand (Ersatz für das Wetter beim nächsten Start).</summary>
     public string? LastAirport { get; set; }
     public bool Voice { get; set; } = true;
+    /// <summary>Sprache: "auto" (wie das System), "de" oder "en".</summary>
+    public string Language { get; set; } = "auto";
     public int UdpPort { get; set; } = ForeFlightProtocol.DefaultPort;
     public int DisplayPort { get; set; } = 8080;
     public string? ReportFolder { get; set; }
@@ -43,6 +45,44 @@ public sealed class AcarsSettings
     public bool HasAirlineApiKey => !string.IsNullOrEmpty(AirlineApiKeyProtected);
 
     public const string MacKeychainMarker = "macos-keychain";
+
+    /// <summary>Stellt <see cref="Lang"/> nach <see cref="Language"/> ein („auto“: Deutsch, wenn das System Deutsch spricht).</summary>
+    public void ApplyLanguage()
+    {
+        Lang.English = Language switch
+        {
+            "de" => false,
+            "en" => true,
+            _ => !Lang.SystemIsGerman(SystemLanguage()),
+        };
+    }
+
+    /// <summary>
+    /// Systemsprache. Unter macOS bekommen per Doppelklick gestartete Programme keine Spracheinstellung mit –
+    /// dort zählt die bevorzugte Sprache aus den Systemeinstellungen (AppleLanguages).
+    /// </summary>
+    private static string? SystemLanguage()
+    {
+        if (!OperatingSystem.IsMacOS()) return null;
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("/usr/bin/defaults", "read -g AppleLanguages")
+            {
+                RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false,
+            };
+            using var p = System.Diagnostics.Process.Start(psi);
+            if (p is null) return null;
+            var output = p.StandardOutput.ReadToEnd();
+            p.WaitForExit(3000);
+            // Ausgabe wie: ( "de-DE", "en-DE" )
+            var first = output.Split('"', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(x => x.Trim().Length >= 2 && char.IsLetter(x.Trim()[0]));
+            return first?.Trim();
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 
     public string? GetAirlineApiKey()
     {
