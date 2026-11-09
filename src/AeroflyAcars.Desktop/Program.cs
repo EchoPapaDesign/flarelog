@@ -9,7 +9,7 @@ internal static class Program
         using var mutex = new Mutex(true, @"Local\Flarelog.Desktop", out bool firstInstance);
         if (!firstInstance)
         {
-            MessageBox.Show("Flarelog läuft bereits.", "Flarelog",
+            MessageBox.Show(AeroflyAcars.Core.Lang.SystemIsGerman() ? "Flarelog läuft bereits." : "Flarelog is already running.", "Flarelog",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }

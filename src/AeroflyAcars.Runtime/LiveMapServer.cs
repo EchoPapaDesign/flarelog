@@ -8,7 +8,7 @@ namespace AeroflyAcars.Runtime;
 /// Kleiner lokaler Webserver (nur localhost) für das Display.
 /// GET  /                  → Display-Seite
 /// GET  /api/state         → aktueller Zustand als JSON
-/// POST /api/settings      → Einstellungen ändern ({ simBriefUser, voice, loadSimBriefOnStart })
+/// POST /api/settings      → Einstellungen ändern ({ simBriefUser, voice, loadSimBriefOnStart, language })
 /// POST /api/simbrief      → SimBrief-Plan laden ({ user })
 /// POST /api/pirep-text    → Flugdaten als Text für manuelle PIREP-Formulare ({ ok, message, text })
 /// POST /api/weather      → METAR und TAF ({ icao }) – Antwort mit data { icao, metar, summary, taf }
@@ -82,7 +82,7 @@ public sealed class LiveMapServer : IDisposable
             if (request.HttpMethod == "GET" && (path == "/" || path == "/index.html"))
             {
                 contentType = "text/html; charset=utf-8";
-                body = Encoding.UTF8.GetBytes(MapPage.Html);
+                body = Encoding.UTF8.GetBytes(MapPage.Html.Replace("__LANG__", AeroflyAcars.Core.Lang.Code));
             }
             else if (request.HttpMethod == "GET" && path == "/api/state")
             {

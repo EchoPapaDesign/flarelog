@@ -315,6 +315,15 @@ public static class MapPage
   <div class="sheet">
     <h3>Einstellungen <button class="btn" id="btnClose">Schließen</button></h3>
     <div class="field">
+      <label>Sprache · Language</label>
+      <div class="row"><select id="setLang">
+        <option value="auto">Automatisch (Systemsprache)</option>
+        <option value="de">Deutsch</option>
+        <option value="en">English</option>
+      </select></div>
+    </div>
+    <hr>
+    <div class="field">
       <label>SimBrief-Benutzer oder Pilot-ID</label>
       <div class="row"><input type="text" id="setSb" placeholder="z. B. meinname" autocomplete="off" spellcheck="false">
         <button class="btn primary" id="btnSbLoad">Plan laden</button></div>
@@ -361,7 +370,7 @@ public static class MapPage
     <div class="field">
       <label>Persönlicher API-Schlüssel</label>
       <div class="row"><input type="password" id="alKey" placeholder="aus dem Airline-Profil einfügen" autocomplete="off"></div>
-      <div class="hint" id="alKeyHint">Wird verschlüsselt auf diesem PC gespeichert und nur an die Airline gesendet.</div>
+      <div class="hint" id="alKeyHint">Wird verschlüsselt auf diesem Computer gespeichert und nur an die Airline gesendet.</div>
     </div>
     <div class="row"><button class="btn primary" id="btnAlConnect">Verbinden &amp; Buchungen laden</button></div>
     <label class="check" style="margin-top:12px"><input type="checkbox" id="alLive"> Live-Tracking: Flug ab dem Losrollen an die Airline melden</label>
@@ -442,7 +451,164 @@ public static class MapPage
 
 <script>
 const $ = id => document.getElementById(id);
-const de = (v, d = 0) => Number(v).toLocaleString('de-DE', { maximumFractionDigits: d, minimumFractionDigits: d });
+// Sprache: Texte stehen auf Deutsch im Code, EN übersetzt sie (Schlüssel = deutscher Text, Platzhalter {0}, {1}).
+let LANG = 'de';
+const EN = {
+"Wetter: METAR und TAF": "Weather: METAR and TAF",
+"Airline (Buchungen)": "Airline (bookings)",
+"Berichtsordner öffnen": "Open report folder",
+"Einstellungen": "Settings",
+"Warte auf Aerofly …": "Waiting for Aerofly …",
+"In Aerofly gewähltes Flugzeug": "Aircraft selected in Aerofly",
+"Update verfügbar": "Update available",
+"Bereit": "Ready",
+"Buchung": "Booking",
+"Der Flug wird live an die Airline gesendet": "The flight is sent live to the airline",
+"Höhe": "Altitude",
+"Vertikal": "Vertical",
+"Kurs (rw)": "Heading (T)",
+"Simulator pausiert": "Simulator paused",
+"Flugzeug folgen": "Follow aircraft",
+"Aufzeichnung beenden und Bericht speichern": "Stop recording and save the report",
+"Beenden": "Finish",
+"Flug als PIREP an die Airline senden": "Send the flight to the airline as a PIREP",
+"An Airline senden": "Send to airline",
+"PIREP auf der Airline-Webseite ansehen": "View the PIREP on the airline website",
+"Flugdaten für ein manuelles PIREP-Formular kopieren": "Copy flight data for a manual PIREP form",
+"Daten kopieren": "Copy data",
+"Neuen Flug aufzeichnen": "Record a new flight",
+"Neuer Flug": "New flight",
+"Uhrzeit": "Time",
+"Wetter": "Weather",
+"Wird beim Start von Aerofly übernommen – während des Flugs kann Flarelog Zeit und Wetter nicht ändern.": "Applied when Aerofly starts – Flarelog cannot change time and weather during a flight.",
+"Noch keine Einträge – Aerofly starten und losrollen.": "No entries yet – start Aerofly and taxi out.",
+"LANDUNG": "LANDING",
+"Schließen": "Close",
+"Sprache · Language": "Language · Sprache",
+"Automatisch (Systemsprache)": "Automatic (system language)",
+"SimBrief-Benutzer oder Pilot-ID": "SimBrief username or pilot ID",
+"z. B. meinname": "e.g. myname",
+"Plan laden": "Load plan",
+"Beim Start automatisch laden": "Load automatically on start",
+"Lädt den zuletzt in SimBrief erzeugten Flugplan.": "Loads the flight plan you last generated in SimBrief.",
+"Landeansage": "Landing callout",
+"„Touchdown with … feet per minute“ ansagen": "Announce “Touchdown with … feet per minute”",
+"Stimme testen": "Test voice",
+"Flugberichte": "Flight reports",
+"Ordner öffnen": "Open folder",
+"Über": "About",
+"Programm": "Program",
+"Beendet Flarelog. Ein laufender Flug wird vorher als Teilbericht gespeichert.": "Quits Flarelog. A flight in progress is saved as a partial report first.",
+"Flarelog beenden": "Quit Flarelog",
+"Webseite der Airline (phpVMS 7)": "Airline website (phpVMS 7)",
+"https://www.deine-va.de": "https://www.your-va.com",
+"Persönlicher API-Schlüssel": "Personal API key",
+"aus dem Airline-Profil einfügen": "paste from your airline profile",
+"Wird verschlüsselt auf diesem Computer gespeichert und nur an die Airline gesendet.": "Stored encrypted on this computer and only sent to the airline.",
+"Verbinden & Buchungen laden": "Connect & load bookings",
+"Live-Tracking: Flug ab dem Losrollen an die Airline melden": "Live tracking: report the flight to the airline from taxi-out",
+"Der Flug erscheint dann während des Flugs auf der Live-Karte der Airline. Dafür braucht es eine Buchung oder einen SimBrief-Plan (Ziel, Flugnummer) und ein bestimmbares Flugzeug.": "The flight then appears on the airline's live map while you fly. This needs a booking or a SimBrief plan (destination, flight number) and an identifiable aircraft.",
+"Gebuchte Flüge": "Booked flights",
+"Aktualisieren": "Refresh",
+"Flug anklicken, um ihn für die Aufzeichnung zu verwenden. Nach der Landung erscheint im Flight Log „An Airline senden“ – gesendet wird erst, wenn du es dort bestätigst. Ohne Buchung wird der Flug als freier Flug eingereicht, sofern die Airline das erlaubt.": "Click a flight to use it for recording. After landing, “Send to airline” appears in the flight log – nothing is sent until you confirm it there. Without a booking the flight is submitted as a free flight, if the airline allows it.",
+"PIREP einreichen": "Submit PIREP",
+"Flug": "Flight",
+"Strecke": "Route",
+"Blockzeit": "Block time",
+"Flugzeit": "Air time",
+"Landerate": "Landing rate",
+"Gelandet in": "Landed at",
+"Flugnummer (freier Flug ohne Buchung)": "Flight number (free flight without booking)",
+"z. B. 1022": "e.g. 1022",
+"Wird mit deiner Airline eingereicht. Manche Airlines erlauben nur gebuchte Flüge – dann kommt eine Meldung.": "Submitted with your airline. Some airlines only allow booked flights – you will get a message in that case.",
+"Flugzeug (Airline-Flotte)": "Aircraft (airline fleet)",
+"Flotte wird geladen …": "Loading fleet …",
+"Oben stehen Flugzeuge am Abflugort und passend zum SimBrief-Typ.": "Aircraft at the departure airport and matching the SimBrief type are listed first.",
+"oder Kennzeichen eingeben, z. B. D-EABC": "or enter a registration, e.g. G-ABCD",
+"Bemerkung (optional)": "Remarks (optional)",
+"z. B. Testflug mit Flarelog": "e.g. test flight with Flarelog",
+"Gesendet werden: Flugnummer, Flughäfen, Flugzeug, Block- und Flugzeit, geflogene Strecke, Landerate, Route und die aufgezeichneten Positionen (alle 10 s). Treibstoff kann Aerofly nicht liefern.": "Sent: flight number, airports, aircraft, block and air time, distance flown, landing rate, route and the recorded positions (every 10 s). Aerofly cannot provide fuel.",
+"Jetzt einreichen": "Submit now",
+"Flugplatz (ICAO)": "Airport (ICAO)",
+"z. B. EDDF": "e.g. EGLL",
+"Abrufen": "Fetch",
+"Quelle: Aviation Weather Center (aviationweather.gov). Nur zur Information für die Simulation.": "Source: Aviation Weather Center (aviationweather.gov). For simulation use only.",
+"Keine Verbindung zu Flarelog": "No connection to Flarelog",
+"Flarelog {0} · ACARS für Aerofly FS 4 – Daten: OurAirports (gemeinfrei), OpenStreetMap-Mitwirkende, SimBrief.": "Flarelog {0} · ACARS for Aerofly FS 4 – data: OurAirports (public domain), OpenStreetMap contributors, SimBrief.",
+"Empfang auf UDP-Port {0}. In Aerofly: Sonstige Einstellungen → „Sende Fluginformation an IP Addresse“ an, Broadcast IP 127.0.0.1, Port {0}.": "Listening on UDP port {0}. In Aerofly: Miscellaneous settings → “Broadcast flight info to IP address” on, broadcast IP 127.0.0.1, port {0}.",
+"Flarelog beenden?": "Quit Flarelog?",
+"Flarelog wurde beendet. Dieses Fenster kann geschlossen werden.": "Flarelog has quit. You can close this window.",
+"Aufzeichnung beenden und Bericht jetzt speichern?": "Stop recording and save the report now?",
+"kein METAR verfügbar": "no METAR available",
+"Für Aerofly: {0}": "For Aerofly: {0}",
+"kein TAF verfügbar (nicht jeder Platz hat einen)": "no TAF available (not every airport has one)",
+"Abgerufen um {0} Uhr": "Retrieved at {0}",
+"Kopieren nicht möglich": "Copying not possible",
+"Ein Schlüssel ist gespeichert. Nur ausfüllen, um ihn zu ersetzen.": "A key is stored. Only fill in to replace it.",
+"Angemeldet als {0}": "Signed in as {0}",
+"aktuell in {0}": "currently at {0}",
+"Stand {0} UTC": "As of {0} UTC",
+"Keine gebuchten Flüge. Auf der Webseite einen Flug buchen und „Aktualisieren“ klicken.": "No booked flights. Book a flight on the website and click “Refresh”.",
+"Freier Flug": "Free flight",
+"Gelandet in {0}, gebucht war {1}.": "Landed at {0}, booked was {1}.",
+"Flugzeug prüfen: ": "Check aircraft: ",
+"Wird gesendet …": "Sending …",
+"Antwort der Airline: {0}": "Airline response: {0}",
+"(aus der Buchung)": "(from the booking)",
+"Keine Flugzeuge in der Liste – Kennzeichen eingeben": "No aircraft in the list – enter a registration",
+"Bitte ein Flugzeug auswählen oder ein Kennzeichen eingeben.": "Please select an aircraft or enter a registration.",
+"PIREP jetzt an die Airline senden?": "Send the PIREP to the airline now?",
+"Verbunden mit {0}": "Connected to {0}",
+"Keine Daten – Aerofly mit „Sende Fluginformation an IP“?": "No data – is “Broadcast flight info to IP” enabled in Aerofly?",
+"Nächster Flug: {0}": "Next flight: {0}",
+"Version {0} verfügbar": "Version {0} available",
+"Beendet": "Finished",
+"In Aerofly gewählt: {0}": "Selected in Aerofly: {0}",
+"Wetter von {0}. SimBrief-Plan und Buchung haben Vorrang vor der Eingabe.": "Weather from {0}. SimBrief plan and booking take precedence over the entry.",
+"Kein Abflugplatz bekannt – bitte ICAO eintragen.": "No departure airport known – please enter ICAO.",
+"direkt": "direct",
+"Plan aus SimBrief": "Plan from SimBrief",
+"Buchung {0}": "Booking {0}",
+"Live an die Airline": "Live to the airline",
+"Pause": "Pause",
+"bei {0} kt Groundspeed": "at {0} kt groundspeed",
+"Endanflug": "Final approach",
+"Bahn {0}": "Runway {0}",
+"(Start {0})": "(takeoff {0})",
+"Zeitraffer bis {0}×": "Sim rate up to {0}×"
+};
+const norm = x => x.replace(/\s+/g, ' ').trim();
+function t(text, ...args) {
+  let r = LANG === 'en' && EN[text] !== undefined ? EN[text] : text;
+  args.forEach((v, i) => { r = r.split(`{${i}}`).join(v); });
+  return r;
+}
+const de = (v, d = 0) => Number(v).toLocaleString(LANG === 'en' ? 'en-US' : 'de-DE', { maximumFractionDigits: d, minimumFractionDigits: d });
+// Feste Texte der Seite einsammeln (vor dem ersten Füllen), damit sie umgeschaltet werden können.
+const staticTexts = [], staticAttrs = [];
+(function collectStatic() {
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n; (n = w.nextNode());) {
+    const k = norm(n.nodeValue);
+    if (k && EN[k] !== undefined) staticTexts.push({ node: n, orig: n.nodeValue, key: k });
+  }
+  document.querySelectorAll('[title],[placeholder]').forEach(el => ['title', 'placeholder'].forEach(at => {
+    const v = el.getAttribute(at);
+    if (v && EN[norm(v)] !== undefined) staticAttrs.push({ el, at, orig: v, key: norm(v) });
+  }));
+})();
+function applyLang(lang) {
+  if (lang !== 'en' && lang !== 'de') return;
+  if (lang === LANG) return;
+  LANG = lang;
+  document.documentElement.lang = lang;
+  staticTexts.forEach(x => {
+    const lead = x.orig.match(/^\s*/)[0], trail = x.orig.match(/\s*$/)[0];
+    x.node.nodeValue = lang === 'en' ? lead + EN[x.key] + trail : x.orig;
+  });
+  staticAttrs.forEach(x => x.el.setAttribute(x.at, lang === 'en' ? EN[x.key] : x.orig));
+  eventCount = -1;
+}
 
 const map = L.map('map', { zoomControl: true, attributionControl: true }).setView([51.0, 10.0], 6);
 // OpenStreetMap-Kacheln, per CSS-Filter abgedunkelt (kein API-Schlüssel nötig)
@@ -496,7 +662,7 @@ function renderEvents(events) {
   const box = $('events');
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   box.innerHTML = events.length === 0
-    ? '<div class="empty">Noch keine Einträge – Aerofly starten und losrollen.</div>'
+    ? '<div class="empty">' + t('Noch keine Einträge – Aerofly starten und losrollen.') + '</div>'
     : events.map(e => `<div class="ev ${e.phaseChange ? 'phase' : 'note'}"><time>${e.time} UTC</time><span></span></div>`).join('');
   // Text sicher einsetzen (kein HTML aus Daten)
   box.querySelectorAll('.ev span').forEach((el, i) => el.textContent = events[i].text);
@@ -517,7 +683,7 @@ async function post(path, body) {
     snack(res.message, res.ok);
     tick();
     return res;
-  } catch (e) { snack('Keine Verbindung zu Flarelog', false); return { ok: false }; }
+  } catch (e) { snack(t('Keine Verbindung zu Flarelog'), false); return { ok: false }; }
 }
 
 function openSettings() {
@@ -528,8 +694,9 @@ function openSettings() {
     $('setVoice').checked = st.voice;
     $('setFolder').textContent = st.reportFolder;
     $('quitField').style.display = st.canQuit ? 'block' : 'none';
-    $('setVersion').textContent = `Flarelog ${st.version} · ACARS für Aerofly FS 4 – Daten: OurAirports (gemeinfrei), OpenStreetMap-Mitwirkende, SimBrief.`;
-    $('setUdp').textContent = `Empfang auf UDP-Port ${st.udpPort}. In Aerofly: Sonstige Einstellungen → „Sende Fluginformation an IP Addresse“ an, Broadcast IP 127.0.0.1, Port ${st.udpPort}.`;
+    $('setVersion').textContent = t('Flarelog {0} · ACARS für Aerofly FS 4 – Daten: OurAirports (gemeinfrei), OpenStreetMap-Mitwirkende, SimBrief.', st.version);
+    $('setLang').value = st.language || 'auto';
+    $('setUdp').textContent = t('Empfang auf UDP-Port {0}. In Aerofly: Sonstige Einstellungen → „Sende Fluginformation an IP Addresse“ an, Broadcast IP 127.0.0.1, Port {0}.', st.udpPort);
   }
   $('overlay').classList.add('show');
 }
@@ -540,14 +707,15 @@ $('navReports').onclick = () => post('/api/open-reports');
 $('btnFolder').onclick = () => post('/api/open-reports');
 $('btnVoiceTest').onclick = () => post('/api/voice-test');
 $('btnQuit').onclick = async () => {
-  if (!confirm('Flarelog beenden?')) return;
+  if (!confirm(t('Flarelog beenden?'))) return;
   const res = await post('/api/quit');
   if (res.ok) {
     quitting = true;
     document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;' +
-      'color:#8b93a0;font:15px system-ui,sans-serif">Flarelog wurde beendet. Dieses Fenster kann geschlossen werden.</div>';
+      'color:#8b93a0;font:15px system-ui,sans-serif">' + t('Flarelog wurde beendet. Dieses Fenster kann geschlossen werden.') + '</div>';
   }
 };
+$('setLang').onchange = async () => { const res = await post('/api/settings', { language: $('setLang').value }); if (res.ok && lastState) tick(); };
 $('setVoice').onchange = () => post('/api/settings', { voice: $('setVoice').checked });
 $('setSbAuto').onchange = () => post('/api/settings', { loadSimBriefOnStart: $('setSbAuto').checked });
 $('setSb').onchange = () => post('/api/settings', { simBriefUser: $('setSb').value });
@@ -558,7 +726,7 @@ $('btnSbLoad').onclick = async () => {
   $('btnSbLoad').disabled = false;
   if (res.ok) { $('overlay').classList.remove('show'); }
 };
-$('btnFinish').onclick = () => { if (confirm('Aufzeichnung beenden und Bericht jetzt speichern?')) post('/api/finish'); };
+$('btnFinish').onclick = () => { if (confirm(t('Aufzeichnung beenden und Bericht jetzt speichern?'))) post('/api/finish'); };
 $('btnNew').onclick = () => { resetMap(); post('/api/newflight'); };
 
 async function fetchWeather(icao) {
@@ -568,16 +736,16 @@ async function fetchWeather(icao) {
     const r = await fetch('/api/weather', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Acars': '1' },
       body: JSON.stringify({ icao }) });
     res = await r.json();
-  } catch (e) { res = { ok: false, message: 'Keine Verbindung zu Flarelog' }; }
+  } catch (e) { res = { ok: false, message: t('Keine Verbindung zu Flarelog') }; }
   $('btnWxFetch').disabled = false;
   if (!res.ok) { snack(res.message, false); return; }
   const d = res.data;
   $('wxStation').value = d.icao;
   $('wxName').textContent = d.name ? `· ${d.name}` : '';
-  $('wxMetar').textContent = d.metar || 'kein METAR verfügbar';
-  $('wxSummary').textContent = d.summary ? `Für Aerofly: ${d.summary}` : '';
-  $('wxTaf').textContent = d.taf || 'kein TAF verfügbar (nicht jeder Platz hat einen)';
-  $('wxFetched').textContent = `Abgerufen um ${d.fetched} Uhr`;
+  $('wxMetar').textContent = d.metar || t('kein METAR verfügbar');
+  $('wxSummary').textContent = d.summary ? t('Für Aerofly: {0}', d.summary) : '';
+  $('wxTaf').textContent = d.taf || t('kein TAF verfügbar (nicht jeder Platz hat einen)');
+  $('wxFetched').textContent = t('Abgerufen um {0} Uhr', d.fetched);
   $('wxResult').style.display = 'block';
 }
 function openWeather() {
@@ -607,7 +775,7 @@ $('btnCopy').onclick = async () => {
   try {
     const r = await fetch('/api/pirep-text', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Acars': '1' }, body: '{}' });
     res = await r.json();
-  } catch (e) { snack('Keine Verbindung zu Flarelog', false); return; }
+  } catch (e) { snack(t('Keine Verbindung zu Flarelog'), false); return; }
   if (!res.ok) { snack(res.message, false); return; }
   let copied = false;
   try { await navigator.clipboard.writeText(res.text); copied = true; } catch (e) { /* Ersatzweg unten */ }
@@ -617,7 +785,7 @@ $('btnCopy').onclick = async () => {
     try { copied = document.execCommand('copy'); } catch (e) { copied = false; }
     ta.remove();
   }
-  snack(copied ? res.message : 'Kopieren nicht möglich', copied);
+  snack(copied ? res.message : t('Kopieren nicht möglich'), copied);
 };
 
 // inputs = true nur beim Öffnen: sonst würde die laufende Aktualisierung Eingaben überschreiben.
@@ -628,19 +796,19 @@ function fillAirline(inputs) {
   $('alLiveInfo').textContent = a.liveInfo || '';
   $('alTitle').textContent = a.presetName || 'Airline';
   $('alKeyHint').textContent = a.hasKey
-    ? 'Ein Schlüssel ist gespeichert. Nur ausfüllen, um ihn zu ersetzen.'
-    : 'Wird verschlüsselt auf diesem PC gespeichert und nur an die Airline gesendet.';
+    ? t('Ein Schlüssel ist gespeichert. Nur ausfüllen, um ihn zu ersetzen.')
+    : t('Wird verschlüsselt auf diesem Computer gespeichert und nur an die Airline gesendet.');
   $('alPilot').innerHTML = '';
   if (a.pilot) {
     const sp = document.createElement('span'); sp.className = 'ok-text';
-    sp.textContent = `✓ Angemeldet als ${a.pilot}` + (a.pilotAirport ? ` · aktuell in ${a.pilotAirport}` : '');
+    sp.textContent = '✓ ' + t('Angemeldet als {0}', a.pilot) + (a.pilotAirport ? ' · ' + t('aktuell in {0}', a.pilotAirport) : '');
     $('alPilot').appendChild(sp);
   }
-  $('alUpdated').textContent = a.updated ? `Stand ${a.updated} UTC` : '';
+  $('alUpdated').textContent = a.updated ? t('Stand {0} UTC', a.updated) : '';
   const box = $('alBookings');
   box.innerHTML = '';
   if (a.pilot && a.bookings.length === 0) {
-    box.innerHTML = '<div class="hint">Keine gebuchten Flüge. Auf der Webseite einen Flug buchen und „Aktualisieren“ klicken.</div>';
+    box.innerHTML = '<div class="hint">' + t('Keine gebuchten Flüge. Auf der Webseite einen Flug buchen und „Aktualisieren“ klicken.') + '</div>';
   }
   a.bookings.forEach(b => {
     const el = document.createElement('div');
@@ -678,7 +846,7 @@ function fmtMin(m) { return m == null ? '–' : fmtDur(m * 60).slice(0, 5); }
 function fillSubmit(full) {
   const su = lastState && lastState.submit, a = lastState && lastState.airline;
   if (!su) return;
-  $('suFlight').textContent = su.free ? 'Freier Flug' : (su.flight ?? '–');
+  $('suFlight').textContent = su.free ? t('Freier Flug') : (su.flight ?? '–');
   $('suFreeField').style.display = su.free ? 'block' : 'none';
   if (full && su.free && !$('suFlightNo').value && su.flightNumberHint) $('suFlightNo').value = su.flightNumberHint;
   $('suRoute').textContent = su.dep ? `${su.dep} → ${su.arr}` : '–';
@@ -688,15 +856,15 @@ function fillSubmit(full) {
   $('suLanded').textContent = su.landedAt ?? '–';
   const warn = [];
   if (su.problem) warn.push(su.problem);
-  if (su.landedAt && su.arr && su.landedAt !== su.arr) warn.push(`Gelandet in ${su.landedAt}, gebucht war ${su.arr}.`);
+  if (su.landedAt && su.arr && su.landedAt !== su.arr) warn.push(t('Gelandet in {0}, gebucht war {1}.', su.landedAt, su.arr));
   const ck = su.aircraftCheck;
-  if (ck && ck.ok === false) warn.push('Flugzeug prüfen: ' + ck.text);
+  if (ck && ck.ok === false) warn.push(t('Flugzeug prüfen: ') + ck.text);
   $('suCheck').textContent = ck && ck.ok !== false ? (ck.ok ? '✓ ' : '') + ck.text : '';
   $('suCheck').className = 'hint' + (ck && ck.ok ? ' ok-text' : '');
   $('suWarn').style.display = warn.length ? 'block' : 'none';
   $('suWarn').textContent = warn.join(' ');
   $('btnSubmitSend').disabled = !su.available || su.sending;
-  $('btnSubmitSend').textContent = su.sending ? 'Wird gesendet …' : 'Jetzt einreichen';
+  $('btnSubmitSend').textContent = su.sending ? t('Wird gesendet …') : t('Jetzt einreichen');
   if (full && a) {
     const sel = $('suAircraft'), keep = sel.value;
     const hint = (su.aircraftHint || '').toUpperCase();
@@ -708,14 +876,14 @@ function fillSubmit(full) {
     };
     const list = [...a.fleet].sort((x, y) => score(y) - score(x) || String(x.reg).localeCompare(String(y.reg)));
     sel.innerHTML = '';
-    $('suFleetInfo').textContent = a.fleetInfo ? `Antwort der Airline: ${a.fleetInfo}` : '';
+    $('suFleetInfo').textContent = a.fleetInfo ? t('Antwort der Airline: {0}', a.fleetInfo) : '';
     if (su.bookedAircraftId) {
       const o = document.createElement('option');
       o.value = su.bookedAircraftId;
-      o.textContent = `${su.bookedAircraft} (aus der Buchung)`;
+      o.textContent = su.bookedAircraft + ' ' + t('(aus der Buchung)');
       sel.appendChild(o);
     }
-    if (list.length === 0 && !su.bookedAircraftId) { const o = document.createElement('option'); o.value = ''; o.textContent = 'Keine Flugzeuge in der Liste – Kennzeichen eingeben'; sel.appendChild(o); }
+    if (list.length === 0 && !su.bookedAircraftId) { const o = document.createElement('option'); o.value = ''; o.textContent = t('Keine Flugzeuge in der Liste – Kennzeichen eingeben'); sel.appendChild(o); }
     list.filter(f => f.id !== su.bookedAircraftId).forEach(f => {
       const o = document.createElement('option');
       o.value = f.id;
@@ -738,8 +906,8 @@ $('btnSubmitted').onclick = () => { if (lastState && lastState.submit.url) windo
 $('btnSubmitSend').onclick = async () => {
   const reg = $('suReg').value.trim();
   const id = reg ? '' : $('suAircraft').value;
-  if (!id && !reg) { snack('Bitte ein Flugzeug auswählen oder ein Kennzeichen eingeben.', false); return; }
-  if (!confirm('PIREP jetzt an die Airline senden?')) return;
+  if (!id && !reg) { snack(t('Bitte ein Flugzeug auswählen oder ein Kennzeichen eingeben.'), false); return; }
+  if (!confirm(t('PIREP jetzt an die Airline senden?'))) return;
   $('btnSubmitSend').disabled = true;
   const res = await post('/api/airline/submit', { aircraftId: id, registration: reg, notes: $('suNotes').value,
     flightNumber: $('suFlightNo').value });
@@ -761,21 +929,22 @@ async function tick() {
     const r = await fetch('/api/state', { cache: 'no-store' });
     s = await r.json();
     lastState = s;
+    if (s.settings && s.settings.lang) applyLang(s.settings.lang);
   } catch (e) {
-    $('conn').className = 'conn'; $('conn').lastChild.textContent = 'Keine Verbindung zu Flarelog';
+    $('conn').className = 'conn'; $('conn').lastChild.textContent = t('Keine Verbindung zu Flarelog');
     return;
   }
 
   // Verbindung
   const conn = $('conn');
-  if (s.paused) { conn.className = 'conn pause'; conn.lastChild.textContent = 'Simulator pausiert'; }
-  else if (s.connected) { conn.className = 'conn ok'; conn.lastChild.textContent = `Verbunden mit ${s.source ?? 'Aerofly'}`; }
-  else { conn.className = 'conn'; conn.lastChild.textContent = 'Keine Daten – Aerofly mit „Sende Fluginformation an IP“?'; }
+  if (s.paused) { conn.className = 'conn pause'; conn.lastChild.textContent = t('Simulator pausiert'); }
+  else if (s.connected) { conn.className = 'conn ok'; conn.lastChild.textContent = t('Verbunden mit {0}', s.source ?? 'Aerofly'); }
+  else { conn.className = 'conn'; conn.lastChild.textContent = t('Keine Daten – Aerofly mit „Sende Fluginformation an IP“?'); }
   $('banner').style.display = s.paused ? 'block' : 'none';
-  $('notice').textContent = s.pendingPlan ? `Nächster Flug: ${s.pendingPlan}` : (s.notices.length ? s.notices[s.notices.length - 1] : '');
+  $('notice').textContent = s.pendingPlan ? t('Nächster Flug: {0}', s.pendingPlan) : (s.notices.length ? s.notices[s.notices.length - 1] : '');
   $('btnFinish').style.display = s.inProgress ? 'inline-block' : 'none';
   $('btnUpdate').style.display = s.update ? 'inline-block' : 'none';
-  if (s.update) { $('btnUpdate').textContent = `Version ${s.update.version} verfügbar`; $('btnUpdate').onclick = () => window.open(s.update.url, '_blank'); }
+  if (s.update) { $('btnUpdate').textContent = t('Version {0} verfügbar', s.update.version); $('btnUpdate').onclick = () => window.open(s.update.url, '_blank'); }
   $('btnNew').style.display = (s.reportSaved || s.finished) ? 'inline-block' : 'none';
   $('btnCopy').style.display = s.landing ? 'inline-block' : 'none';
   const canSubmit = s.airline.hasKey && !!s.airline.pilot && !s.submit.pirepId && (s.reportSaved || s.finished);
@@ -788,13 +957,13 @@ async function tick() {
   const h = s.header;
   const tracking = s.connected && !s.finished;
   $('trk').className = 'tracking' + (tracking ? ' on' : '');
-  $('trk').lastChild.textContent = s.finished ? 'Beendet' : tracking ? 'Tracking' : 'Bereit';
-  $('fn').textContent = h.flight ?? 'Freier Flug';
+  $('trk').lastChild.textContent = s.finished ? t('Beendet') : tracking ? 'Tracking' : t('Bereit');
+  $('fn').textContent = h.flight ?? t('Freier Flug');
   $('rt').textContent = `${h.origin ?? '····'} — ${h.destination ?? '····'}`;
   $('sb').style.display = h.simbrief ? 'inline-block' : 'none';
   $('simAc').style.display = h.simAircraft ? 'inline' : 'none';
   $('simAc').textContent = h.simAircraft || '';
-  $('simAc').title = h.simAircraftCode ? `In Aerofly gewählt: ${h.simAircraftCode}` : '';
+  $('simAc').title = h.simAircraftCode ? t('In Aerofly gewählt: {0}', h.simAircraftCode) : '';
   if (s.settings) {
     segSet('segTime', s.settings.realTime);
     segSet('segWx', s.settings.realWeather);
@@ -803,8 +972,8 @@ async function tick() {
     if (document.activeElement !== $('wxIcao')) $('wxIcao').value = s.settings.weatherIcao || '';
     $('wxAuto').style.display = s.settings.realWeather ? 'block' : 'none';
     $('wxAuto').textContent = s.settings.weatherAuto
-      ? `Wetter von ${s.settings.weatherAuto}. SimBrief-Plan und Buchung haben Vorrang vor der Eingabe.`
-      : 'Kein Abflugplatz bekannt – bitte ICAO eintragen.';
+      ? t('Wetter von {0}. SimBrief-Plan und Buchung haben Vorrang vor der Eingabe.', s.settings.weatherAuto)
+      : t('Kein Abflugplatz bekannt – bitte ICAO eintragen.');
   }
   const ri = s.settings && s.settings.routeInfo;
   $('routeCard').style.display = ri ? 'block' : 'none';
@@ -812,16 +981,16 @@ async function tick() {
     $('rcDep').textContent = [ri.dep, ri.depRwy].filter(Boolean).join(' ');
     $('rcSid').textContent = ri.sid ? `SID ${ri.sid}` : '';
     const w = ri.waypoints || [];
-    $('rcWpts').textContent = w.length ? w.join(' · ') : 'direkt';
+    $('rcWpts').textContent = w.length ? w.join(' · ') : t('direkt');
     $('rcWpts').title = w.join(' ');
     $('rcArr').textContent = [ri.arr, ri.arrRwy].filter(Boolean).join(' ');
     $('rcStar').textContent = ri.star ? `STAR ${ri.star}` : '';
-    $('rcSrc').textContent = 'Plan aus SimBrief';
+    $('rcSrc').textContent = t('Plan aus SimBrief');
   }
   $('bookingTag').style.display = h.booking ? 'inline-block' : 'none';
-  if (h.booking) $('bookingTag').textContent = `Buchung ${h.booking}`;
+  if (h.booking) $('bookingTag').textContent = t('Buchung {0}', h.booking);
   $('liveTag').style.display = s.airline && s.airline.live ? 'inline-block' : 'none';
-  if (s.airline) $('liveTag').title = s.airline.liveInfo || 'Live an die Airline';
+  if (s.airline) $('liveTag').title = s.airline.liveInfo || t('Live an die Airline');
   if ($('airlineOverlay').classList.contains('show')) fillAirline(false);
   $('ac').textContent = h.aircraft ?? '';
   $('tod').textContent = s.progress && s.progress.todNm != null ? `TOD in ${de(s.progress.todNm)} nm` : '';
@@ -842,7 +1011,7 @@ async function tick() {
   $('dtg').textContent = s.progress ? `${de(s.progress.dtgNm)} nm` : '–';
   airBase = s.airTimeSec == null ? null
     : { sec: s.airTimeSec, at: performance.now(), running: s.connected && !s.paused && !s.landing };
-  $('phase').textContent = s.paused ? 'Pause' : s.phase;
+  $('phase').textContent = s.paused ? t('Pause') : s.phase;
   if (s.progress) {
     $('next').innerHTML = '';
     $('next').append(s.progress.next + ' ');
@@ -858,15 +1027,15 @@ async function tick() {
     $('ldgRating').textContent = s.landing.rating;
     $('ldgRating').className = 'big ' + s.landing.rating;
     $('ldgApt').textContent = s.landing.airport ?? '';
-    $('ldgGs').textContent = s.landing.gsKt != null ? `bei ${de(s.landing.gsKt)} kt Groundspeed` : '';
+    $('ldgGs').textContent = s.landing.gsKt != null ? t('bei {0} kt Groundspeed', de(s.landing.gsKt)) : '';
     const an = s.landing.analysis, more = [];
     if (an) {
       more.push(`Bounces ${an.bounces}`);
       if (an.approachVsSigmaFpm != null)
-        more.push(`Endanflug ${an.approachRating} · σ ${de(an.approachVsSigmaFpm)} fpm · Ø ${de(an.approachVsMeanFpm)} fpm`);
+        more.push(t('Endanflug') + ` ${an.approachRating} · σ ${de(an.approachVsSigmaFpm)} fpm · Ø ${de(an.approachVsMeanFpm)} fpm`);
       if (an.rolloutM != null) more.push(`Rollout ${de(an.rolloutM)} m`);
-      if (an.arrivalRunway) more.push(`Bahn ${an.arrivalRunway}` + (an.departureRunway ? ` (Start ${an.departureRunway})` : ''));
-      if (an.maxSimRate > 1) more.push(`⚠ Zeitraffer bis ${de(an.maxSimRate, 1)}×`);
+      if (an.arrivalRunway) more.push(t('Bahn {0}', an.arrivalRunway) + (an.departureRunway ? ' ' + t('(Start {0})', an.departureRunway) : ''));
+      if (an.maxSimRate > 1) more.push('⚠ ' + t('Zeitraffer bis {0}×', de(an.maxSimRate, 1)));
       if (an.slewEvents > 0) more.push(`⚠ Slew ${an.slewEvents}×`);
     }
     $('ldgMore').textContent = more.join('\n');
@@ -913,6 +1082,7 @@ setInterval(() => {
   $('air').textContent = fmtDur(airBase.sec + extra);
 }, 250);
 
+applyLang('__LANG__');   // vom Server eingesetzt – kein Umschalten nach dem Laden
 setInterval(tick, 1000);
 tick();
 </script>

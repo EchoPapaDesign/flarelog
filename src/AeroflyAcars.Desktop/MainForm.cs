@@ -17,7 +17,7 @@ internal sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "Flarelog – ACARS für Aerofly FS 4";
+        Text = AeroflyAcars.Core.Lang.T("Flarelog – ACARS für Aerofly FS 4", "Flarelog – ACARS for Aerofly FS 4");
         StartPosition = FormStartPosition.CenterScreen;
         Size = new Size(1500, 920);
         MinimumSize = new Size(1000, 640);
@@ -38,7 +38,7 @@ internal sealed class MainForm : Form
             BackColor = Background,
             TextAlign = ContentAlignment.MiddleCenter,
             Font = new Font("Segoe UI", 11f),
-            Text = "Flarelog wird gestartet …",
+            Text = AeroflyAcars.Core.Lang.T("Flarelog wird gestartet …", "Flarelog is starting …"),
         };
         _web = new WebView2
         {
@@ -64,8 +64,9 @@ internal sealed class MainForm : Form
         catch (SocketException ex)
         {
             MessageBox.Show(this,
-                $"Der UDP-Port {_engine.Settings.UdpPort} ist belegt ({ex.Message}).\n\n" +
-                "Läuft Flarelog schon, zum Beispiel noch die Konsolenversion?",
+                AeroflyAcars.Core.Lang.T(
+                    $"Der UDP-Port {_engine.Settings.UdpPort} ist belegt ({ex.Message}).\n\nLäuft Flarelog schon, zum Beispiel noch die Konsolenversion?",
+                    $"UDP port {_engine.Settings.UdpPort} is in use ({ex.Message}).\n\nIs Flarelog already running, e.g. the console version?"),
                 "Flarelog", MessageBoxButtons.OK, MessageBoxIcon.Error);
             Close();
             return;
@@ -74,7 +75,7 @@ internal sealed class MainForm : Form
         var url = _engine.DisplayUrl;
         if (url is null)
         {
-            _status.Text = "Das Display konnte nicht gestartet werden (Ports 8080–8089 belegt).";
+            _status.Text = AeroflyAcars.Core.Lang.T("Das Display konnte nicht gestartet werden (Ports 8080–8089 belegt).", "The display could not be started (ports 8080–8089 in use).");
             return;
         }
 
@@ -87,8 +88,9 @@ internal sealed class MainForm : Form
         }
         catch (Exception ex)
         {
-            _status.Text = "Die Anzeige-Komponente „Microsoft Edge WebView2“ konnte nicht gestartet werden.\n" +
-                           $"({ex.Message})\n\nDas Display wird stattdessen im Browser geöffnet: {url}";
+            _status.Text = AeroflyAcars.Core.Lang.T(
+                $"Die Anzeige-Komponente „Microsoft Edge WebView2“ konnte nicht gestartet werden.\n({ex.Message})\n\nDas Display wird stattdessen im Browser geöffnet: {url}",
+                $"The display component “Microsoft Edge WebView2” could not be started.\n({ex.Message})\n\nThe display opens in your browser instead: {url}");
             OpenExternal(url);
             return;
         }
@@ -122,7 +124,9 @@ internal sealed class MainForm : Form
         if (_engine.FlightInProgress)
         {
             var answer = MessageBox.Show(this,
-                "Es wird gerade ein Flug aufgezeichnet.\n\nProgramm beenden und den bisherigen Flug als Teilbericht speichern?",
+                AeroflyAcars.Core.Lang.T(
+                    "Es wird gerade ein Flug aufgezeichnet.\n\nProgramm beenden und den bisherigen Flug als Teilbericht speichern?",
+                    "A flight is being recorded.\n\nQuit and save the flight so far as a partial report?"),
                 "Flarelog", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
             if (answer != DialogResult.Yes)
             {
