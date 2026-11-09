@@ -60,7 +60,7 @@ public static class ReportWriter
         {
             sb.AppendLine($"  Bounces:       {a.Bounces}");
             if (a.ApproachVsSigmaFpm is { } sig)
-                sb.AppendLine($"  {L("Endanflug:", "Final approach:"),-15}{a.ApproachRating}, {L("Streuung", "spread")} {sig.ToString("F0", De)} fpm, " +
+                sb.AppendLine($"  {L("Endanflug:", "Approach:"),-15}{a.ApproachRating}, {L("Streuung", "spread")} {sig.ToString("F0", De)} fpm, " +
                               $"{L("Mittel", "mean")} {a.ApproachVsMeanFpm!.Value.ToString("F0", De)} fpm " +
                               $"({L("steilste", "steepest")} {a.ApproachVsSteepestFpm!.Value.ToString("F0", De)}, {L("flachste", "flattest")} {a.ApproachVsFlattestFpm!.Value.ToString("F0", De)})");
             if (a.RolloutM is { } ro) sb.AppendLine($"  Rollout:       {ro.ToString("N0", De)} m");
