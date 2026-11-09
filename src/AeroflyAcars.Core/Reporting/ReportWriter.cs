@@ -8,7 +8,7 @@ namespace AeroflyAcars.Core.Reporting;
 
 public static class ReportWriter
 {
-    private static readonly CultureInfo De = CultureInfo.GetCultureInfo("de-DE");
+    private static CultureInfo De => Lang.Culture;
 
     public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -17,70 +17,72 @@ public static class ReportWriter
         Converters = { new JsonStringEnumConverter() },
     };
 
+    private static string L(string de, string en) => Lang.T(de, en);
+
     public static string ToJson(FlightReport report) => JsonSerializer.Serialize(report, JsonOptions);
 
     public static string ToText(FlightReport r)
     {
         var sb = new StringBuilder();
         sb.AppendLine("==================================================");
-        sb.AppendLine($"  ACARS-Bericht  {r.Flight ?? "Flug"}  {r.Origin ?? "????"} → {r.Destination ?? "????"}");
+        sb.AppendLine($"  {L("ACARS-Bericht", "ACARS report")}  {r.Flight ?? L("Flug", "Flight")}  {r.Origin ?? "????"} → {r.Destination ?? "????"}");
         sb.AppendLine("==================================================");
-        if (r.OriginName is not null) sb.AppendLine($"Abflug:          {r.Origin} {r.OriginName}");
-        if (r.DestinationName is not null) sb.AppendLine($"Ziel:            {r.Destination} {r.DestinationName}");
-        if (r.Booking is not null) sb.AppendLine($"Buchung:         {r.Booking}");
-        if (r.Aircraft is not null) sb.AppendLine($"Muster:          {r.Aircraft}");
+        if (r.OriginName is not null) sb.AppendLine($"{L("Abflug:", "Departure:"),-17}{r.Origin} {r.OriginName}");
+        if (r.DestinationName is not null) sb.AppendLine($"{L("Ziel:", "Destination:"),-17}{r.Destination} {r.DestinationName}");
+        if (r.Booking is not null) sb.AppendLine($"{L("Buchung:", "Booking:"),-17}{r.Booking}");
+        if (r.Aircraft is not null) sb.AppendLine($"{L("Muster:", "Aircraft type:"),-17}{r.Aircraft}");
         if (r.Airac is not null) sb.AppendLine($"AIRAC (SimBrief): {r.Airac}");
         if (r.Route is not null) sb.AppendLine($"Route:           {r.Route}");
         sb.AppendLine();
 
-        sb.AppendLine("Zeiten (UTC)");
+        sb.AppendLine(L("Zeiten (UTC)", "Times (UTC)"));
         sb.AppendLine($"  Block off:     {Time(r.BlockOffUtc)}");
-        sb.AppendLine($"  Abheben:       {Time(r.TakeoffUtc)}");
-        sb.AppendLine($"  Aufsetzen:     {Time(r.TouchdownUtc)}");
+        sb.AppendLine($"  {L("Abheben:", "Takeoff:"),-15}{Time(r.TakeoffUtc)}");
+        sb.AppendLine($"  {L("Aufsetzen:", "Touchdown:"),-15}{Time(r.TouchdownUtc)}");
         sb.AppendLine($"  Block on:      {Time(r.BlockOnUtc)}");
         sb.AppendLine();
 
-        sb.AppendLine("Soll / Ist                 Plan        Ist      Abw.");
-        sb.AppendLine(Row("Blockzeit", Dur(r.PlannedBlockTime), Dur(r.BlockTime), Delta(r.BlockTime, r.PlannedBlockTime)));
-        sb.AppendLine(Row("Flugzeit", Dur(r.PlannedAirTime), Dur(r.AirTime), Delta(r.AirTime, r.PlannedAirTime)));
-        sb.AppendLine(Row("Strecke (NM)", Num(r.PlannedDistanceNm), Num(r.DistanceFlownNm), NumDelta(r.DistanceFlownNm, r.PlannedDistanceNm)));
-        sb.AppendLine(Row("Max. Höhe (ft)", Num(r.PlannedCruiseAltitudeFt), Num(r.MaxAltitudeFt), NumDelta(r.MaxAltitudeFt, r.PlannedCruiseAltitudeFt)));
+        sb.AppendLine(L("Soll / Ist                 Plan        Ist      Abw.", "Planned / actual           Plan     Actual      Diff"));
+        sb.AppendLine(Row(L("Blockzeit", "Block time"), Dur(r.PlannedBlockTime), Dur(r.BlockTime), Delta(r.BlockTime, r.PlannedBlockTime)));
+        sb.AppendLine(Row(L("Flugzeit", "Air time"), Dur(r.PlannedAirTime), Dur(r.AirTime), Delta(r.AirTime, r.PlannedAirTime)));
+        sb.AppendLine(Row(L("Strecke (NM)", "Distance (NM)"), Num(r.PlannedDistanceNm), Num(r.DistanceFlownNm), NumDelta(r.DistanceFlownNm, r.PlannedDistanceNm)));
+        sb.AppendLine(Row(L("Max. Höhe (ft)", "Max. altitude (ft)"), Num(r.PlannedCruiseAltitudeFt), Num(r.MaxAltitudeFt), NumDelta(r.MaxAltitudeFt, r.PlannedCruiseAltitudeFt)));
         sb.AppendLine();
 
-        sb.AppendLine("Landung");
-        sb.AppendLine($"  Landerate:     {(r.LandingRateFpm is { } lr ? lr.ToString("F0", De) + " fpm (" + r.LandingRating + ")" : "–")}");
+        sb.AppendLine(L("Landung", "Landing"));
+        sb.AppendLine($"  {L("Landerate:", "Landing rate:"),-15}{(r.LandingRateFpm is { } lr ? lr.ToString("F0", De) + " fpm (" + r.LandingRating + ")" : "–")}");
         sb.AppendLine($"  Groundspeed:   {(r.TouchdownGroundSpeedKt is { } gs ? gs.ToString("F0", De) + " kt" : "–")}");
         sb.AppendLine($"  Pitch:         {(r.TouchdownPitchDeg is { } p ? p.ToString("F1", De) + "°" : "–")}");
         if (r.TouchdownDistanceToDestinationNm is { } dd)
-            sb.AppendLine($"  Abstand Ziel:  {dd.ToString("F1", De)} NM");
-        sb.AppendLine($"  Durchstarten:  {r.GoArounds}");
+            sb.AppendLine($"  {L("Abstand Ziel:", "Dist. to dest.:"),-15}{dd.ToString("F1", De)} NM");
+        sb.AppendLine($"  {L("Durchstarten:", "Go-arounds:"),-15}{r.GoArounds}");
         if (r.Analysis is { } a)
         {
             sb.AppendLine($"  Bounces:       {a.Bounces}");
             if (a.ApproachVsSigmaFpm is { } sig)
-                sb.AppendLine($"  Endanflug:     {a.ApproachRating}, Streuung {sig.ToString("F0", De)} fpm, " +
-                              $"Mittel {a.ApproachVsMeanFpm!.Value.ToString("F0", De)} fpm " +
-                              $"(steilste {a.ApproachVsSteepestFpm!.Value.ToString("F0", De)}, flachste {a.ApproachVsFlattestFpm!.Value.ToString("F0", De)})");
+                sb.AppendLine($"  {L("Endanflug:", "Final approach:"),-15}{a.ApproachRating}, {L("Streuung", "spread")} {sig.ToString("F0", De)} fpm, " +
+                              $"{L("Mittel", "mean")} {a.ApproachVsMeanFpm!.Value.ToString("F0", De)} fpm " +
+                              $"({L("steilste", "steepest")} {a.ApproachVsSteepestFpm!.Value.ToString("F0", De)}, {L("flachste", "flattest")} {a.ApproachVsFlattestFpm!.Value.ToString("F0", De)})");
             if (a.RolloutM is { } ro) sb.AppendLine($"  Rollout:       {ro.ToString("N0", De)} m");
             sb.AppendLine();
-            sb.AppendLine("Auswertung");
-            sb.AppendLine($"  Bahnen:        {a.DepartureRunway ?? "–"} → {a.ArrivalRunway ?? "–"}");
-            sb.AppendLine($"  Rollzeiten:    Taxi-out {Dur(a.TaxiOut)}, Taxi-in {Dur(a.TaxiIn)}");
-            sb.AppendLine($"  Pausen:        {Dur(a.PausedTime)}");
-            sb.AppendLine($"  Zeitraffer:    max. {a.MaxSimRate.ToString("0.#", De)}×");
+            sb.AppendLine(L("Auswertung", "Analysis"));
+            sb.AppendLine($"  {L("Bahnen:", "Runways:"),-15}{a.DepartureRunway ?? "–"} → {a.ArrivalRunway ?? "–"}");
+            sb.AppendLine($"  {L("Rollzeiten:", "Taxi times:"),-15}Taxi-out {Dur(a.TaxiOut)}, Taxi-in {Dur(a.TaxiIn)}");
+            sb.AppendLine($"  {L("Pausen:", "Paused:"),-15}{Dur(a.PausedTime)}");
+            sb.AppendLine($"  {L("Zeitraffer:", "Sim rate:"),-15}max. {a.MaxSimRate.ToString("0.#", De)}×");
             sb.AppendLine($"  Slew:          {a.SlewEvents}");
-            sb.AppendLine($"  Tageslicht:    {a.DaylightTakeoff ?? "–"} → {a.DaylightLanding ?? "–"}");
+            sb.AppendLine($"  {L("Tageslicht:", "Daylight:"),-15}{a.DaylightTakeoff ?? "–"} → {a.DaylightLanding ?? "–"}");
         }
         sb.AppendLine();
 
-        sb.AppendLine("Ablauf");
+        sb.AppendLine(L("Ablauf", "Flight log"));
         foreach (var e in r.Phases)
             sb.AppendLine($"  {e.Time:HH:mm:ss}  {e.Text}");
         sb.AppendLine();
 
         if (r.Notes.Count > 0)
         {
-            sb.AppendLine("Hinweise");
+            sb.AppendLine(L("Hinweise", "Notes"));
             foreach (var n in r.Notes) sb.AppendLine($"  - {n}");
         }
         return sb.ToString();

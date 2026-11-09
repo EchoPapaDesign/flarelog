@@ -1187,7 +1187,7 @@ public sealed class AcarsEngine : IDisposable
             bool connected = IsConnectedLocked();
             if (s is null)
                 return connected ? "Daten kommen an, warte auf erste GPS-Position …" : "Keine Daten von Aerofly …";
-            var phase = _tracker.IsPaused ? "PAUSE" : _tracker.Phase.ToGerman();
+            var phase = _tracker.IsPaused ? "PAUSE" : _tracker.Phase.ToDisplay();
             return string.Create(CultureInfo.InvariantCulture,
                 $"{(connected ? "●" : "○")} {phase,-24} ALT {s.AltitudeFt,6:F0} ft  GS {s.GroundSpeedKt,4:F0} kt  VS {s.VerticalSpeedFpm,6:F0} fpm  HDG {s.HeadingDeg,4:F0}°");
         }
@@ -1229,7 +1229,7 @@ public sealed class AcarsEngine : IDisposable
                 connected,
                 paused = tracker.IsPaused,
                 source = _source,
-                phase = tracker.Phase.ToGerman(),
+                phase = tracker.Phase.ToDisplay(),
                 finished = tracker.IsFinished,
                 inProgress = samples.Count > 0 && tracker.Phase != FlightPhase.Preflight && !_reportSaved,
                 reportSaved = _reportSaved,

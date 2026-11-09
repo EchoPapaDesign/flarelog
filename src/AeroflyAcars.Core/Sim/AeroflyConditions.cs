@@ -28,11 +28,12 @@ public sealed record Metar(string Raw, string? Station, int? WindDirection, int 
     {
         get
         {
-            var de = CultureInfo.GetCultureInfo("de-DE");
-            string wind = WindKt == 0 ? "Wind still"
+            var de = Lang.Culture;
+            string wind = WindKt == 0 ? Lang.T("Wind still", "Wind calm")
                 : $"{(WindDirection is { } d ? d.ToString("000", de) : "VRB")}/{WindKt:00} kt" + (GustKt is { } g ? $" G{g}" : "");
-            string vis = VisibilityM is { } v ? (v >= 9999 ? "Sicht ≥ 10 km" : v >= 5000 ? $"Sicht {v / 1000} km" : $"Sicht {v:N0} m".Replace(",", ".")) : "Sicht ?";
-            string clouds = Clouds.Count == 0 ? "keine Wolken"
+            string sight = Lang.T("Sicht", "Visibility");
+            string vis = VisibilityM is { } v ? (v >= 9999 ? $"{sight} ≥ 10 km" : v >= 5000 ? $"{sight} {v / 1000} km" : $"{sight} {v.ToString("N0", de)} m") : $"{sight} ?";
+            string clouds = Clouds.Count == 0 ? Lang.T("keine Wolken", "no clouds")
                 : string.Join(" ", Clouds.Take(3).Select(c => $"{c.Cover} {c.BaseFt.ToString("N0", de)} ft"));
             return $"{wind}, {vis}, {clouds}";
         }
@@ -152,7 +153,7 @@ public static class AeroflyConditions
     public static int WriteToMainMcf(DateTimeOffset? utc, Metar? metar, string? path = null)
     {
         path ??= AeroflyConfig.DefaultPath;
-        if (!File.Exists(path)) throw new InvalidOperationException($"Aerofly-Einstellungen nicht gefunden: {path}");
+        if (!File.Exists(path)) throw new InvalidOperationException(Lang.T($"Aerofly-Einstellungen nicht gefunden: {path}", $"Aerofly settings not found: {path}"));
 
         var bytes = File.ReadAllBytes(path);
         bool bom = bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;

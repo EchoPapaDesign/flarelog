@@ -59,11 +59,11 @@ public sealed record FlightPlan
     }
 
     public string DisplayName =>
-        Callsign ?? (Airline is not null && FlightNumber is not null ? Airline + FlightNumber : "Flug");
+        Callsign ?? (Airline is not null && FlightNumber is not null ? Airline + FlightNumber : Lang.T("Flug", "Flight"));
 
     public string Summary =>
         $"{DisplayName} {OriginIcao} → {DestinationIcao}" +
         (AircraftType is null ? "" : $", {AircraftType}") +
-        $", {Waypoints.Count} Wegpunkte" +
+        $", {Waypoints.Count} " + Lang.T("Wegpunkte", "waypoints") +
         (Airac is null ? "" : $", AIRAC {Airac}");
 }

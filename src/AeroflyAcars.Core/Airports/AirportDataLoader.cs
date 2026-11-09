@@ -22,16 +22,16 @@ public static class AirportDataLoader
     {
         path ??= DefaultPath;
         var (ok, note) = await EnsureFileAsync(SourceUrl, path, "latitude_deg", http, cancellationToken).ConfigureAwait(false);
-        if (!ok) return (null, $"Flughafenliste nicht verfügbar{note}.");
+        if (!ok) return (null, Lang.T($"Flughafenliste nicht verfügbar{note}.", $"Airport list not available{note}."));
 
         try
         {
             var db = AirportDatabase.LoadCsv(path);
-            return (db, $"{db.Count:N0} Flugplätze geladen{note}");
+            return (db, Lang.T($"{db.Count:N0} Flugplätze geladen{note}", $"{db.Count:N0} airports loaded{note}"));
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
-            return (null, $"Flughafenliste konnte nicht gelesen werden: {ex.Message}");
+            return (null, Lang.T($"Flughafenliste konnte nicht gelesen werden: {ex.Message}", $"Could not read the airport list: {ex.Message}"));
         }
     }
 
@@ -40,16 +40,16 @@ public static class AirportDataLoader
     {
         path ??= RunwaysPath;
         var (ok, note) = await EnsureFileAsync(RunwaysUrl, path, "le_ident", http, cancellationToken).ConfigureAwait(false);
-        if (!ok) return (null, $"Bahnenliste nicht verfügbar{note}.");
+        if (!ok) return (null, Lang.T($"Bahnenliste nicht verfügbar{note}.", $"Runway list not available{note}."));
 
         try
         {
             var db = RunwayDatabase.LoadCsv(path);
-            return (db, $"{db.Count:N0} Bahnen geladen{note}");
+            return (db, Lang.T($"{db.Count:N0} Bahnen geladen{note}", $"{db.Count:N0} runways loaded{note}"));
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
-            return (null, $"Bahnenliste konnte nicht gelesen werden: {ex.Message}");
+            return (null, Lang.T($"Bahnenliste konnte nicht gelesen werden: {ex.Message}", $"Could not read the runway list: {ex.Message}"));
         }
     }
 
@@ -69,7 +69,7 @@ public static class AirportDataLoader
         catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or UnauthorizedAccessException)
         {
             return exists
-                ? (true, " (Aktualisierung fehlgeschlagen, nutze vorhandene Liste)")
+                ? (true, Lang.T(" (Aktualisierung fehlgeschlagen, nutze vorhandene Liste)", " (update failed, using existing list)"))
                 : (false, $" ({ex.Message})");
         }
     }

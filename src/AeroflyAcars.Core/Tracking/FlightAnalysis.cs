@@ -112,7 +112,7 @@ public sealed record FlightAnalysis
                 sigma = Math.Sqrt(vs.Sum(v => (v - m) * (v - m)) / n);
                 steep = vs.Min();
                 flat = vs.Max();
-                rating = sigma <= 300 ? "stabil" : sigma <= 500 ? "leichte Schwankungen" : "unstabil";
+                rating = sigma <= 300 ? Lang.T("stabil", "stable") : sigma <= 500 ? Lang.T("leichte Schwankungen", "slightly unsteady") : Lang.T("unstabil", "unstable");
             }
         }
 
@@ -200,9 +200,9 @@ public sealed record FlightAnalysis
         string? Daylight(FlightSample? s) =>
             s is null ? null : Geo.SunElevationDeg(s.Time, s.Latitude, s.Longitude) switch
             {
-                >= -0.833 => "Tag",
-                >= -6 => "Dämmerung",
-                _ => "Nacht",
+                >= -0.833 => Lang.T("Tag", "day"),
+                >= -6 => Lang.T("Dämmerung", "twilight"),
+                _ => Lang.T("Nacht", "night"),
             };
         var takeoffSample = t.Takeoff is { } tko ? samples.FirstOrDefault(s => s.Time >= tko) : null;
 

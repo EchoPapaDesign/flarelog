@@ -16,7 +16,7 @@ public sealed class SimBriefClient
     public async Task<FlightPlan> FetchLatestAsync(string user, CancellationToken cancellationToken = default)
     {
         user = user.Trim();
-        if (user.Length == 0) throw new SimBriefException("Kein SimBrief-Benutzer angegeben.");
+        if (user.Length == 0) throw new SimBriefException(Lang.T("Kein SimBrief-Benutzer angegeben.", "No SimBrief user entered."));
 
         string key = user.All(char.IsDigit) ? "userid" : "username";
         var url = $"https://www.simbrief.com/api/xml.fetcher.php?{key}={Uri.EscapeDataString(user)}&json=1";
@@ -31,11 +31,11 @@ public sealed class SimBriefClient
         }
         catch (HttpRequestException ex)
         {
-            throw new SimBriefException($"SimBrief ist nicht erreichbar: {ex.Message}", ex);
+            throw new SimBriefException(Lang.T($"SimBrief ist nicht erreichbar: {ex.Message}", $"SimBrief is not reachable: {ex.Message}"), ex);
         }
         catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new SimBriefException("SimBrief hat nicht rechtzeitig geantwortet.", ex);
+            throw new SimBriefException(Lang.T("SimBrief hat nicht rechtzeitig geantwortet.", "SimBrief did not respond in time."), ex);
         }
 
         // Auch bei Fehlern (HTTP 400) steht der Grund als JSON im Body – der Parser wertet ihn aus.
@@ -45,7 +45,7 @@ public sealed class SimBriefClient
         }
         catch (SimBriefException) when (status >= 400 && !body.TrimStart().StartsWith('{'))
         {
-            throw new SimBriefException($"SimBrief antwortet mit HTTP {status}.");
+            throw new SimBriefException(Lang.T($"SimBrief antwortet mit HTTP {status}.", $"SimBrief responds with HTTP {status}."));
         }
     }
 }

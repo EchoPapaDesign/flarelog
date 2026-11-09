@@ -15,8 +15,10 @@ public static class FlightReportBuilder
         var samples = tracker.Samples;
         var notes = new List<string>
         {
-            "Datenquelle: Aerofly UDP-Broadcast (ForeFlight-Format). Vertikalgeschwindigkeit und Landerate " +
-            "sind aus der GPS-Höhe berechnet; Fahrwerk, Klappen und Treibstoff sind über UDP nicht verfügbar.",
+            Lang.T("Datenquelle: Aerofly UDP-Broadcast (ForeFlight-Format). Vertikalgeschwindigkeit und Landerate " +
+                   "sind aus der GPS-Höhe berechnet; Fahrwerk, Klappen und Treibstoff sind über UDP nicht verfügbar.",
+                   "Data source: Aerofly UDP broadcast (ForeFlight format). Vertical speed and landing rate are " +
+                   "calculated from GPS altitude; gear, flaps and fuel are not available via UDP."),
         };
 
         TimeSpan? blockTime = tracker.BlockOff is { } off && tracker.BlockOn is { } on ? on - off : null;
@@ -32,22 +34,22 @@ public static class FlightReportBuilder
         {
             touchdownToDest = Geo.DistanceNm(tdSample.Latitude, tdSample.Longitude, dlat, dlon);
             if (touchdownToDest > 5)
-                notes.Add($"Gelandet {touchdownToDest:F1} NM vom geplanten Ziel {plan.DestinationIcao} entfernt.");
+                notes.Add(Lang.T($"Gelandet {touchdownToDest:F1} NM vom geplanten Ziel {plan.DestinationIcao} entfernt.", $"Landed {touchdownToDest:F1} NM from the planned destination {plan.DestinationIcao}."));
         }
 
         var analysis = FlightAnalysis.Analyze(tracker, runways);
-        if (analysis.MaxSimRate > 1) notes.Add($"Zeitraffer erkannt: bis ca. {analysis.MaxSimRate:0.#}×.");
-        if (analysis.SlewEvents > 0) notes.Add($"Positionssprung (Slew/Versetzen) {analysis.SlewEvents}× erkannt.");
+        if (analysis.MaxSimRate > 1) notes.Add(Lang.T($"Zeitraffer erkannt: bis ca. {analysis.MaxSimRate:0.#}×.", $"Sim rate detected: up to approx. {analysis.MaxSimRate:0.#}×."));
+        if (analysis.SlewEvents > 0) notes.Add(Lang.T($"Positionssprung (Slew/Versetzen) {analysis.SlewEvents}× erkannt.", $"Position jump (slew/reposition) detected {analysis.SlewEvents}×."));
         if (tracker.PauseCount > 0)
-            notes.Add($"Simulator {tracker.PauseCount}× pausiert, zusammen {tracker.PausedTime:mm\\:ss} min (in Flug- und Blockzeit enthalten).");
+            notes.Add(Lang.T($"Simulator {tracker.PauseCount}× pausiert, zusammen {tracker.PausedTime:mm\\:ss} min (in Flug- und Blockzeit enthalten).", $"Simulator paused {tracker.PauseCount}×, {tracker.PausedTime:mm\\:ss} min in total (included in air and block time)."));
         if (plan is not null && tracker.ArrivalAirport is { } arr &&
             !arr.Ident.Equals(plan.DestinationIcao, StringComparison.OrdinalIgnoreCase))
-            notes.Add($"Gelandet in {arr.DisplayName} statt in {plan.DestinationIcao}.");
+            notes.Add(Lang.T($"Gelandet in {arr.DisplayName} statt in {plan.DestinationIcao}.", $"Landed at {arr.DisplayName} instead of {plan.DestinationIcao}."));
         if (booking is not null && tracker.ArrivalAirport is { } landed &&
             !landed.Ident.Equals(booking.Arrival, StringComparison.OrdinalIgnoreCase))
-            notes.Add($"Buchung {booking.Ident} hatte Ziel {booking.Arrival}, gelandet in {landed.Ident}.");
-        if (tracker.StartedAirborne) notes.Add("Aufzeichnung wurde im Flug gestartet – keine Startdaten.");
-        if (!tracker.IsFinished) notes.Add($"Flug nicht vollständig aufgezeichnet (letzte Phase: {tracker.Phase.ToGerman()}).");
+            notes.Add(Lang.T($"Buchung {booking.Ident} hatte Ziel {booking.Arrival}, gelandet in {landed.Ident}.", $"Booking {booking.Ident} was to {booking.Arrival}, landed at {landed.Ident}."));
+        if (tracker.StartedAirborne) notes.Add(Lang.T("Aufzeichnung wurde im Flug gestartet – keine Startdaten.", "Recording started in flight – no takeoff data."));
+        if (!tracker.IsFinished) notes.Add(Lang.T($"Flug nicht vollständig aufgezeichnet (letzte Phase: {tracker.Phase.ToDisplay()}).", $"Flight not completely recorded (last phase: {tracker.Phase.ToDisplay()})."));
 
         return new FlightReport
         {
@@ -96,11 +98,11 @@ public static class FlightReportBuilder
 
     public static string RateLanding(double fpm) => fpm switch
     {
-        >= -60 => "sehr weich",
-        >= -240 => "gut",
-        >= -400 => "fest",
-        >= -600 => "hart",
-        _ => "sehr hart",
+        >= -60 => Lang.T("sehr weich", "very soft"),
+        >= -240 => Lang.T("gut", "good"),
+        >= -400 => Lang.T("fest", "firm"),
+        >= -600 => Lang.T("hart", "hard"),
+        _ => Lang.T("sehr hart", "very hard"),
     };
 
     private static double DistanceNm(IReadOnlyList<FlightSample> samples, DateTimeOffset from, DateTimeOffset to)

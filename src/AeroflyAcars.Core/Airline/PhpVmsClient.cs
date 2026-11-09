@@ -103,7 +103,7 @@ public sealed class PhpVmsClient
     public static Uri NormalizeBaseUrl(string url)
     {
         url = url.Trim();
-        if (url.Length == 0) throw new AirlineException("Keine Airline-Adresse eingetragen.");
+        if (url.Length == 0) throw new AirlineException(Lang.T("Keine Airline-Adresse eingetragen.", "No airline address entered."));
         if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
             !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             url = "https://" + url;
@@ -195,7 +195,7 @@ public sealed class PhpVmsClient
             ["source_name"] = p.SourceName,
         };
         var json = await SendAsync(HttpMethod.Post, "api/pireps/prefile", Clean(body), ct).ConfigureAwait(false);
-        return PhpVmsParser.ParseId(json) ?? throw new AirlineException("Die Airline hat keine PIREP-ID zurückgegeben.");
+        return PhpVmsParser.ParseId(json) ?? throw new AirlineException(Lang.T("Die Airline hat keine PIREP-ID zurückgegeben.", "The airline did not return a PIREP ID."));
     }
 
     public async Task SendPositionsAsync(string pirepId, IReadOnlyList<PirepPosition> positions, CancellationToken ct = default)
@@ -290,7 +290,7 @@ public sealed class PhpVmsClient
 
     private async Task<string> SendAsync(HttpMethod method, string path, object? jsonBody, CancellationToken ct)
     {
-        if (_apiKey.Length == 0) throw new AirlineException("Kein API-Schlüssel eingetragen.");
+        if (_apiKey.Length == 0) throw new AirlineException(Lang.T("Kein API-Schlüssel eingetragen.", "No API key entered."));
 
         using var request = new HttpRequestMessage(method, new Uri(_base, path));
         if (jsonBody is not null)
@@ -306,11 +306,11 @@ public sealed class PhpVmsClient
         }
         catch (HttpRequestException ex)
         {
-            throw new AirlineException($"{_base.Host} ist nicht erreichbar: {ex.Message}", ex);
+            throw new AirlineException(Lang.T($"{_base.Host} ist nicht erreichbar: {ex.Message}", $"{_base.Host} is not reachable: {ex.Message}"), ex);
         }
         catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
         {
-            throw new AirlineException($"{_base.Host} hat nicht rechtzeitig geantwortet.", ex);
+            throw new AirlineException(Lang.T($"{_base.Host} hat nicht rechtzeitig geantwortet.", $"{_base.Host} did not respond in time."), ex);
         }
 
         using (response)
@@ -319,14 +319,14 @@ public sealed class PhpVmsClient
             var status = response.StatusCode;
             var detail = PhpVmsParser.ParseError(body);
             if (status == HttpStatusCode.Unauthorized)
-                throw new AirlineException("API-Schlüssel wurde abgelehnt. Bitte im Airline-Profil prüfen.", status);
+                throw new AirlineException(Lang.T("API-Schlüssel wurde abgelehnt. Bitte im Airline-Profil prüfen.", "API key was rejected. Please check it in your airline profile."), status);
             if (status == HttpStatusCode.NotFound)
-                throw new AirlineException(detail ?? $"Nicht gefunden: {path}", status);
+                throw new AirlineException(detail ?? Lang.T($"Nicht gefunden: {path}", $"Not found: {path}"), status);
             if (!response.IsSuccessStatusCode)
                 throw new AirlineException(
-                    $"Die Airline meldet{(detail is null ? $" HTTP {(int)status}" : ": " + detail)}", status);
+                    Lang.T("Die Airline meldet", "The airline reports") + (detail is null ? $" HTTP {(int)status}" : ": " + detail), status);
             if (!body.TrimStart().StartsWith('{') && !body.TrimStart().StartsWith('['))
-                throw new AirlineException($"{_base.Host} liefert keine Schnittstellen-Daten (evtl. falsche Adresse).");
+                throw new AirlineException(Lang.T($"{_base.Host} liefert keine Schnittstellen-Daten (evtl. falsche Adresse).", $"{_base.Host} does not return API data (wrong address?)."));
             return body;
         }
     }
@@ -508,7 +508,7 @@ public static class PhpVmsParser
         }
         catch (JsonException ex)
         {
-            throw new AirlineException("Antwort der Airline konnte nicht gelesen werden.", ex);
+            throw new AirlineException(Lang.T("Antwort der Airline konnte nicht gelesen werden.", "Could not read the airline's response."), ex);
         }
     }
 

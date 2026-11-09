@@ -77,7 +77,6 @@ public sealed class FlightTracker
     /// <summary>Nach dem Ausrollen wieder so schnell: neuer Start (Stop-and-go, Platzrunden).</summary>
     public const double RestartTakeoffKt = 40;
 
-    private static readonly CultureInfo De = CultureInfo.GetCultureInfo("de-DE");
 
     private readonly List<FlightSample> _samples = new();
     private readonly List<FlightEvent> _events = new();
@@ -94,6 +93,7 @@ public sealed class FlightTracker
     private DateTimeOffset _pendingSince;
     private TouchdownCandidate? _candidate;
     private double _approachMinAltFt = double.MaxValue;
+    private readonly HashSet<FlightEvent> _goAroundEvents = new(ReferenceEqualityComparer.Instance);
     /// <summary>Startlauf: Strecke (ft) und Höhe der Messpunkte am Boden – für geneigte Bahnen.</summary>
     private readonly List<(double D, double Alt)> _roll = new();
     private double _rollDistFt;
@@ -184,7 +184,7 @@ public sealed class FlightTracker
             {
                 IsPaused = true;
                 PauseCount++;
-                Log(_frozenSince, "Simulator pausiert");
+                Log(_frozenSince, Lang.T("Simulator pausiert", "Simulator paused"));
             }
             return;
         }
@@ -192,7 +192,7 @@ public sealed class FlightTracker
         {
             IsPaused = false;
             PausedTime += s.Time - _frozenSince;
-            Log(s.Time, "Simulator fortgesetzt");
+            Log(s.Time, Lang.T("Simulator fortgesetzt", "Simulator resumed"));
         }
         _frozenCount = 0;
 
@@ -205,7 +205,7 @@ public sealed class FlightTracker
                 if (_samples.Count == 1 && s.GroundSpeedKt > AirborneStartKt)
                 {
                     StartedAirborne = true;
-                    SetPhase(FlightPhase.Cruise, s.Time, "Aufzeichnung im Flug begonnen – Start wird nicht erfasst");
+                    SetPhase(FlightPhase.Cruise, s.Time, Lang.T("Aufzeichnung im Flug begonnen – Start wird nicht erfasst", "Recording started in flight – takeoff not recorded"));
                     break;
                 }
                 if (s.GroundSpeedKt < TakeoffRollKt) DepartureElevationFt = s.AltitudeFt;
@@ -213,7 +213,7 @@ public sealed class FlightTracker
                 {
                     BlockOff = s.Time;
                     DepartureAirport = _airports?.Nearest(s.Latitude, s.Longitude, DepartureAirportRadiusNm);
-                    SetPhase(FlightPhase.TaxiOut, s.Time, "Block off" + At(DepartureAirport) + " – Rollen zum Start");
+                    SetPhase(FlightPhase.TaxiOut, s.Time, "Block off" + At(DepartureAirport) + Lang.T(" – Rollen zum Start", " – taxi to runway"));
                 }
                 break;
 
@@ -228,7 +228,7 @@ public sealed class FlightTracker
                     DepartureAirport ??= _airports?.Nearest(s.Latitude, s.Longitude, DepartureAirportRadiusNm);
                     CalibrateGround(s);
                     _roll.Clear(); _rollDistFt = 0;
-                    SetPhase(FlightPhase.TakeoffRoll, s.Time, $"Startlauf auf Kurs {s.HeadingDeg:000}°");
+                    SetPhase(FlightPhase.TakeoffRoll, s.Time, Lang.T($"Startlauf auf Kurs {s.HeadingDeg:000}°", $"Takeoff roll, heading {s.HeadingDeg:000}°"));
                 }
                 break;
 
@@ -240,12 +240,14 @@ public sealed class FlightTracker
                     Takeoff ??= liftoff;               // bei Stop-and-go zählt der erste Start
                     LiftoffSpeedKt ??= s.GroundSpeedKt;
                     SetPhase(FlightPhase.Climb, liftoff,
-                        string.Create(De, $"Abheben mit {s.GroundSpeedKt:F0} kt, Pitch {s.PitchDeg:F1}°, Querlage {Math.Abs(s.RollDeg):F1}°"));
+                        Lang.English
+                            ? string.Create(Lang.Culture, $"Liftoff at {s.GroundSpeedKt:F0} kt, pitch {s.PitchDeg:F1}°, bank {Math.Abs(s.RollDeg):F1}°")
+                            : string.Create(Lang.Culture, $"Abheben mit {s.GroundSpeedKt:F0} kt, Pitch {s.PitchDeg:F1}°, Querlage {Math.Abs(s.RollDeg):F1}°"));
                 }
                 else
                 {
                     if (s.GroundSpeedKt < RejectTakeoffKt)
-                        SetPhase(FlightPhase.TaxiOut, s.Time, "Startabbruch – wieder Rollen");
+                        SetPhase(FlightPhase.TaxiOut, s.Time, Lang.T("Startabbruch – wieder Rollen", "Rejected takeoff – taxiing"));
                 }
                 break;
 
@@ -260,7 +262,7 @@ public sealed class FlightTracker
             case FlightPhase.Landing:
                 if (s.GroundSpeedKt >= RestartTakeoffKt && s.GroundSpeedKt > (prev?.GroundSpeedKt ?? 0)) { Restart(s); break; }
                 if (s.GroundSpeedKt < TaxiInKt)
-                    SetPhase(FlightPhase.TaxiIn, s.Time, "Rollen zur Parkposition");
+                    SetPhase(FlightPhase.TaxiIn, s.Time, Lang.T("Rollen zur Parkposition", "Taxi to gate"));
                 break;
 
             case FlightPhase.TaxiIn:
@@ -271,7 +273,7 @@ public sealed class FlightTracker
                     if (s.Time - _stoppedSince.Value >= ParkingTime)
                     {
                         BlockOn = _stoppedSince;
-                        SetPhase(FlightPhase.Arrived, _stoppedSince.Value, "Block on" + At(ArrivalAirport) + " – angekommen");
+                        SetPhase(FlightPhase.Arrived, _stoppedSince.Value, "Block on" + At(ArrivalAirport) + Lang.T(" – angekommen", " – arrived"));
                     }
                 }
                 else
@@ -325,23 +327,26 @@ public sealed class FlightTracker
         if (++_pendingCount < PhaseConfirmSamples) return;
 
         string text;
+        bool goAround = false;
         if (Phase == FlightPhase.Approach && target == FlightPhase.Climb && _approachMinAltFt - groundRef < GoAroundMaxHeightFt)
         {
             GoArounds++;
-            text = "Durchstarten";
+            text = Lang.T("Durchstarten", "Go-around");
+            goAround = true;
         }
         else if (target == FlightPhase.Cruise)
         {
-            text = "Reiseflug in " + FormatAltitude(s.AltitudeFt);
+            text = Lang.T("Reiseflug in ", "Cruise at ") + FormatAltitude(s.AltitudeFt);
         }
         else
         {
-            text = target.ToGerman();
+            text = target.ToDisplay();
         }
 
         _pendingPhase = null;
         if (target == FlightPhase.Approach) _approachMinAltFt = s.AltitudeFt;
         SetPhase(target, _pendingSince, text);
+        if (goAround) _goAroundEvents.Add(_events[^1]);
     }
 
     /// <summary>Abgleich der Aerofly-Höhe mit der Bahnhöhe aus der Datenbank, solange das Flugzeug am Boden steht.</summary>
@@ -491,7 +496,7 @@ public sealed class FlightTracker
         LandingRateFpm = cand.LandingRateFpm;
         ArrivalAirport = cand.Airport ?? _airports?.Nearest(s.Latitude, s.Longitude, ArrivalAirportRadiusNm);
         SetPhase(FlightPhase.Landing, cand.Sample.Time,
-            $"Aufsetzen mit {cand.LandingRateFpm:F0} fpm bei {cand.Sample.GroundSpeedKt:F0} kt" + At(ArrivalAirport));
+            TouchdownText(cand.LandingRateFpm, cand.Sample.GroundSpeedKt) + At(ArrivalAirport));
         return true;
     }
 
@@ -580,7 +585,7 @@ public sealed class FlightTracker
         DepartureElevationFt = s.AltitudeFt;
         _lastOnGround = s.Time;
         _roll.Clear(); _rollDistFt = 0;
-        SetPhase(FlightPhase.TakeoffRoll, s.Time, $"Erneuter Startlauf auf Kurs {s.HeadingDeg:000}°");
+        SetPhase(FlightPhase.TakeoffRoll, s.Time, Lang.T($"Erneuter Startlauf auf Kurs {s.HeadingDeg:000}°", $"New takeoff roll, heading {s.HeadingDeg:000}°"));
     }
 
     /// <summary>
@@ -703,7 +708,7 @@ public sealed class FlightTracker
         foreach (var e in _events.Where(e => e.PhaseChange && e.Phase.IsAirborne() &&
                      (e.Time > x.Time || (e.Phase == FlightPhase.Climb && e.Time > x.Time - TimeSpan.FromSeconds(10)))).ToList())
         {
-            if (e.Text == "Durchstarten") GoArounds--;
+            if (_goAroundEvents.Remove(e)) GoArounds--;
             _events.Remove(e);
         }
 
@@ -715,7 +720,7 @@ public sealed class FlightTracker
         LandingRateFpm = rate;
         TouchdownSlope = -slope;
         ArrivalAirport = airport;
-        SetPhase(FlightPhase.Landing, x.Time, $"Aufsetzen mit {rate:F0} fpm bei {x.GroundSpeedKt:F0} kt" + At(ArrivalAirport));
+        SetPhase(FlightPhase.Landing, x.Time, TouchdownText(rate, x.GroundSpeedKt) + At(ArrivalAirport));
         return true;
     }
 
@@ -726,10 +731,13 @@ public sealed class FlightTracker
 
     private static string At(Airport? airport) => airport is null ? "" : $" in {airport.Ident}";
 
+    private static string TouchdownText(double rateFpm, double gsKt) =>
+        Lang.T($"Aufsetzen mit {rateFpm:F0} fpm bei {gsKt:F0} kt", $"Touchdown at {rateFpm:F0} fpm, {gsKt:F0} kt");
+
     public static string FormatAltitude(double altFt) =>
         altFt >= 10000
             ? $"FL{Math.Round(altFt / 100):000}"
-            : (Math.Round(altFt / 100) * 100).ToString("N0", De) + " ft";
+            : (Math.Round(altFt / 100) * 100).ToString("N0", Lang.Culture) + " ft";
 
     private void SetPhase(FlightPhase phase, DateTimeOffset time, string text)
     {

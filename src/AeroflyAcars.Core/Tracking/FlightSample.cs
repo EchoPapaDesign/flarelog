@@ -47,6 +47,24 @@ public static class FlightPhaseExtensions
         _ => phase.ToString(),
     };
 
+    public static string ToEnglish(this FlightPhase phase) => phase switch
+    {
+        FlightPhase.Preflight => "Preflight",
+        FlightPhase.TaxiOut => "Taxi out",
+        FlightPhase.TakeoffRoll => "Takeoff roll",
+        FlightPhase.Climb => "Climb",
+        FlightPhase.Cruise => "Cruise",
+        FlightPhase.Descent => "Descent",
+        FlightPhase.Approach => "Approach",
+        FlightPhase.Landing => "Landing",
+        FlightPhase.TaxiIn => "Taxi to gate",
+        FlightPhase.Arrived => "Arrived",
+        _ => phase.ToString(),
+    };
+
+    /// <summary>Name der Phase in der eingestellten Sprache.</summary>
+    public static string ToDisplay(this FlightPhase phase) => Lang.English ? phase.ToEnglish() : phase.ToGerman();
+
     public static bool IsAirborne(this FlightPhase phase) =>
         phase is FlightPhase.Climb or FlightPhase.Cruise or FlightPhase.Descent or FlightPhase.Approach;
 }

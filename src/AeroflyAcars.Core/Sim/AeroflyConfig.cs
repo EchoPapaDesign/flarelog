@@ -126,7 +126,7 @@ public static class AircraftCheck
         // Sammeltypen der Airline (z. B. "CSE" = Cessna Single Engine) sind keine ICAO-Typen: nicht vergleichen.
         if (bookedIcao is not null && !bookedIcao.Any(char.IsDigit))
         {
-            notes.Add($"Gebucht: Typgruppe {bookedIcao}.");
+            notes.Add(Lang.T($"Gebucht: Typgruppe {bookedIcao}.", $"Booked: type group {bookedIcao}."));
             bookedIcao = null;
         }
 
@@ -136,17 +136,17 @@ public static class AircraftCheck
             if (same)
             {
                 ok = true;
-                notes.Add($"In Aerofly gewählt: {aeroflyName} – passt zu {bookedIcao}.");
+                notes.Add(Lang.T($"In Aerofly gewählt: {aeroflyName} – passt zu {bookedIcao}.", $"Selected in Aerofly: {aeroflyName} – matches {bookedIcao}."));
             }
             else
             {
                 ok = false;
-                notes.Add($"In Aerofly gewählt: {aeroflyName}, gebucht ist {bookedIcao}.");
+                notes.Add(Lang.T($"In Aerofly gewählt: {aeroflyName}, gebucht ist {bookedIcao}.", $"Selected in Aerofly: {aeroflyName}, booked is {bookedIcao}."));
             }
         }
         else if (aeroflyName is not null)
         {
-            notes.Add($"In Aerofly gewählt: {aeroflyName}.");
+            notes.Add(Lang.T($"In Aerofly gewählt: {aeroflyName}.", $"Selected in Aerofly: {aeroflyName}."));
         }
 
         if (bookedIcao is not null && liftoffKt is { } v)
@@ -156,16 +156,16 @@ public static class AircraftCheck
             if (implausible)
             {
                 ok = false;
-                notes.Add($"Abheben mit {v:F0} kt passt nicht zu {bookedIcao}.");
+                notes.Add(Lang.T($"Abheben mit {v:F0} kt passt nicht zu {bookedIcao}.", $"Liftoff at {v:F0} kt does not match {bookedIcao}."));
             }
             else if (cat != Category.Unknown)
             {
                 ok ??= true;
-                notes.Add($"Abhebegeschwindigkeit {v:F0} kt passt zu {bookedIcao}.");
+                notes.Add(Lang.T($"Abhebegeschwindigkeit {v:F0} kt passt zu {bookedIcao}.", $"Liftoff speed {v:F0} kt matches {bookedIcao}."));
             }
         }
 
-        return new Result(ok, notes.Count == 0 ? "Kein Abgleich möglich." : string.Join(" ", notes));
+        return new Result(ok, notes.Count == 0 ? Lang.T("Kein Abgleich möglich.", "No comparison possible.") : string.Join(" ", notes));
     }
 
     /// <summary>"C172" → "c17", "B738" → "b73", "b737_max9" → "b73", "a320" → "a32".</summary>

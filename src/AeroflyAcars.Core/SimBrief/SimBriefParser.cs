@@ -23,7 +23,7 @@ public static class SimBriefParser
         }
         catch (JsonException ex)
         {
-            throw new SimBriefException("Die Antwort von SimBrief konnte nicht gelesen werden.", ex);
+            throw new SimBriefException(Lang.T("Die Antwort von SimBrief konnte nicht gelesen werden.", "Could not read the SimBrief response."), ex);
         }
 
         using (doc)
@@ -32,12 +32,12 @@ public static class SimBriefParser
 
             var status = Str(root, "fetch", "status");
             if (status is not null && !status.Equals("Success", StringComparison.OrdinalIgnoreCase))
-                throw new SimBriefException($"SimBrief meldet: {status}");
+                throw new SimBriefException(Lang.T($"SimBrief meldet: {status}", $"SimBrief reports: {status}"));
 
             var origin = Str(root, "origin", "icao_code");
             var destination = Str(root, "destination", "icao_code");
             if (origin is null || destination is null)
-                throw new SimBriefException("Im SimBrief-Flugplan fehlen Abflug- oder Zielflughafen.");
+                throw new SimBriefException(Lang.T("Im SimBrief-Flugplan fehlen Abflug- oder Zielflughafen.", "The SimBrief flight plan is missing the departure or destination airport."));
 
             var plan = new FlightPlan
             {
