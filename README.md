@@ -44,6 +44,9 @@ Flarelog ist kostenlos, läuft komplett auf deinem PC und braucht keine Installa
 - Abgleich des gebuchten Flugzeugs mit dem in Aerofly gewählten
 - Für Airlines ohne passende Schnittstelle: **„Daten kopieren“** für das manuelle PIREP-Formular
 
+**Sprache**
+- Deutsch oder Englisch – automatisch nach der Systemsprache, umschaltbar in den Einstellungen
+
 **Berichte**
 - Jeder Flug als Text- und JSON-Datei in `Dokumente/Flarelog/Fluege`
 

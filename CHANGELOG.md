@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.9.0-beta.3 – English
+
+- **Englische Oberfläche:** Flarelog spricht Deutsch oder Englisch – automatisch nach der Systemsprache oder
+  umschaltbar unter Einstellungen → Sprache. Gilt auch für Flight Log, Meldungen und Flugberichte.
+
 ## 0.9.0-beta.2 – Mac-Version
 
 - **Mac-Version:** Flarelog.app für macOS 12+ (Apple Silicon und Intel). Läuft im Hintergrund, die Oberfläche
