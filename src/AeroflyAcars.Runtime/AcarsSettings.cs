@@ -30,7 +30,10 @@ public sealed class AcarsSettings
     /// <summary>Adresse der phpVMS-Airline, z. B. https://www.meine-va.de</summary>
     public string? AirlineUrl { get; set; }
 
-    /// <summary>API-Schlüssel, unter Windows mit DPAPI für den angemeldeten Benutzer verschlüsselt.</summary>
+    /// <summary>
+    /// API-Schlüssel, unter Windows mit DPAPI für den angemeldeten Benutzer verschlüsselt. Unter macOS liegt er im
+    /// Schlüsselbund, hier steht dann nur <see cref="MacKeychainMarker"/>.
+    /// </summary>
     public string? AirlineApiKeyProtected { get; set; }
 
     /// <summary>Flug ab dem Losrollen live an die Airline melden (erscheint auf deren Live-Karte).</summary>
@@ -39,9 +42,12 @@ public sealed class AcarsSettings
     [JsonIgnore]
     public bool HasAirlineApiKey => !string.IsNullOrEmpty(AirlineApiKeyProtected);
 
+    public const string MacKeychainMarker = "macos-keychain";
+
     public string? GetAirlineApiKey()
     {
         if (string.IsNullOrEmpty(AirlineApiKeyProtected)) return null;
+        if (AirlineApiKeyProtected == MacKeychainMarker) return OperatingSystem.IsMacOS() ? MacKeychain.Load() : null;
         try
         {
             var raw = Convert.FromBase64String(AirlineApiKeyProtected);
@@ -59,7 +65,13 @@ public sealed class AcarsSettings
     {
         if (string.IsNullOrWhiteSpace(apiKey))
         {
+            if (AirlineApiKeyProtected == MacKeychainMarker && OperatingSystem.IsMacOS()) MacKeychain.Delete();
             AirlineApiKeyProtected = null;
+            return;
+        }
+        if (OperatingSystem.IsMacOS() && MacKeychain.Save(apiKey.Trim()))
+        {
+            AirlineApiKeyProtected = MacKeychainMarker;
             return;
         }
         var raw = Encoding.UTF8.GetBytes(apiKey.Trim());
@@ -75,14 +87,13 @@ public sealed class AcarsSettings
     [JsonIgnore]
     public double? DestinationElevationFt { get; set; }
 
-    public static string Folder => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppInfo.FolderName);
+    public static string Folder => AppPaths.Settings;
 
     public static string FilePath => Path.Combine(Folder, "settings.json");
 
     [JsonIgnore]
     public string EffectiveReportFolder => string.IsNullOrWhiteSpace(ReportFolder)
-        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), AppInfo.Name, "Fluege")
+        ? Path.Combine(AppPaths.Documents, AppInfo.Name, "Fluege")
         : ReportFolder;
 
     public static AcarsSettings Load()
@@ -106,6 +117,7 @@ public sealed class AcarsSettings
     /// </summary>
     private static void MigrateLegacyFolders()
     {
+        if (!OperatingSystem.IsWindows()) return;   // vor Flarelog gab es nur die Windows-Version
         static void Move(string from, string to)
         {
             try
@@ -125,5 +137,11 @@ public sealed class AcarsSettings
     {
         Directory.CreateDirectory(Folder);
         File.WriteAllText(FilePath, JsonSerializer.Serialize(this, Json));
+        // Außerhalb von Windows nur für den Benutzer lesbar (falls der Schlüsselbund nicht verfügbar war).
+        if (!OperatingSystem.IsWindows())
+        {
+            try { File.SetUnixFileMode(FilePath, UnixFileMode.UserRead | UnixFileMode.UserWrite); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
     }
 }

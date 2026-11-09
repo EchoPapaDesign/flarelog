@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Flarelog für macOS: läuft ohne eigenes Fenster im Hintergrund, die Oberfläche öffnet sich im Browser.
+    Wird mit build-mac.sh zu Flarelog.app verpackt (auf einem Mac oder in GitHub Actions).
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>AeroflyAcars.Mac</RootNamespace>
+    <AssemblyName>Flarelog</AssemblyName>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AeroflyAcars.Core\AeroflyAcars.Core.csproj" />
+    <ProjectReference Include="..\AeroflyAcars.Runtime\AeroflyAcars.Runtime.csproj" />
+  </ItemGroup>
+
+</Project>

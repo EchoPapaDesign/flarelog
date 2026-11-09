@@ -4,9 +4,9 @@ using System.Reflection;
 namespace AeroflyAcars.Runtime;
 
 /// <summary>
-/// Sprachausgabe über die in Windows eingebaute Sprach-API (SAPI, COM "SAPI.SpVoice").
-/// Kein NuGet nötig. Bevorzugt eine englische Stimme, damit "Touchdown ..." richtig klingt.
-/// Läuft auf einem eigenen Thread, damit der UDP-Empfang nie blockiert.
+/// Sprachausgabe über die eingebaute Sprachausgabe des Systems: Windows-Sprach-API (SAPI, COM "SAPI.SpVoice"),
+/// unter macOS das Programm „say“. Kein NuGet nötig. Bevorzugt eine englische Stimme, damit "Touchdown ..." richtig
+/// klingt. Läuft auf einem eigenen Thread, damit der UDP-Empfang nie blockiert.
 /// </summary>
 public sealed class SpeechAnnouncer : IDisposable
 {
@@ -26,9 +26,21 @@ public sealed class SpeechAnnouncer : IDisposable
     public static SpeechAnnouncer Create()
     {
         var announcer = new SpeechAnnouncer();
+        if (OperatingSystem.IsMacOS())
+        {
+            announcer.Available = File.Exists("/usr/bin/say");
+            announcer.Problem = announcer.Available ? null : "Das Programm „say“ wurde nicht gefunden.";
+            announcer.VoiceName = MacVoice;
+            if (announcer.Available)
+            {
+                announcer._thread = new Thread(announcer.RunMac) { IsBackground = true, Name = "Sprachausgabe" };
+                announcer._thread.Start();
+            }
+            return announcer;
+        }
         if (!OperatingSystem.IsWindows())
         {
-            announcer.Problem = "Sprachausgabe gibt es nur unter Windows.";
+            announcer.Problem = "Sprachausgabe gibt es nur unter Windows und macOS.";
             return announcer;
         }
 
@@ -43,6 +55,39 @@ public sealed class SpeechAnnouncer : IDisposable
     public void Say(string text)
     {
         if (Available && !_queue.IsAddingCompleted) _queue.Add(text);
+    }
+
+    /// <summary>Englische Standardstimme von macOS (USA); fehlt sie, nimmt „say“ die Systemstimme.</summary>
+    private const string MacVoice = "Samantha";
+
+    private void RunMac()
+    {
+        bool useVoice = true;
+        foreach (var text in _queue.GetConsumingEnumerable())
+        {
+            try
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo("/usr/bin/say") { UseShellExecute = false, RedirectStandardError = true };
+                if (useVoice) { psi.ArgumentList.Add("-v"); psi.ArgumentList.Add(MacVoice); }
+                psi.ArgumentList.Add(text);
+                using var p = System.Diagnostics.Process.Start(psi);
+                if (p is null) continue;
+                p.StandardError.ReadToEnd();
+                p.WaitForExit(30_000);
+                if (p.ExitCode != 0 && useVoice)
+                {
+                    // Stimme nicht installiert: ab jetzt die Systemstimme.
+                    useVoice = false;
+                    VoiceName = "Systemstimme";
+                    using var retry = System.Diagnostics.Process.Start("/usr/bin/say", new[] { text });
+                    retry?.WaitForExit(30_000);
+                }
+            }
+            catch (Exception)
+            {
+                // Eine fehlgeschlagene Ansage soll das Programm nicht stören.
+            }
+        }
     }
 
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]

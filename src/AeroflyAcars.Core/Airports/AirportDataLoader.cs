@@ -11,8 +11,7 @@ public static class AirportDataLoader
     public const string RunwaysUrl = "https://davidmegginson.github.io/ourairports-data/runways.csv";
     public static readonly TimeSpan MaxAge = TimeSpan.FromDays(30);
 
-    public static string Folder => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppInfo.FolderName);
+    public static string Folder => AppPaths.Cache;
 
     public static string DefaultPath => Path.Combine(Folder, "airports.csv");
     public static string RunwaysPath => Path.Combine(Folder, "runways.csv");

@@ -1,5 +1,10 @@
 # Änderungen
 
+## In Arbeit
+
+- **Mac-Version:** Flarelog.app für macOS 12+ (Apple Silicon und Intel). Läuft im Hintergrund, die Oberfläche
+  öffnet sich im Browser; API-Schlüssel im Schlüsselbund, Landeansage mit der Mac-Stimme
+
 ## 0.9.0-beta.1 – erste öffentliche Beta
 
 - Live-Tracking über den UDP-Broadcast von Aerofly FS 4, Flugphasen und Pausen-Erkennung

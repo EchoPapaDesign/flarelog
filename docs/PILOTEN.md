@@ -9,8 +9,17 @@
    - **Windows-Firewall** → Zugriff für *private Netzwerke* erlauben. Darüber kommen die Daten von Aerofly.
    - Das Programm lädt einmalig die Flughafen- und Bahnenliste (zusammen ca. 15 MB).
 
+**macOS:** Die passende ZIP-Datei laden (`AppleSilicon` für M1–M4, `Intel` für ältere Macs), entpacken und
+`Flarelog.app` in *Programme* ziehen. Beim ersten Öffnen meldet macOS, dass die App nicht geprüft ist →
+*Systemeinstellungen → Datenschutz & Sicherheit* → bei Flarelog **Trotzdem öffnen**. Eingehende Verbindungen
+**erlauben**. Flarelog hat kein eigenes Fenster: Die Oberfläche öffnet sich im Browser, ein erneuter Doppelklick auf
+die App öffnet sie wieder. Beenden über Zahnrad → *Flarelog beenden*. In Aerofly dieselben Einstellungen wie unter
+Windows (Broadcast an 127.0.0.1, Port 49002).
+
 Es gibt keine Installation. Zum Entfernen die .exe löschen, optional auch
 `%APPDATA%\Flarelog` (Einstellungen) und `%LOCALAPPDATA%\Flarelog` (Flughafenlisten).
+Unter macOS: `~/Library/Application Support/Flarelog` und `~/Library/Caches/Flarelog`, Protokoll in
+`~/Library/Logs/Flarelog.log`.
 
 ## 2. Aerofly FS 4 einstellen
 
@@ -98,6 +107,7 @@ zurück und zeigt die Meldung der VA an.
 - **Berichte:** Ordner-Symbol unten links → `Dokumente\Flarelog\Fluege` (Text und JSON).
 - **Landeansage:** Zahnrad → an/aus, „Stimme testen“. Eine englische Windows-Stimme klingt am besten
   (Windows-Einstellungen → Zeit und Sprache → Sprache → Englisch mit „Sprachausgabe“ hinzufügen).
+  Am Mac wird die englische Stimme „Samantha“ verwendet, falls vorhanden.
 - **Zweiter Monitor:** Das Display ist zusätzlich im Browser unter `http://localhost:8080` erreichbar.
 
 ## Probleme

@@ -45,20 +45,29 @@ Flarelog ist kostenlos, läuft komplett auf deinem PC und braucht keine Installa
 - Für Airlines ohne passende Schnittstelle: **„Daten kopieren“** für das manuelle PIREP-Formular
 
 **Berichte**
-- Jeder Flug als Text- und JSON-Datei in `Dokumente\Flarelog\Fluege`
+- Jeder Flug als Text- und JSON-Datei in `Dokumente/Flarelog/Fluege`
 
 ## Schnellstart
 
 **1. Herunterladen**
-Unter [**Releases**](https://github.com/EchoPapaDesign/flarelog/releases) die neueste `Flarelog.exe`
-herunterladen und an einen beliebigen Ort legen, z. B. auf den Desktop.
-Voraussetzung: Windows 10 oder 11 (64 Bit) und Aerofly FS 4.
+Unter [**Releases**](https://github.com/EchoPapaDesign/flarelog/releases) die neueste Version herunterladen:
+- **Windows 10/11 (64 Bit):** `Flarelog.exe` – an einen beliebigen Ort legen, z. B. auf den Desktop
+- **macOS 12 oder neuer:** `Flarelog-macOS-AppleSilicon.zip` (M1/M2/M3/M4) oder `Flarelog-macOS-Intel.zip` –
+  entpacken und `Flarelog.app` in den Ordner *Programme* ziehen. Welcher Mac? Apple-Menü → *Über diesen Mac* → „Chip“
+  (Apple M…) oder „Prozessor“ (Intel). Die Mac-Version ist neu – Rückmeldungen besonders willkommen.
 
 **2. Starten**
-Doppelklick auf `Flarelog.exe`. Beim ersten Start:
+*Windows:* Doppelklick auf `Flarelog.exe`. Beim ersten Start:
 - „Der Computer wurde durch Windows geschützt“ → **Weitere Informationen** → **Trotzdem ausführen**
   (das Programm ist noch nicht digital signiert)
 - Windows-Firewall → Zugriff für **private Netzwerke** erlauben
+
+*macOS:* Doppelklick auf `Flarelog.app` – die Oberfläche öffnet sich im Browser. Beim ersten Start:
+- „Flarelog kann nicht geöffnet werden“ (nicht von Apple geprüft) → **Systemeinstellungen → Datenschutz & Sicherheit**,
+  ganz unten bei Flarelog **Trotzdem öffnen** → mit Passwort bestätigen
+- „Eingehende Netzwerkverbindungen akzeptieren?“ → **Erlauben** (darüber kommen die Daten von Aerofly)
+- Flarelog läuft ohne eigenes Fenster im Hintergrund. Tab geschlossen? Einfach `Flarelog.app` noch einmal öffnen.
+  Beenden: Zahnrad → **Flarelog beenden**.
 
 **3. Aerofly einstellen** – Einstellungen → **Sonstige Einstellungen**:
 
@@ -106,18 +115,18 @@ Höhe über Grund und ein „am Boden“-Signal. Die Landerate wird deshalb aus 
 
 ## Bekannte Grenzen
 
-- Nur Windows 10/11 (64 Bit). Aerofly für macOS wird nicht unterstützt.
+- Windows 10/11 (64 Bit) und macOS 12 oder neuer. Die Mac-Version ist neu und noch kaum getestet.
 - **Hubschrauber** werden noch nicht unterstützt (Schwebeflug, Landungen ohne Ausrollen).
 - Treibstoff, Fahrwerk, Klappen, Lichter und G-Kraft liefert Aerofly nicht – diese Werte fehlen im PIREP.
 - Zeit und Wetter lassen sich nur vor dem Start von Aerofly setzen, nicht während des Flugs.
 - Updates werden angezeigt, aber nicht automatisch installiert.
-- Das Programm ist nicht digital signiert; Windows warnt beim ersten Start.
+- Das Programm ist nicht digital signiert; Windows und macOS warnen beim ersten Start.
 
 ## Datenschutz
 
 - Alles läuft lokal. Es gibt keine Telemetrie und keinen eigenen Server.
-- Der API-Schlüssel der Airline wird mit der Windows-Datenschutz-API verschlüsselt gespeichert
-  (`%APPDATA%\Flarelog\settings.json`) und nur an die eingetragene Airline gesendet.
+- Der API-Schlüssel der Airline wird verschlüsselt gespeichert – unter Windows mit der Windows-Datenschutz-API
+  (`%APPDATA%\Flarelog\settings.json`), unter macOS im Schlüsselbund – und nur an die eingetragene Airline gesendet.
 - Netzwerkzugriffe: SimBrief (Flugplan), die eingetragene Airline (Buchungen, PIREP), OurAirports
   (Flughafen- und Bahnenliste, alle 30 Tage), OpenStreetMap (Kartenkacheln), Aviation Weather Center (METAR, nur mit „Wetter: Real“),
   GitHub (Update-Prüfung, falls eingerichtet).
@@ -127,12 +136,14 @@ Höhe über Grund und ein „am Boden“-Signal. Die Landerate wird deshalb aus 
 ```
 AeroflyAcars.sln
 src/AeroflyAcars.Desktop    Programm: Flarelog.exe (WinForms + WebView2)
+src/AeroflyAcars.Mac        Programm für macOS: Flarelog.app (Hintergrundprogramm, Oberfläche im Browser)
 src/AeroflyAcars.Runtime    Programmlogik: Empfang, Auswertung, Berichte, Sprachansage, Display-Server
 src/AeroflyAcars.Core       Bibliothek: UDP-Format, Phasen, Auswertung, SimBrief, Flughäfen/Bahnen, phpVMS
 src/AeroflyAcars.App        Konsolenversion (Fehlersuche)
 src/AeroflyAcars.SimDummy   Aerofly-Ersatz: sendet einen künstlichen 13-Minuten-Flug
 tests/AeroflyAcars.SelfTest Selbsttest (ohne Testframework)
 publish.cmd                 Erzeugt lokal publish\Flarelog.exe
+build-mac.sh                Erzeugt auf einem Mac Flarelog.app als ZIP (packaging/mac: Info.plist, Symbol)
 .github/workflows           Build bei jedem Push, Flarelog.exe an jedes veröffentlichte Release
 ```
 

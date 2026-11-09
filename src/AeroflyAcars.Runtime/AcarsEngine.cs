@@ -94,6 +94,23 @@ public sealed class AcarsEngine : IDisposable
     public event Action<string>? CalloutSpoken;
     public event Action<FlightReport, string>? ReportSaved;
 
+    /// <summary>
+    /// Das Display bittet darum, Flarelog zu beenden (Knopf in den Einstellungen). Nur die Mac-Version meldet sich
+    /// dafür an – dort gibt es kein eigenes Programmfenster, das man schließen könnte.
+    /// </summary>
+    public event Action? QuitRequested;
+
+    public ActionResult RequestQuit()
+    {
+        if (QuitRequested is null) return new ActionResult(false, "Bitte das Programmfenster schließen.");
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(300).ConfigureAwait(false);   // Antwort noch an die Seite schicken
+            QuitRequested?.Invoke();
+        });
+        return new ActionResult(true, "Flarelog wird beendet …");
+    }
+
     /// <summary>Es wird gerade ein Flug aufgezeichnet, dessen Bericht noch nicht gespeichert ist.</summary>
     public bool FlightInProgress
     {
@@ -1357,6 +1374,7 @@ public sealed class AcarsEngine : IDisposable
                     reportFolder = Settings.EffectiveReportFolder,
                     udpPort = Settings.UdpPort,
                     version = AppInfo.Version,
+                    canQuit = QuitRequested is not null,
                 },
                 update = _update is null ? null : new { version = _update.Version, url = _update.Url },
             };

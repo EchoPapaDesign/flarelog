@@ -21,3 +21,36 @@ jobs:
 
       - name: Selbsttest
         run: dotnet run --project tests/AeroflyAcars.SelfTest -c Release --no-build
+
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Selbsttest unter macOS
+        run: dotnet run --project tests/AeroflyAcars.SelfTest -c Release
+
+      - name: Flarelog.app bauen (Apple Silicon und Intel)
+        run: |
+          ./build-mac.sh 0.0.0-ci osx-arm64
+          ./build-mac.sh 0.0.0-ci osx-x64
+
+      - name: Probestart (Apple Silicon)
+        run: |
+          ditto -x -k publish/Flarelog-macOS-AppleSilicon.zip probe
+          codesign --verify --verbose probe/Flarelog.app
+          ./probe/Flarelog.app/Contents/MacOS/Flarelog &
+          pid=$!
+          for i in $(seq 1 20); do curl -sf http://localhost:8080/api/state > state.json && break; sleep 1; done
+          kill -TERM $pid; wait $pid || true
+          grep -q '"canQuit":true' state.json
+          echo "Display antwortet, Beenden-Knopf aktiv"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Flarelog-macOS
+          path: publish/*.zip

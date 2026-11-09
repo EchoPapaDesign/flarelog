@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>Flarelog</string>
+  <key>CFBundleDisplayName</key><string>Flarelog</string>
+  <key>CFBundleIdentifier</key><string>com.epdesign.flarelog</string>
+  <key>CFBundleExecutable</key><string>Flarelog</string>
+  <key>CFBundleIconFile</key><string>Flarelog</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>__SHORTVERSION__</string>
+  <key>CFBundleVersion</key><string>__SHORTVERSION__</string>
+  <key>FlarelogVersion</key><string>__VERSION__</string>
+  <key>LSMinimumSystemVersion</key><string>12.0</string>
+  <!-- Kein Dock-Symbol und kein Menü: Flarelog läuft im Hintergrund, die Oberfläche ist im Browser. -->
+  <key>LSUIElement</key><true/>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSHumanReadableCopyright</key><string>© 2026 EP Design – MIT-Lizenz</string>
+</dict>
+</plist>

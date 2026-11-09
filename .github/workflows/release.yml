@@ -1,4 +1,4 @@
-# Veröffentlicht eine neue Version und hängt Flarelog.exe an.
+# Veröffentlicht eine neue Version und hängt Flarelog.exe (Windows) und Flarelog.app (macOS, als ZIP) an.
 #
 # Releases → "Draft a new release" → neuen Tag wie v0.9.0-beta.2 anlegen → Publish.
 # GitHub baut dann, testet und hängt Flarelog.exe an dieses Release an (dauert ein paar Minuten).
@@ -51,3 +51,34 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           files: publish/Flarelog.exe
+
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Version aus dem Tag
+        id: version
+        run: |
+          tag="${{ github.event.release.tag_name }}"
+          number="${tag#[vV]}"
+          number="${number#.}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Flarelog.app bauen (Apple Silicon und Intel)
+        run: |
+          ./build-mac.sh "${{ steps.version.outputs.number }}" osx-arm64
+          ./build-mac.sh "${{ steps.version.outputs.number }}" osx-x64
+
+      - name: Mac-Versionen an das Release hängen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: |
+            publish/Flarelog-macOS-AppleSilicon.zip
+            publish/Flarelog-macOS-Intel.zip

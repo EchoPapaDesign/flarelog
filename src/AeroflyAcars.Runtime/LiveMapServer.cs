@@ -17,6 +17,7 @@ namespace AeroflyAcars.Runtime;
 /// POST /api/newflight     → neuen Flug beginnen
 /// POST /api/open-reports  → Berichtsordner im Explorer öffnen
 /// POST /api/voice-test    → Probeansage
+/// POST /api/quit          → Flarelog beenden (nur Mac-Version, siehe AcarsEngine.QuitRequested)
 /// POST /api/airline/connect → Airline-Adresse/Schlüssel speichern, anmelden, Buchungen laden ({ url, apiKey })
 /// POST /api/airline/refresh → Buchungen neu laden
 /// POST /api/airline/select  → Buchung für den Flug auswählen ({ flightId })
@@ -155,6 +156,7 @@ public sealed class LiveMapServer : IDisposable
                 "/api/newflight" => _engine.NewFlight(),
                 "/api/open-reports" => _engine.OpenReportFolder(),
                 "/api/voice-test" => _engine.VoiceTest(),
+                "/api/quit" => _engine.RequestQuit(),
                 _ => null,
             };
         }

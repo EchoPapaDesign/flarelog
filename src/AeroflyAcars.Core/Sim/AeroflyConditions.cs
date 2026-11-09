@@ -132,7 +132,9 @@ public static class AeroflyConditions
             {
                 using (p)
                 {
-                    if (p.ProcessName.Contains("aerofly_fs", StringComparison.OrdinalIgnoreCase)) return true;
+                    // Windows: aerofly_fs_4.exe, macOS: „Aerofly FS 4“
+                    if (p.ProcessName.Contains("aerofly_fs", StringComparison.OrdinalIgnoreCase) ||
+                        p.ProcessName.Contains("aerofly fs", StringComparison.OrdinalIgnoreCase)) return true;
                 }
             }
         }

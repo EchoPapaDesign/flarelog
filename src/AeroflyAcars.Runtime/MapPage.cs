@@ -343,6 +343,12 @@ public static class MapPage
       <label>Über</label>
       <div class="hint" id="setVersion"></div>
     </div>
+    <div class="field" id="quitField" style="display:none">
+      <hr>
+      <label>Programm</label>
+      <div class="hint">Beendet Flarelog. Ein laufender Flug wird vorher als Teilbericht gespeichert.</div>
+      <div class="row" style="margin-top:10px"><button class="btn warn" id="btnQuit">Flarelog beenden</button></div>
+    </div>
   </div>
 </div>
 <div id="airlineOverlay" class="overlay">
@@ -497,7 +503,7 @@ function renderEvents(events) {
   if (atBottom) box.scrollTop = box.scrollHeight;
 }
 
-let snackTimer = null, lastState = null;
+let snackTimer = null, lastState = null, quitting = false;
 function snack(text, ok = true) {
   const el = $('snack');
   el.textContent = text; el.className = 'snack show' + (ok ? '' : ' bad');
@@ -521,6 +527,7 @@ function openSettings() {
     $('setSbAuto').checked = st.loadSimBriefOnStart;
     $('setVoice').checked = st.voice;
     $('setFolder').textContent = st.reportFolder;
+    $('quitField').style.display = st.canQuit ? 'block' : 'none';
     $('setVersion').textContent = `Flarelog ${st.version} · ACARS für Aerofly FS 4 – Daten: OurAirports (gemeinfrei), OpenStreetMap-Mitwirkende, SimBrief.`;
     $('setUdp').textContent = `Empfang auf UDP-Port ${st.udpPort}. In Aerofly: Sonstige Einstellungen → „Sende Fluginformation an IP Addresse“ an, Broadcast IP 127.0.0.1, Port ${st.udpPort}.`;
   }
@@ -532,6 +539,15 @@ $('overlay').onclick = e => { if (e.target.id === 'overlay') $('overlay').classL
 $('navReports').onclick = () => post('/api/open-reports');
 $('btnFolder').onclick = () => post('/api/open-reports');
 $('btnVoiceTest').onclick = () => post('/api/voice-test');
+$('btnQuit').onclick = async () => {
+  if (!confirm('Flarelog beenden?')) return;
+  const res = await post('/api/quit');
+  if (res.ok) {
+    quitting = true;
+    document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;' +
+      'color:#8b93a0;font:15px system-ui,sans-serif">Flarelog wurde beendet. Dieses Fenster kann geschlossen werden.</div>';
+  }
+};
 $('setVoice').onchange = () => post('/api/settings', { voice: $('setVoice').checked });
 $('setSbAuto').onchange = () => post('/api/settings', { loadSimBriefOnStart: $('setSbAuto').checked });
 $('setSb').onchange = () => post('/api/settings', { simBriefUser: $('setSb').value });
@@ -739,6 +755,7 @@ function resetMap() {
 }
 
 async function tick() {
+  if (quitting) return;
   let s;
   try {
     const r = await fetch('/api/state', { cache: 'no-store' });

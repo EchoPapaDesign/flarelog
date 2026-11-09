@@ -9,8 +9,7 @@ namespace AeroflyAcars.Core.Sim;
 /// </summary>
 public static class AeroflyConfig
 {
-    public static string DefaultPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Aerofly FS 4", "main.mcf");
+    public static string DefaultPath => Path.Combine(AppPaths.AeroflyUserFolder, "main.mcf");
 
     public sealed record SelectedAircraft(string Name, string? Paintscheme)
     {
@@ -38,8 +37,7 @@ public static class AeroflyConfig
         KnownAircraft.TryGetValue(name.Trim(), out var known) ? known : name.Trim().Replace('_', ' ').ToUpperInvariant();
 
     /// <summary>Aeroflys laufendes Protokoll (wird bei jedem Start neu geschrieben).</summary>
-    public static string DefaultLogPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Aerofly FS 4", "tm.log");
+    public static string DefaultLogPath => Path.Combine(AppPaths.AeroflyUserFolder, "tm.log");
 
     private static readonly Regex LoadedModel = new(@"tmsimulator:\s+done loading model\s+(\S+)", RegexOptions.Compiled);
 

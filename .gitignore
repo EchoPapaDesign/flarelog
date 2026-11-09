@@ -4,3 +4,4 @@ obj/
 *.user
 Fluege/
 publish/
+build-mac/
