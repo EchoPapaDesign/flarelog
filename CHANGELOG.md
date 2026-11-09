@@ -1,6 +1,6 @@
 # Änderungen
 
-## In Arbeit
+## 0.9.0-beta.2 – Mac-Version
 
 - **Mac-Version:** Flarelog.app für macOS 12+ (Apple Silicon und Intel). Läuft im Hintergrund, die Oberfläche
   öffnet sich im Browser; API-Schlüssel im Schlüsselbund, Landeansage mit der Mac-Stimme
