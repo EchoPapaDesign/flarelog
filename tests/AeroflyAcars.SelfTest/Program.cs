@@ -940,6 +940,26 @@ t.Test("Versionsvergleich für die Update-Prüfung", () =>
     t.True(AppInfo.Version.Length > 0, "Version vorhanden");
 });
 
+t.Test("Englische Texte: Flight Log, Bericht, Phasen", () =>
+{
+    Lang.English = true;
+    try
+    {
+        var tracker = Fly(null);
+        t.True(tracker.Events.Any(e => e.Text.StartsWith("Touchdown at")), "Aufsetzen auf Englisch");
+        t.Equal("Approach", FlightPhase.Approach.ToDisplay());
+        var text = ReportWriter.ToText(FlightReportBuilder.Build(tracker, DateTimeOffset.UnixEpoch));
+        t.True(text.Contains("Landing rate:") && text.Contains("Flight log"), "Bericht auf Englisch");
+        t.Equal("good", FlightReportBuilder.RateLanding(-150));
+        t.Equal("4,500 ft", FlightTracker.FormatAltitude(4512));
+    }
+    finally
+    {
+        Lang.English = false;
+    }
+    t.Equal("gut", FlightReportBuilder.RateLanding(-150));
+});
+
 t.Test("Höhenformat", () =>
 {
     t.Equal("4.500 ft", FlightTracker.FormatAltitude(4512));

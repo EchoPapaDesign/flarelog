@@ -153,7 +153,7 @@ Voraussetzung: .NET 8 SDK.
 
 ```
 dotnet build
-dotnet run --project tests\AeroflyAcars.SelfTest      # erwartet: "Alle 43 Tests bestanden."
+dotnet run --project tests\AeroflyAcars.SelfTest      # erwartet: "Alle 44 Tests bestanden."
 dotnet run --project src\AeroflyAcars.Desktop
 dotnet run --project src\AeroflyAcars.SimDummy         # Testflug ohne Aerofly
 ```

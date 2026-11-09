@@ -17,6 +17,7 @@ internal sealed class MainForm : Form
 
     public MainForm()
     {
+        _engine = new AcarsEngine(AcarsSettings.Load());   // zuerst: stellt auch die Sprache ein
         Text = AeroflyAcars.Core.Lang.T("Flarelog – ACARS für Aerofly FS 4", "Flarelog – ACARS for Aerofly FS 4");
         StartPosition = FormStartPosition.CenterScreen;
         Size = new Size(1500, 920);
@@ -48,8 +49,6 @@ internal sealed class MainForm : Form
         };
         Controls.Add(_web);
         Controls.Add(_status);
-
-        _engine = new AcarsEngine(AcarsSettings.Load());
 
         Shown += async (_, _) => await StartAsync();
         FormClosing += OnFormClosing;
