@@ -79,6 +79,7 @@ public static class MapPage
   .leaflet-bar a { background: var(--panel2) !important; color: var(--text) !important; border-color: var(--line) !important; }
   .wpt-label { background: none; border: none; box-shadow: none; color: var(--muted); font-size: 11px; font-weight: 600; }
   .wpt-label::before { display: none; }
+  .wpt-label.apt { color: #f05a5a; font-size: 12px; font-weight: 700; }
 
   .follow { position: absolute; right: 12px; bottom: 26px; z-index: 500; background: var(--panel2); border: 1px solid var(--line);
     border-radius: 6px; padding: 6px 10px; color: var(--muted); font-size: 12px; cursor: pointer; user-select: none; }
@@ -617,7 +618,7 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap-Mitwirkende'
 }).addTo(map);
 
-const routeLine = L.polyline([], { color: '#9aa4b2', weight: 2, opacity: .8, dashArray: '8 8' }).addTo(map);
+const routeLine = L.polyline([], { color: '#ff9f1c', weight: 3, opacity: .9, dashArray: '10 6' }).addTo(map);
 const trackLine = L.polyline([], { color: '#3fd68a', weight: 3, opacity: .9 }).addTo(map);
 let marker = null, routeKey = '', firstFix = true, follow = true;
 let lastCalloutId = null, toastTimer = null, eventCount = -1;
@@ -648,7 +649,7 @@ function fmtEta(min) {
 }
 
 function showToast(c) {
-  $('toastRate').textContent = `${de(Math.abs(c.rate))} fpm`;
+  $('toastRate').textContent = `${de(c.rate)} fpm`;
   $('toastRating').textContent = c.rating;
   $('toastRating').className = 't3 ' + c.rating;
   $('toast').classList.add('show');
@@ -1023,7 +1024,7 @@ async function tick() {
   // Landung
   if (s.landing) {
     $('landing').style.display = 'block';
-    $('ldgRate').textContent = `${de(Math.abs(s.landing.rate))} fpm`;
+    $('ldgRate').textContent = `${de(s.landing.rate)} fpm`;
     $('ldgRating').textContent = s.landing.rating;
     $('ldgRating').className = 'big ' + s.landing.rating;
     $('ldgApt').textContent = s.landing.airport ?? '';
@@ -1056,10 +1057,12 @@ async function tick() {
   if (key && routeMarkers.length === 0 && s.route.length > 1) {
     routeLine.setLatLngs(s.route.map(w => [w.lat, w.lon]));
     s.route.forEach((w, i) => {
-      const m = L.circleMarker([w.lat, w.lon], { radius: i === 0 || i === s.route.length - 1 ? 6 : 3,
-        color: i === 0 || i === s.route.length - 1 ? '#3fd68a' : '#9aa4b2', fillOpacity: 1, weight: 1 }).addTo(map);
+      const apt = i === 0 || i === s.route.length - 1;
+      // Flughäfen rot, Wegpunkte orange – heben sich von der dunklen Karte und der grünen Spur ab.
+      const m = L.circleMarker([w.lat, w.lon], { radius: apt ? 7 : 4,
+        color: '#111', fillColor: apt ? '#f05a5a' : '#ff9f1c', fillOpacity: 1, weight: 1.5 }).addTo(map);
       routeMarkers.push(m);
-      m.bindTooltip(w.ident, { permanent: i === 0 || i === s.route.length - 1, direction: 'bottom', className: 'wpt-label' });
+      m.bindTooltip(w.ident, { permanent: apt, direction: 'bottom', className: apt ? 'wpt-label apt' : 'wpt-label' });
     });
     if (!p) map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
   }

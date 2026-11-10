@@ -1,5 +1,12 @@
 # Änderungen
 
+## Unveröffentlicht
+
+- **Landerate mit Vorzeichen:** Hinweis nach der Landung und Landekarte zeigen die Landerate jetzt wie der Flugbericht
+  mit Minus (z. B. −77 fpm) statt als positiven Wert
+- **Besser sichtbare SimBrief-Route:** Abflug- und Zielflughafen rot, Wegpunkte und Routenlinie orange
+- **Englische Anleitung:** `README.en.md` und `docs/PILOTS.md`
+
 ## 0.9.0-beta.3 – English
 
 - **Englische Oberfläche:** Flarelog spricht Deutsch oder Englisch – automatisch nach der Systemsprache oder

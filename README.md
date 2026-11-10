@@ -4,6 +4,8 @@
 <p align="center"><b>ACARS für Aerofly FS 4</b> – Live-Tracking, Landeauswertung mit Sprachansage,<br>
 SimBrief, Wetter und PIREPs an virtuelle Airlines</p>
 
+<p align="center"><b>Deutsch</b> · <a href="README.en.md">English</a></p>
+
 > [!IMPORTANT]
 > **Flarelog ist eine Beta.** Das Programm ist neu und wird gerade von den ersten Piloten getestet.
 > **Dein Feedback ist dringend erbeten:** Was funktioniert, was nicht, was fehlt dir?

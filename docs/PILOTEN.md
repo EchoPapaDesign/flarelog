@@ -1,5 +1,7 @@
 # Anleitung für Piloten
 
+*[English version](PILOTS.md)*
+
 ## 1. Installieren
 
 1. `Flarelog.exe` aus den **Releases** herunterladen und an einen beliebigen Ort legen, z. B. auf den Desktop.
