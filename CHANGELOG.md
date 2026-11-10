@@ -1,11 +1,15 @@
 # Änderungen
 
-## Unveröffentlicht
+## 0.9.0-beta.4 – Feedback der ersten Mac-Tests
 
 - **Landerate mit Vorzeichen:** Hinweis nach der Landung und Landekarte zeigen die Landerate jetzt wie der Flugbericht
   mit Minus (z. B. −77 fpm) statt als positiven Wert
 - **Besser sichtbare SimBrief-Route:** Abflug- und Zielflughafen rot, Wegpunkte und Routenlinie orange
 - **Englische Anleitung:** `README.en.md` und `docs/PILOTS.md`
+- **Flughafennamen im Bericht:** Code und Name passen immer zusammen (vorher konnte z. B. „EDDL“ mit dem Namen des
+  tatsächlichen Abflugplatzes erscheinen)
+- **In die Luft versetzt:** Wird das Flugzeug vom Boden in die Luft versetzt (z. B. in den Anflug), gilt das nicht mehr
+  als Start, sondern als „Aufzeichnung im Flug begonnen“
 
 ## 0.9.0-beta.3 – English
 

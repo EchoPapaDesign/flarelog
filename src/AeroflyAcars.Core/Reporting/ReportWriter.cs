@@ -27,8 +27,8 @@ public static class ReportWriter
         sb.AppendLine("==================================================");
         sb.AppendLine($"  {L("ACARS-Bericht", "ACARS report")}  {r.Flight ?? L("Flug", "Flight")}  {r.Origin ?? "????"} → {r.Destination ?? "????"}");
         sb.AppendLine("==================================================");
-        if (r.OriginName is not null) sb.AppendLine($"{L("Abflug:", "Departure:"),-17}{r.Origin} {r.OriginName}");
-        if (r.DestinationName is not null) sb.AppendLine($"{L("Ziel:", "Destination:"),-17}{r.Destination} {r.DestinationName}");
+        if (r.Origin is not null) sb.AppendLine($"{L("Abflug:", "Departure:"),-17}{r.Origin} {r.OriginName}".TrimEnd());
+        if (r.Destination is not null) sb.AppendLine($"{L("Ziel:", "Destination:"),-17}{r.Destination} {r.DestinationName}".TrimEnd());
         if (r.Booking is not null) sb.AppendLine($"{L("Buchung:", "Booking:"),-17}{r.Booking}");
         if (r.Aircraft is not null) sb.AppendLine($"{L("Muster:", "Aircraft type:"),-17}{r.Aircraft}");
         if (r.Airac is not null) sb.AppendLine($"AIRAC (SimBrief): {r.Airac}");

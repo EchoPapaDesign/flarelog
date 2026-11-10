@@ -59,8 +59,10 @@ public static class FlightReportBuilder
             Booking = booking?.Ident,
             Origin = plan?.OriginIcao ?? booking?.Departure ?? tracker.DepartureAirport?.Ident,
             Destination = plan?.DestinationIcao ?? booking?.Arrival ?? tracker.ArrivalAirport?.Ident,
-            OriginName = tracker.DepartureAirport?.Name ?? plan?.OriginName,
-            DestinationName = tracker.ArrivalAirport?.Name ?? plan?.DestinationName,
+            OriginName = NameFor(plan?.OriginIcao ?? booking?.Departure ?? tracker.DepartureAirport?.Ident,
+                                 tracker.DepartureAirport, plan?.OriginIcao, plan?.OriginName),
+            DestinationName = NameFor(plan?.DestinationIcao ?? booking?.Arrival ?? tracker.ArrivalAirport?.Ident,
+                                      tracker.ArrivalAirport, plan?.DestinationIcao, plan?.DestinationName),
             Pauses = tracker.PauseCount,
             PausedTime = tracker.PauseCount > 0 ? tracker.PausedTime : null,
             Aircraft = plan?.AircraftType,
@@ -94,6 +96,15 @@ public static class FlightReportBuilder
             Notes = notes,
             Track = Thin(samples),
         };
+    }
+
+    /// <summary>Name passend zum angezeigten Code – nie der Name eines anderen Platzes.</summary>
+    private static string? NameFor(string? code, Airport? actual, string? planCode, string? planName)
+    {
+        if (code is null) return null;
+        if (actual is not null && string.Equals(actual.Ident, code, StringComparison.OrdinalIgnoreCase)) return actual.Name;
+        if (string.Equals(planCode, code, StringComparison.OrdinalIgnoreCase)) return planName;
+        return null;
     }
 
     public static string RateLanding(double fpm) => fpm switch

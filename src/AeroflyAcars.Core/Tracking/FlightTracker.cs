@@ -202,8 +202,9 @@ public sealed class FlightTracker
         switch (Phase)
         {
             case FlightPhase.Preflight:
-                if (_samples.Count == 1 && s.GroundSpeedKt > AirborneStartKt)
+                if (s.GroundSpeedKt > AirborneStartKt && (_samples.Count == 1 || Jumped(prev, s)))
                 {
+                    StartInFlight();
                     StartedAirborne = true;
                     SetPhase(FlightPhase.Cruise, s.Time, Lang.T("Aufzeichnung im Flug begonnen – Start wird nicht erfasst", "Recording started in flight – takeoff not recorded"));
                     break;
@@ -218,6 +219,13 @@ public sealed class FlightTracker
                 break;
 
             case FlightPhase.TaxiOut:
+                if (s.GroundSpeedKt > AirborneStartKt && Jumped(prev, s))
+                {
+                    // Vom Boden in die Luft versetzt (z. B. in den Anflug): kein Start, sondern Beginn im Flug.
+                    StartInFlight();
+                    SetPhase(FlightPhase.Cruise, s.Time, Lang.T("Flugzeug in die Luft versetzt – Start wird nicht erfasst", "Aircraft repositioned into the air – takeoff not recorded"));
+                    break;
+                }
                 if (s.GroundSpeedKt < TakeoffRollKt)
                 {
                     DepartureElevationFt = s.AltitudeFt;
@@ -282,6 +290,26 @@ public sealed class FlightTracker
                 }
                 break;
         }
+    }
+
+    /// <summary>Positionssprung zwischen zwei Messpunkten, der durch Fliegen nicht erklärbar ist (Versetzen, Slew).</summary>
+    private static bool Jumped(FlightSample? prev, FlightSample s)
+    {
+        if (prev is null) return false;
+        double hours = Math.Max((s.Time - prev.Time).TotalHours, 1.0 / 3600);
+        double distNm = Geo.DistanceNm(prev.Latitude, prev.Longitude, s.Latitude, s.Longitude);
+        double plausibleNm = Math.Max(Math.Max(prev.GroundSpeedKt, s.GroundSpeedKt), 250) * hours * 1.5;
+        return (distNm > 0.3 && distNm > plausibleNm) || Math.Abs(s.AltitudeFt - prev.AltitudeFt) > 500;
+    }
+
+    /// <summary>Verwirft Abflugdaten vom Boden, weil die Aufzeichnung faktisch erst in der Luft beginnt.</summary>
+    private void StartInFlight()
+    {
+        StartedAirborne = true;
+        BlockOff = null;
+        DepartureAirport = null;
+        DepartureElevationFt = null;
+        _lastOnGround = null;
     }
 
     private void UpdateAirbornePhase(FlightSample s)
