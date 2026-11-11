@@ -159,6 +159,11 @@ public static class MapPage
 
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 2000; display: none; }
   .overlay.show { display: block; }
+  .news h4 { margin: 18px 0 6px; font-size: 13px; color: var(--accent); }
+  .news h4:first-of-type { margin-top: 0; }
+  .news ul { margin: 0; padding-left: 18px; color: var(--text); font-size: 13px; line-height: 1.5; }
+  .news li { margin-bottom: 5px; }
+  .news code { font: 12px ui-monospace, Consolas, monospace; background: var(--panel2); padding: 0 4px; border-radius: 3px; }
   .wxraw { margin: 4px 0 6px; padding: 10px 12px; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px;
     font: 13px/1.55 ui-monospace, Consolas, monospace; color: var(--text); white-space: pre-wrap; word-break: break-word; }
   .sheet { position: absolute; left: 60px; top: 0; bottom: 0; width: 420px; background: var(--panel); border-right: 1px solid var(--line);
@@ -361,6 +366,7 @@ public static class MapPage
     <div class="field">
       <label>Über</label>
       <div class="hint" id="setVersion"></div>
+      <div class="row" style="margin-top:10px"><button class="btn" id="btnNews">Was ist neu?</button></div>
     </div>
     <div class="field" id="quitField" style="display:none">
       <hr>
@@ -457,6 +463,12 @@ public static class MapPage
     <div class="hint" style="margin-top:12px">Quelle: Aviation Weather Center (aviationweather.gov). Nur zur Information für die Simulation.</div>
   </div>
 </div>
+<div id="newsOverlay" class="overlay">
+  <div class="sheet news">
+    <h3>Was ist neu? <button class="btn" id="btnNewsClose">Schließen</button></h3>
+    <div id="newsBody"></div>
+  </div>
+</div>
 <div id="snack" class="snack"></div>
 
 <script>
@@ -504,6 +516,7 @@ const EN = {
 "Landeansage": "Landing callout",
 "„Touchdown with … feet per minute“ ansagen": "Announce “Touchdown with … feet per minute”",
 "Stimme testen": "Test voice",
+"Was ist neu?": "What's new?",
 "Kabinenansagen": "Cabin announcements",
 "Ansagen in den Flugphasen abspielen": "Play announcements during the flight phases",
 "Ansage testen": "Test announcement",
@@ -730,6 +743,41 @@ function openSettings() {
   $('overlay').classList.add('show');
 }
 $('navSettings').onclick = openSettings;
+
+// „Was ist neu?“: Änderungsliste (Markdown) als Liste anzeigen; nach einem Update einmal von selbst.
+function mdToHtml(md) {
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>');
+  let html = '', items = [], cur = null;
+  const flush = () => { if (items.length) html += '<ul>' + items.map(i => '<li>' + inline(i) + '</li>').join('') + '</ul>'; items = []; cur = null; };
+  for (const line of md.split(/\r?\n/)) {
+    if (line.startsWith('# ')) continue;
+    if (line.startsWith('## ')) { flush(); html += '<h4>' + inline(line.slice(3)) + '</h4>'; }
+    else if (line.startsWith('- ')) { items.push(line.slice(2)); cur = items.length - 1; }
+    else if (line.trim() && cur !== null) items[cur] += ' ' + line.trim();
+    else if (!line.trim()) { /* Leerzeile */ }
+  }
+  flush();
+  return html;
+}
+async function openNews() {
+  try {
+    const r = await fetch('/api/changelog', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Acars': '1' }, body: '{}' });
+    const res = await r.json();
+    if (!res.ok) { snack(res.message, false); return; }
+    $('newsBody').innerHTML = mdToHtml(res.text);
+  } catch (e) { return; }
+  $('overlay').classList.remove('show');
+  $('newsOverlay').classList.add('show');
+}
+function closeNews() {
+  $('newsOverlay').classList.remove('show');
+  fetch('/api/news-seen', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Acars': '1' }, body: '{}' }).catch(() => {});
+}
+let newsChecked = false;
+$('btnNews').onclick = openNews;
+$('btnNewsClose').onclick = closeNews;
+$('newsOverlay').onclick = e => { if (e.target.id === 'newsOverlay') closeNews(); };
 $('btnClose').onclick = () => $('overlay').classList.remove('show');
 $('overlay').onclick = e => { if (e.target.id === 'overlay') $('overlay').classList.remove('show'); };
 $('navReports').onclick = () => post('/api/open-reports');
@@ -962,6 +1010,7 @@ async function tick() {
     s = await r.json();
     lastState = s;
     if (s.settings && s.settings.lang) applyLang(s.settings.lang);
+    if (!newsChecked && s.settings) { newsChecked = true; if (s.settings.showNews) openNews(); }
   } catch (e) {
     $('conn').className = 'conn'; $('conn').lastChild.textContent = t('Keine Verbindung zu Flarelog');
     return;

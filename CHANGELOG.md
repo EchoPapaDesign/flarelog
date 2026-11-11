@@ -6,6 +6,8 @@
   nach der Landung – automatisch passend zur Flugphase, jede Ansage einmal pro Flug. Soundpack von AeRodri.
 - Einstellungen → Kabinenansagen: an/aus, „Ansage testen“, „Eigene Ansagen …“ (gleichnamige WAV-Dateien in
   `Dokumente/Flarelog/Sounds` ersetzen die mitgelieferten)
+- **Was ist neu:** Nach einem Update zeigt Flarelog einmal die Änderungen an; später über Einstellungen → Über →
+  „Was ist neu?“
 
 ## 0.9.0-beta.5 – Mac-App mit eigenem Fenster
 

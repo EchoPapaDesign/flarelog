@@ -25,6 +25,8 @@ public sealed class AcarsSettings
     public bool Voice { get; set; } = true;
     /// <summary>Kabinenansagen in den Flugphasen (Begrüßung, Sicherheitseinweisung, Steigflug …).</summary>
     public bool CabinAnnouncements { get; set; } = true;
+    /// <summary>Version, deren „Was ist neu?“ zuletzt gezeigt wurde.</summary>
+    public string? LastSeenVersion { get; set; }
     /// <summary>Sprache: "auto" (wie das System), "de" oder "en".</summary>
     public string Language { get; set; } = "auto";
     public int UdpPort { get; set; } = ForeFlightProtocol.DefaultPort;

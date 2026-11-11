@@ -13,6 +13,9 @@
   <ItemGroup>
     <!-- Kabinenansagen (Flarelog-Soundpack von AeRodri, siehe sounds/CREDITS.md) – Dateinamen nicht ändern. -->
     <EmbeddedResource Include="..\..\sounds\*.wav" LogicalName="Flarelog.Sounds.%(Filename)%(Extension)" />
+    <!-- „Was ist neu?“ im Programm -->
+    <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="Flarelog.Changelog.de.md" />
+    <EmbeddedResource Include="..\..\CHANGELOG.en.md" LogicalName="Flarelog.Changelog.en.md" />
   </ItemGroup>
 
   <ItemGroup>

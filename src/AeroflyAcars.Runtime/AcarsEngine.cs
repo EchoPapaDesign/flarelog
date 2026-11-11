@@ -1193,6 +1193,24 @@ public sealed class AcarsEngine : IDisposable
         }
     }
 
+    /// <summary>Änderungsliste in der eingestellten Sprache (aus CHANGELOG.md bzw. CHANGELOG.en.md).</summary>
+    public ActionResult Changelog()
+    {
+        var name = Lang.English ? "Flarelog.Changelog.en.md" : "Flarelog.Changelog.de.md";
+        using var stream = typeof(AcarsEngine).Assembly.GetManifestResourceStream(name);
+        if (stream is null) return new ActionResult(false, L("Änderungsliste nicht gefunden.", "Changelog not found."));
+        using var reader = new StreamReader(stream);
+        return new ActionResult(true, "", reader.ReadToEnd());
+    }
+
+    /// <summary>„Was ist neu?“ für diese Version gesehen – nicht wieder von selbst öffnen.</summary>
+    public ActionResult NewsSeen()
+    {
+        Settings.LastSeenVersion = AppInfo.Version;
+        try { Settings.Save(); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        return new ActionResult(true, "");
+    }
+
     /// <summary>Probe: spielt die Begrüßung.</summary>
     public ActionResult CabinTest()
     {
@@ -1432,6 +1450,7 @@ public sealed class AcarsEngine : IDisposable
                     },
                     voice = Settings.Voice,
                     cabin = Settings.CabinAnnouncements,
+                    showNews = Settings.LastSeenVersion != AppInfo.Version,
                     soundFolder = CabinAnnouncer.UserFolder,
                     reportFolder = Settings.EffectiveReportFolder,
                     udpPort = Settings.UdpPort,
