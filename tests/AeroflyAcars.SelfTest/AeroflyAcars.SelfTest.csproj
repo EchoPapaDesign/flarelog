@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AeroflyAcars.Core\AeroflyAcars.Core.csproj" />
+    <ProjectReference Include="..\..\src\AeroflyAcars.Runtime\AeroflyAcars.Runtime.csproj" />
   </ItemGroup>
 
 </Project>

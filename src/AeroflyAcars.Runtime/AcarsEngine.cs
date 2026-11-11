@@ -1196,8 +1196,10 @@ public sealed class AcarsEngine : IDisposable
     /// <summary>Änderungsliste in der eingestellten Sprache (aus CHANGELOG.md bzw. CHANGELOG.en.md).</summary>
     public ActionResult Changelog()
     {
-        var name = Lang.English ? "Flarelog.Changelog.en.md" : "Flarelog.Changelog.de.md";
-        using var stream = typeof(AcarsEngine).Assembly.GetManifestResourceStream(name);
+        var asm = typeof(AcarsEngine).Assembly;
+        // Englisch, falls vorhanden – sonst die deutsche Liste statt gar nichts.
+        using var stream = (Lang.English ? asm.GetManifestResourceStream("Flarelog.Changelog.en.md") : null)
+                           ?? asm.GetManifestResourceStream("Flarelog.Changelog.de.md");
         if (stream is null) return new ActionResult(false, L("Änderungsliste nicht gefunden.", "Changelog not found."));
         using var reader = new StreamReader(stream);
         return new ActionResult(true, "", reader.ReadToEnd());

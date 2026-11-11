@@ -12,10 +12,11 @@
 
   <ItemGroup>
     <!-- Kabinenansagen (Flarelog-Soundpack von AeRodri, siehe sounds/CREDITS.md) – Dateinamen nicht ändern. -->
-    <EmbeddedResource Include="..\..\sounds\*.wav" LogicalName="Flarelog.Sounds.%(Filename)%(Extension)" />
-    <!-- „Was ist neu?“ im Programm -->
-    <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="Flarelog.Changelog.de.md" />
-    <EmbeddedResource Include="..\..\CHANGELOG.en.md" LogicalName="Flarelog.Changelog.en.md" />
+    <EmbeddedResource Include="..\..\sounds\*.wav" LogicalName="Flarelog.Sounds.%(Filename)%(Extension)" WithCulture="false" />
+    <!-- „Was ist neu?“ im Programm. WithCulture=false: sonst hält der Build „.en.md“ für eine Sprachdatei
+         und packt sie in eine eigene Satelliten-DLL, wo Flarelog sie nicht findet. -->
+    <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="Flarelog.Changelog.de.md" WithCulture="false" />
+    <EmbeddedResource Include="..\..\CHANGELOG.en.md" LogicalName="Flarelog.Changelog.en.md" WithCulture="false" />
   </ItemGroup>
 
   <ItemGroup>

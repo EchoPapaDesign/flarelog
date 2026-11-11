@@ -1009,6 +1009,16 @@ t.Test("Kabinenansagen: Dateinamen des Soundpacks liegen bei", () =>
         t.True(File.Exists(Path.Combine(dir!, "sounds", cue)), cue);
 });
 
+
+t.Test("Im Programm eingebettet: Änderungslisten (de/en) und Kabinenansagen", () =>
+{
+    var names = typeof(AeroflyAcars.Runtime.CabinAnnouncer).Assembly.GetManifestResourceNames();
+    t.True(names.Contains("Flarelog.Changelog.de.md"), "Changelog deutsch");
+    t.True(names.Contains("Flarelog.Changelog.en.md"), "Changelog englisch");
+    foreach (var cue in CabinCues.All)
+        t.True(names.Contains("Flarelog.Sounds." + cue), cue);
+});
+
 return t.Summary();
 
 static FlightTracker Fly(FlightPlan? plan) => FlyWith(plan, null, null, out _);
