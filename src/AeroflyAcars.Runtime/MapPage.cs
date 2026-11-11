@@ -348,7 +348,7 @@ public static class MapPage
       <label class="check"><input type="checkbox" id="setCabin"> Ansagen in den Flugphasen abspielen</label>
       <div class="row" style="margin-top:10px"><button class="btn" id="btnCabinTest">Ansage testen</button>
         <button class="btn" id="btnSoundFolder">Eigene Ansagen …</button></div>
-      <div class="hint">Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung. Soundpack von AeRodri.
+      <div class="hint">Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung. Soundpack von AeRodri (RealFlightOps).
         Gleichnamige WAV-Dateien im Ordner „Eigene Ansagen“ ersetzen die mitgelieferten.</div>
     </div>
     <hr>
@@ -521,7 +521,7 @@ const EN = {
 "Ansagen in den Flugphasen abspielen": "Play announcements during the flight phases",
 "Ansage testen": "Test announcement",
 "Eigene Ansagen …": "Own announcements …",
-"Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung. Soundpack von AeRodri. Gleichnamige WAV-Dateien im Ordner „Eigene Ansagen“ ersetzen die mitgelieferten.": "Welcome, safety briefing, climb, cruise and descent, after landing. Soundpack by AeRodri. WAV files with the same name in the “Own announcements” folder replace the built-in ones.",
+"Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung. Soundpack von AeRodri (RealFlightOps). Gleichnamige WAV-Dateien im Ordner „Eigene Ansagen“ ersetzen die mitgelieferten.": "Welcome, safety briefing, climb, cruise and descent, after landing. Soundpack by AeRodri (RealFlightOps). WAV files with the same name in the “Own announcements” folder replace the built-in ones.",
 "Flugberichte": "Flight reports",
 "Ordner öffnen": "Open folder",
 "Über": "About",
