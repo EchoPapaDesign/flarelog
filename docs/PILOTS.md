@@ -111,6 +111,9 @@ submission and shows the VA's message.
 - **Landing callout:** gear icon → on/off, "Test voice". An English Windows voice sounds best
   (Windows Settings → Time & language → Language → add English with "Text-to-speech").
   On the Mac, the English voice "Samantha" is used if available.
+- **Cabin announcements:** gear icon → on/off, "Test announcement". "Own announcements …" opens the folder
+  `Documents\Flarelog\Sounds` – WAV files placed there with the same names as in the soundpack
+  (e.g. `Welcome_Onboard.wav`) replace the built-in ones.
 - **Second monitor:** the display is also available in the browser at `http://localhost:8080`.
 
 ## Troubleshooting

@@ -339,6 +339,15 @@ public static class MapPage
     </div>
     <hr>
     <div class="field">
+      <label>Kabinenansagen</label>
+      <label class="check"><input type="checkbox" id="setCabin"> Ansagen in den Flugphasen abspielen</label>
+      <div class="row" style="margin-top:10px"><button class="btn" id="btnCabinTest">Ansage testen</button>
+        <button class="btn" id="btnSoundFolder">Eigene Ansagen …</button></div>
+      <div class="hint">Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung. Soundpack von AeRodri.
+        Gleichnamige WAV-Dateien im Ordner „Eigene Ansagen“ ersetzen die mitgelieferten.</div>
+    </div>
+    <hr>
+    <div class="field">
       <label>Flugberichte</label>
       <div class="hint" id="setFolder"></div>
       <div class="row" style="margin-top:10px"><button class="btn" id="btnFolder">Ordner öffnen</button></div>
@@ -495,6 +504,11 @@ const EN = {
 "Landeansage": "Landing callout",
 "„Touchdown with … feet per minute“ ansagen": "Announce “Touchdown with … feet per minute”",
 "Stimme testen": "Test voice",
+"Kabinenansagen": "Cabin announcements",
+"Ansagen in den Flugphasen abspielen": "Play announcements during the flight phases",
+"Ansage testen": "Test announcement",
+"Eigene Ansagen …": "Own announcements …",
+"Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung. Soundpack von AeRodri. Gleichnamige WAV-Dateien im Ordner „Eigene Ansagen“ ersetzen die mitgelieferten.": "Welcome, safety briefing, climb, cruise and descent, after landing. Soundpack by AeRodri. WAV files with the same name in the “Own announcements” folder replace the built-in ones.",
 "Flugberichte": "Flight reports",
 "Ordner öffnen": "Open folder",
 "Über": "About",
@@ -706,6 +720,7 @@ function openSettings() {
     $('setSb').value = st.simBriefUser ?? '';
     $('setSbAuto').checked = st.loadSimBriefOnStart;
     $('setVoice').checked = st.voice;
+    $('setCabin').checked = st.cabin;
     $('setFolder').textContent = st.reportFolder;
     $('quitField').style.display = st.canQuit ? 'block' : 'none';
     $('setVersion').textContent = t('Flarelog {0} · ACARS für Aerofly FS 4 – Daten: OurAirports (gemeinfrei), OpenStreetMap-Mitwirkende, SimBrief.', st.version);
@@ -720,6 +735,8 @@ $('overlay').onclick = e => { if (e.target.id === 'overlay') $('overlay').classL
 $('navReports').onclick = () => post('/api/open-reports');
 $('btnFolder').onclick = () => post('/api/open-reports');
 $('btnVoiceTest').onclick = () => post('/api/voice-test');
+$('btnCabinTest').onclick = () => post('/api/cabin-test');
+$('btnSoundFolder').onclick = () => post('/api/open-sounds');
 $('btnQuit').onclick = async () => {
   if (!confirm(t('Flarelog beenden?'))) return;
   const res = await post('/api/quit');
@@ -731,6 +748,7 @@ $('btnQuit').onclick = async () => {
 };
 $('setLang').onchange = async () => { const res = await post('/api/settings', { language: $('setLang').value }); if (res.ok && lastState) tick(); };
 $('setVoice').onchange = () => post('/api/settings', { voice: $('setVoice').checked });
+$('setCabin').onchange = () => post('/api/settings', { cabinAnnouncements: $('setCabin').checked });
 $('setSbAuto').onchange = () => post('/api/settings', { loadSimBriefOnStart: $('setSbAuto').checked });
 $('setSb').onchange = () => post('/api/settings', { simBriefUser: $('setSb').value });
 $('btnSbLoad').onclick = async () => {

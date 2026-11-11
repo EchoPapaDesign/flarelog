@@ -110,6 +110,9 @@ zurück und zeigt die Meldung der VA an.
 - **Landeansage:** Zahnrad → an/aus, „Stimme testen“. Eine englische Windows-Stimme klingt am besten
   (Windows-Einstellungen → Zeit und Sprache → Sprache → Englisch mit „Sprachausgabe“ hinzufügen).
   Am Mac wird die englische Stimme „Samantha“ verwendet, falls vorhanden.
+- **Kabinenansagen:** Zahnrad → an/aus, „Ansage testen“. Unter „Eigene Ansagen …“ öffnet sich der Ordner
+  `Dokumente\Flarelog\Sounds` – dort abgelegte WAV-Dateien mit denselben Namen wie im Soundpack
+  (z. B. `Welcome_Onboard.wav`) ersetzen die mitgelieferten.
 - **Zweiter Monitor:** Das Display ist zusätzlich im Browser unter `http://localhost:8080` erreichbar.
 
 ## Probleme

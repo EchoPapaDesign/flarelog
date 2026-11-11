@@ -966,6 +966,49 @@ t.Test("Höhenformat", () =>
     t.Equal("FL350", FlightTracker.FormatAltitude(34990));
 });
 
+
+t.Test("Kabinenansagen: richtige Reihenfolge, jede nur einmal", () =>
+{
+    var tracker = new FlightTracker();
+    var cues = new CabinCues();
+    var played = new List<string>();
+    tracker.EventRaised += e => played.AddRange(cues.OnEvent(e));
+    var builder = new SampleBuilder();
+    var start = new DateTimeOffset(2026, 11, 11, 10, 0, 0, TimeSpan.Zero);
+    foreach (var f in ScriptedFlight.Generate())
+    {
+        var time = start + f.Offset;
+        builder.Add(f.Attitude, time);
+        var sample = builder.Add(f.Gps, time);
+        if (sample is null) continue;
+        tracker.Add(sample);
+        played.AddRange(cues.OnSample(sample, tracker.Phase));
+    }
+    t.Equal(string.Join(",", new[] { CabinCues.WelcomeOnboard, CabinCues.PushbackStart, CabinCues.SafetyBriefing,
+        CabinCues.ClimbingMessage, CabinCues.CruiseAltitude, CabinCues.DescendingStart, CabinCues.AfterTouchdown }),
+        string.Join(",", played));
+});
+
+t.Test("Kabinenansagen: Aufzeichnung im Flug ohne Start-Ansagen", () =>
+{
+    var cues = new CabinCues();
+    var now = DateTimeOffset.UtcNow;
+    var inFlight = new FlightSample(now, 53, 10, 30000, 450, 90, 90, 0, 0, 0);
+    t.Equal(0, cues.OnSample(inFlight, FlightPhase.Cruise).Count);
+    t.Equal(0, cues.OnEvent(new FlightEvent(now, FlightPhase.Cruise, "im Flug")).Count);
+    t.Equal(0, cues.OnEvent(new FlightEvent(now, FlightPhase.Descent, "Sinkflug")).Count);
+    t.Equal(CabinCues.AfterTouchdown, cues.OnEvent(new FlightEvent(now, FlightPhase.TaxiIn, "Rollen")).Single());
+});
+
+t.Test("Kabinenansagen: Dateinamen des Soundpacks liegen bei", () =>
+{
+    var dir = AppContext.BaseDirectory;
+    while (dir is not null && !Directory.Exists(Path.Combine(dir, "sounds"))) dir = Path.GetDirectoryName(dir);
+    t.True(dir is not null, "Ordner sounds gefunden");
+    foreach (var cue in CabinCues.All)
+        t.True(File.Exists(Path.Combine(dir!, "sounds", cue)), cue);
+});
+
 return t.Summary();
 
 static FlightTracker Fly(FlightPlan? plan) => FlyWith(plan, null, null, out _);

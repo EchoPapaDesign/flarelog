@@ -1,5 +1,12 @@
 # Änderungen
 
+## Unveröffentlicht – Kabinenansagen
+
+- **Kabinenansagen:** Begrüßung am Gate, Pushback und Sicherheitseinweisung, Steigflug, Reiseflughöhe, Sinkflug und
+  nach der Landung – automatisch passend zur Flugphase, jede Ansage einmal pro Flug. Soundpack von AeRodri.
+- Einstellungen → Kabinenansagen: an/aus, „Ansage testen“, „Eigene Ansagen …“ (gleichnamige WAV-Dateien in
+  `Dokumente/Flarelog/Sounds` ersetzen die mitgelieferten)
+
 ## 0.9.0-beta.5 – Mac-App mit eigenem Fenster
 
 - **Eigenständige Mac-App:** Flarelog öffnet auf dem Mac ein eigenes Programmfenster mit Symbol im Dock – kein

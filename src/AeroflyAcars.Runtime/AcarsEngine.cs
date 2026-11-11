@@ -13,7 +13,7 @@ namespace AeroflyAcars.Runtime;
 
 public sealed record ActionResult(bool Ok, string Message, string? Text = null, object? Data = null);
 public sealed record SettingsUpdate(string? SimBriefUser, bool? Voice, bool? LoadSimBriefOnStart,
-    string? AirlineUrl = null, string? AirlineApiKey = null, string? Language = null);
+    string? AirlineUrl = null, string? AirlineApiKey = null, string? Language = null, bool? CabinAnnouncements = null);
 public sealed record SimBriefRequest(string? User);
 public sealed record WeatherRequest(string? Icao);
 public sealed record ConditionsRequest(bool? RealTime, bool? RealWeather, string? WeatherIcao = null);
@@ -41,6 +41,8 @@ public sealed class AcarsEngine : IDisposable
     private SimUdpListener? _listener;
     private LiveMapServer? _server;
     private SpeechAnnouncer? _speech;
+    private CabinAnnouncer? _cabin;
+    private CabinCues _cabinCues = new();
     private CancellationTokenSource? _cts;
     private DateTimeOffset? _lastReceived;
     private string? _source;
@@ -132,6 +134,7 @@ public sealed class AcarsEngine : IDisposable
         _ = _listener.RunAsync(OnMessage, _cts.Token);
         _server = StartServer();
         if (Settings.Voice) _speech = SpeechAnnouncer.Create();
+        if (Settings.CabinAnnouncements) _cabin = new CabinAnnouncer();
         _ = Task.Run(LoadInBackgroundAsync);
         _ = Task.Run(() => WatchAeroflyAsync(_cts.Token));
         _ = Task.Run(() => LiveLoopAsync(_cts.Token));
@@ -197,6 +200,7 @@ public sealed class AcarsEngine : IDisposable
             if (sample is null) return;
 
             _tracker.Add(sample);
+            PlayCabin(_cabinCues.OnSample(sample, _tracker.Phase));
             if (_tracker.IsFinished && !_reportSaved)
                 SaveReportLocked();
         }
@@ -205,8 +209,11 @@ public sealed class AcarsEngine : IDisposable
     private FlightTracker CreateTracker()
     {
         var tracker = new FlightTracker(_plan, Settings.DestinationElevationFt, _airports, _runwaysProxy);
+        var cues = new CabinCues();
+        _cabinCues = cues;
         tracker.EventRaised += e =>
         {
+            PlayCabin(cues.OnEvent(e));
             // Beim Losrollen festhalten, welches Flugzeug in Aerofly gewählt ist.
             if (e.PhaseChange && e.Phase == FlightPhase.TaxiOut)
             {
@@ -230,6 +237,12 @@ public sealed class AcarsEngine : IDisposable
             CalloutSpoken?.Invoke(text);
         };
         return tracker;
+    }
+
+    private void PlayCabin(IReadOnlyList<string> cues)
+    {
+        if (!Settings.CabinAnnouncements || _cabin is null) return;
+        foreach (var cue in cues) _cabin.Play(cue);
     }
 
     // ---------- Bedienung (Display-Knöpfe, Konsole) ----------
@@ -1120,6 +1133,12 @@ public sealed class AcarsEngine : IDisposable
             Settings.Voice = voice;
             if (voice && _speech is null) _speech = SpeechAnnouncer.Create();
         }
+        if (update.CabinAnnouncements is { } cabin)
+        {
+            Settings.CabinAnnouncements = cabin;
+            if (cabin) _cabin ??= new CabinAnnouncer();
+            else _cabin?.Stop();
+        }
 
         try
         {
@@ -1171,6 +1190,34 @@ public sealed class AcarsEngine : IDisposable
             lines.Add($"Simulator: Aerofly FS 4 · {L("aufgezeichnet mit", "recorded with")} {SourceName} {Version}");
 
             return new ActionResult(true, L("Flugdaten in die Zwischenablage kopiert.", "Flight data copied to the clipboard."), string.Join(Environment.NewLine, lines));
+        }
+    }
+
+    /// <summary>Probe: spielt die Begrüßung.</summary>
+    public ActionResult CabinTest()
+    {
+        _cabin ??= new CabinAnnouncer();
+        if (!_cabin.Available) return new ActionResult(false, L("Tonausgabe ist auf diesem System nicht verfügbar.", "Sound output is not available on this system."));
+        if (CabinAnnouncer.Resolve(CabinCues.WelcomeOnboard) is null)
+            return new ActionResult(false, L("Keine Begrüßungsansage gefunden.", "No welcome announcement found."));
+        _cabin.Stop();
+        _cabin.Play(CabinCues.WelcomeOnboard);
+        return new ActionResult(true, L("Begrüßung wird abgespielt.", "Playing the welcome announcement."));
+    }
+
+    /// <summary>Ordner für eigene Ansagen öffnen (Dokumente/Flarelog/Sounds).</summary>
+    public ActionResult OpenSoundFolder()
+    {
+        try
+        {
+            var folder = CabinAnnouncer.UserFolder;
+            Directory.CreateDirectory(folder);
+            Process.Start(new ProcessStartInfo(folder) { UseShellExecute = true });
+            return new ActionResult(true, folder);
+        }
+        catch (Exception ex)
+        {
+            return new ActionResult(false, L("Ordner konnte nicht geöffnet werden: ", "Could not open the folder: ") + ex.Message);
         }
     }
 
@@ -1384,6 +1431,8 @@ public sealed class AcarsEngine : IDisposable
                         arr = routePlan.DestinationIcao,
                     },
                     voice = Settings.Voice,
+                    cabin = Settings.CabinAnnouncements,
+                    soundFolder = CabinAnnouncer.UserFolder,
                     reportFolder = Settings.EffectiveReportFolder,
                     udpPort = Settings.UdpPort,
                     version = AppInfo.Version,
@@ -1419,6 +1468,7 @@ public sealed class AcarsEngine : IDisposable
         _liveStatusCode = null;
         _liveInfo = null;
         _builder = new SampleBuilder();
+        _cabin?.Stop();
         _tracker = CreateTracker();
         _reportSaved = false;
         _lastCallout = null;
@@ -1469,6 +1519,7 @@ public sealed class AcarsEngine : IDisposable
         _listener?.Dispose();
         _server?.Dispose();
         _speech?.Dispose();
+        _cabin?.Dispose();
         _cts?.Dispose();
     }
 

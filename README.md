@@ -34,6 +34,10 @@ Flarelog ist kostenlos, läuft komplett auf deinem PC und braucht keine Installa
 - Bounces, Stabilität im Endanflug, Rollout, Start- und Landebahn, Tag/Nacht
 - Berücksichtigt geneigte Bahnen (auch Courchevel) und erkennt das Ausschweben über der Bahn
 
+**Kabinenansagen**
+- Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug und nach der Landung – automatisch zur Flugphase
+- Soundpack von AeRodri (RealFlightOps); eigene Ansagen lassen sich in `Dokumente/Flarelog/Sounds` ablegen
+
 **Planen und Wetter**
 - SimBrief: letzten Flugplan laden, Route auf der Karte, Übersicht mit SID, Strecke und STAR
 - Wetter-Fenster mit aktuellem **METAR und TAF** für jeden Flugplatz
@@ -157,7 +161,7 @@ Voraussetzung: .NET 8 SDK.
 
 ```
 dotnet build
-dotnet run --project tests\AeroflyAcars.SelfTest      # erwartet: "Alle 44 Tests bestanden."
+dotnet run --project tests\AeroflyAcars.SelfTest      # erwartet: "Alle … Tests bestanden."
 dotnet run --project src\AeroflyAcars.Desktop
 dotnet run --project src\AeroflyAcars.SimDummy         # Testflug ohne Aerofly
 ```
@@ -189,6 +193,7 @@ Das Programm meldet neue Versionen über `GitHubRepository` in `src/AeroflyAcars
 - Flughäfen und Bahnen: [OurAirports](https://ourairports.com/data/) (gemeinfrei)
 - Karte: © [OpenStreetMap](https://www.openstreetmap.org/copyright)-Mitwirkende, [Leaflet](https://leafletjs.com)
 - Flugpläne: [SimBrief](https://www.simbrief.com)
+- Kabinenansagen: Flarelog Soundpack von AeRodri / [RealFlightOps](https://www.youtube.com/@RealFlightOpsOfficial) – siehe [sounds/CREDITS.md](sounds/CREDITS.md)
 - Aerofly FS ist eine Marke der IPACS. Dieses Projekt ist kein offizielles Produkt von IPACS.
 
 ## Lizenz

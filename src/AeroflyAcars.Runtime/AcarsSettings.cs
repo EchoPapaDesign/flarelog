@@ -23,6 +23,8 @@ public sealed class AcarsSettings
     /// <summary>Platz, an dem das Flugzeug zuletzt stand (Ersatz für das Wetter beim nächsten Start).</summary>
     public string? LastAirport { get; set; }
     public bool Voice { get; set; } = true;
+    /// <summary>Kabinenansagen in den Flugphasen (Begrüßung, Sicherheitseinweisung, Steigflug …).</summary>
+    public bool CabinAnnouncements { get; set; } = true;
     /// <summary>Sprache: "auto" (wie das System), "de" oder "en".</summary>
     public string Language { get; set; } = "auto";
     public int UdpPort { get; set; } = ForeFlightProtocol.DefaultPort;

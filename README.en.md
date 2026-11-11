@@ -34,6 +34,10 @@ Flarelog is free, runs entirely on your computer and needs no installation.
 - Bounces, final approach stability, rollout, departure and landing runway, day/night
 - Takes sloped runways into account (including Courchevel) and detects floating over the runway
 
+**Cabin announcements**
+- Welcome, safety briefing, climb, cruise, descent and after landing – automatically matched to the flight phase
+- Soundpack by AeRodri (RealFlightOps); own announcements can be placed in `Documents/Flarelog/Sounds`
+
 **Planning and weather**
 - SimBrief: load your latest flight plan, route on the map, overview with SID, enroute and STAR
 - Weather window with current **METAR and TAF** for any airport
@@ -150,6 +154,7 @@ See the [German README](README.md#für-entwickler) for the project structure and
 - Airports and runways: [OurAirports](https://ourairports.com/data/) (public domain)
 - Map: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, [Leaflet](https://leafletjs.com)
 - Flight plans: [SimBrief](https://www.simbrief.com)
+- Cabin announcements: Flarelog Soundpack by AeRodri / [RealFlightOps](https://www.youtube.com/@RealFlightOpsOfficial) – see [sounds/CREDITS.md](sounds/CREDITS.md)
 - Aerofly FS is a trademark of IPACS. This project is not an official IPACS product.
 
 ## License
