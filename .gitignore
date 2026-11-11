@@ -5,3 +5,8 @@ obj/
 Fluege/
 publish/
 build-mac/
+
+# Lokale Ordner im Projektordner – nicht ins öffentliche Repo
+Soundfiles/
+Fluege/
+Claude outputs/
