@@ -14,8 +14,8 @@
 **macOS:** Download the matching ZIP file (`AppleSilicon` for M1–M4, `Intel` for older Macs), unzip it and
 drag `Flarelog.app` into *Applications*. When you open it for the first time, macOS reports that the app has not been
 verified → *System Settings → Privacy & Security* → **Open Anyway** next to Flarelog. **Allow** incoming connections.
-Flarelog currently has no window of its own: the interface opens in your web browser, and double-clicking the app
-again reopens it. Quit via gear icon → *Quit Flarelog*. In Aerofly, use the same settings as on Windows
+Flarelog opens its own window with a Dock icon; quit by closing the window or pressing Cmd+Q. In Aerofly, use the
+same settings as on Windows
 (broadcast to 127.0.0.1, port 49002).
 
 There is no installer. To remove Flarelog, delete the .exe, and optionally also

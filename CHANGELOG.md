@@ -1,5 +1,13 @@
 # Änderungen
 
+## 0.9.0-beta.5 – Mac-App mit eigenem Fenster
+
+- **Eigenständige Mac-App:** Flarelog öffnet auf dem Mac ein eigenes Programmfenster mit Symbol im Dock – kein
+  Browser mehr nötig. Funktionen, Erkennung, Berichte und Einstellungen bleiben unverändert.
+- Fenster schließen während eines Flugs fragt nach und speichert den bisherigen Flug als Teilbericht
+- Externe Links (Update, PIREP auf der VA-Seite, Kartenquellen) öffnen im normalen Browser
+- Lässt sich das Fenster nicht öffnen, startet Flarelog wie bisher im Browser (Hinweis in `~/Library/Logs/Flarelog.log`)
+
 ## 0.9.0-beta.4 – Feedback der ersten Mac-Tests
 
 - **Landerate mit Vorzeichen:** Hinweis nach der Landung und Landekarte zeigen die Landerate jetzt wie der Flugbericht

@@ -67,12 +67,11 @@ Unter [**Releases**](https://github.com/EchoPapaDesign/flarelog/releases) die ne
   (das Programm ist noch nicht digital signiert)
 - Windows-Firewall → Zugriff für **private Netzwerke** erlauben
 
-*macOS:* Doppelklick auf `Flarelog.app` – die Oberfläche öffnet sich im Browser. Beim ersten Start:
+*macOS:* Doppelklick auf `Flarelog.app` – Flarelog öffnet sein eigenes Fenster. Beim ersten Start:
 - „Flarelog kann nicht geöffnet werden“ (nicht von Apple geprüft) → **Systemeinstellungen → Datenschutz & Sicherheit**,
   ganz unten bei Flarelog **Trotzdem öffnen** → mit Passwort bestätigen
 - „Eingehende Netzwerkverbindungen akzeptieren?“ → **Erlauben** (darüber kommen die Daten von Aerofly)
-- Flarelog läuft ohne eigenes Fenster im Hintergrund. Tab geschlossen? Einfach `Flarelog.app` noch einmal öffnen.
-  Beenden: Zahnrad → **Flarelog beenden**.
+- Beenden: Fenster schließen oder Cmd+Q.
 
 **3. Aerofly einstellen** – Einstellungen → **Sonstige Einstellungen**:
 
@@ -141,7 +140,7 @@ Höhe über Grund und ein „am Boden“-Signal. Die Landerate wird deshalb aus 
 ```
 AeroflyAcars.sln
 src/AeroflyAcars.Desktop    Programm: Flarelog.exe (WinForms + WebView2)
-src/AeroflyAcars.Mac        Programm für macOS: Flarelog.app (Hintergrundprogramm, Oberfläche im Browser)
+src/AeroflyAcars.Mac        Programm für macOS: Flarelog.app (eigenes Fenster über Photino/WebKit)
 src/AeroflyAcars.Runtime    Programmlogik: Empfang, Auswertung, Berichte, Sprachansage, Display-Server
 src/AeroflyAcars.Core       Bibliothek: UDP-Format, Phasen, Auswertung, SimBrief, Flughäfen/Bahnen, phpVMS
 src/AeroflyAcars.App        Konsolenversion (Fehlersuche)

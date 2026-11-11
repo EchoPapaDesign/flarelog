@@ -97,7 +97,7 @@ public sealed class AcarsEngine : IDisposable
 
     /// <summary>
     /// Das Display bittet darum, Flarelog zu beenden (Knopf in den Einstellungen). Nur die Mac-Version meldet sich
-    /// dafür an – dort gibt es kein eigenes Programmfenster, das man schließen könnte.
+    /// dafür an (schließt dann ihr Fenster bzw. beendet sich im Browser-Notbetrieb).
     /// </summary>
     public event Action? QuitRequested;
 

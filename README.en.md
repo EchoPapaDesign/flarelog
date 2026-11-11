@@ -54,10 +54,9 @@ Flarelog is free, runs entirely on your computer and needs no installation.
 
 ## How Flarelog runs on Windows and macOS
 
-- **Windows:** `Flarelog.exe` opens its own program window.
-- **macOS:** `Flarelog.app` currently runs in the background and opens its interface **in your web browser**
-  (Safari, Chrome, …) at `http://localhost:8080`. All data stays on your Mac – the browser only displays it.
-  A standalone Mac window is planned.
+Both versions are standalone apps with their own window: `Flarelog.exe` on Windows, `Flarelog.app` with a Dock icon
+on macOS. No browser needed. The display is additionally available at `http://localhost:8080`, e.g. for a second
+monitor or tablet.
 
 ## Quick start
 
@@ -74,11 +73,11 @@ Get the latest version from [**Releases**](https://github.com/EchoPapaDesign/fla
   (the program is not digitally signed yet)
 - Windows Firewall → allow access for **private networks**
 
-*macOS:* Double-click `Flarelog.app` – the interface opens in your browser. On first start:
+*macOS:* Double-click `Flarelog.app` – Flarelog opens its own window. On first start:
 - "Flarelog can't be opened" (not verified by Apple) → **System Settings → Privacy & Security**,
   scroll down to Flarelog → **Open Anyway** → confirm with your password
 - "Accept incoming network connections?" → **Allow** (this is how the data from Aerofly arrives)
-- Closed the tab? Just open `Flarelog.app` again. To quit: gear icon → **Quit Flarelog**.
+- To quit: close the window or press Cmd+Q.
 
 **3. Set up Aerofly** – Settings → **Miscellaneous settings**:
 

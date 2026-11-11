@@ -12,8 +12,11 @@
   <key>CFBundleVersion</key><string>__SHORTVERSION__</string>
   <key>FlarelogVersion</key><string>__VERSION__</string>
   <key>LSMinimumSystemVersion</key><string>12.0</string>
-  <!-- Kein Dock-Symbol und kein Menü: Flarelog läuft im Hintergrund, die Oberfläche ist im Browser. -->
-  <key>LSUIElement</key><true/>
+  <!-- Die Oberfläche kommt vom eingebauten Server auf localhost (http). -->
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsLocalNetworking</key><true/>
+  </dict>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSHumanReadableCopyright</key><string>© 2026 EP Design – MIT-Lizenz</string>
 </dict>

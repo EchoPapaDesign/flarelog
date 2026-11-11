@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Flarelog für macOS: läuft ohne eigenes Fenster im Hintergrund, die Oberfläche öffnet sich im Browser.
+    Flarelog für macOS: eigenes Programmfenster (Photino → WebKit von macOS), Dock-Symbol wie jede Mac-App.
     Wird mit build-mac.sh zu Flarelog.app verpackt (auf einem Mac oder in GitHub Actions).
   -->
   <PropertyGroup>
@@ -10,6 +10,11 @@
     <AssemblyName>Flarelog</AssemblyName>
     <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Fenster mit der eingebauten WebKit-Ansicht; bringt Photino.Native für Intel und Apple Silicon mit. -->
+    <PackageReference Include="Photino.NET" Version="4.0.16" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AeroflyAcars.Core\AeroflyAcars.Core.csproj" />

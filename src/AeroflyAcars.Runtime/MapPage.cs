@@ -584,6 +584,19 @@ function t(text, ...args) {
   args.forEach((v, i) => { r = r.split(`{${i}}`).join(v); });
   return r;
 }
+// Im Mac-Programmfenster (Photino) gibt es kein window.open – externe Links gehen dort an das Programm,
+// das sie im normalen Browser öffnet. Im Browser und unter Windows (WebView2) bleibt alles wie gehabt.
+const hostApp = !!(window.external && typeof window.external.sendMessage === 'function');
+function openExternal(url) {
+  if (hostApp) window.external.sendMessage('open:' + url); else window.open(url, '_blank');
+}
+document.addEventListener('click', e => {
+  if (!hostApp) return;
+  const a = e.target.closest ? e.target.closest('a[href]') : null;
+  if (!a) return;
+  const u = new URL(a.href, location.href);
+  if (u.origin !== location.origin) { e.preventDefault(); openExternal(u.href); }
+});
 const de = (v, d = 0) => Number(v).toLocaleString(LANG === 'en' ? 'en-US' : 'de-DE', { maximumFractionDigits: d, minimumFractionDigits: d });
 // Feste Texte der Seite einsammeln (vor dem ersten Füllen), damit sie umgeschaltet werden können.
 const staticTexts = [], staticAttrs = [];
@@ -903,7 +916,7 @@ async function openSubmit() {
 $('btnSubmit').onclick = openSubmit;
 $('btnSubmitClose').onclick = () => $('submitOverlay').classList.remove('show');
 $('submitOverlay').onclick = e => { if (e.target.id === 'submitOverlay') $('submitOverlay').classList.remove('show'); };
-$('btnSubmitted').onclick = () => { if (lastState && lastState.submit.url) window.open(lastState.submit.url, '_blank'); };
+$('btnSubmitted').onclick = () => { if (lastState && lastState.submit.url) openExternal(lastState.submit.url); };
 $('btnSubmitSend').onclick = async () => {
   const reg = $('suReg').value.trim();
   const id = reg ? '' : $('suAircraft').value;
@@ -945,7 +958,7 @@ async function tick() {
   $('notice').textContent = s.pendingPlan ? t('Nächster Flug: {0}', s.pendingPlan) : (s.notices.length ? s.notices[s.notices.length - 1] : '');
   $('btnFinish').style.display = s.inProgress ? 'inline-block' : 'none';
   $('btnUpdate').style.display = s.update ? 'inline-block' : 'none';
-  if (s.update) { $('btnUpdate').textContent = t('Version {0} verfügbar', s.update.version); $('btnUpdate').onclick = () => window.open(s.update.url, '_blank'); }
+  if (s.update) { $('btnUpdate').textContent = t('Version {0} verfügbar', s.update.version); $('btnUpdate').onclick = () => openExternal(s.update.url); }
   $('btnNew').style.display = (s.reportSaved || s.finished) ? 'inline-block' : 'none';
   $('btnCopy').style.display = s.landing ? 'inline-block' : 'none';
   const canSubmit = s.airline.hasKey && !!s.airline.pilot && !s.submit.pirepId && (s.reportSaved || s.finished);
