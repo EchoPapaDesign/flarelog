@@ -47,7 +47,7 @@ At the top right, the route overview shows departure with runway and SID, the wa
 
 ## Time and weather (optional)
 
-At the top right of the program: **Time** "Aerofly" or "Real", **Weather** "Aerofly" or "Real (Departure)".
+Gear icon → "Time and weather in Aerofly": **Time** "Aerofly" or "Real", **Weather** "Aerofly" or "Real (Departure)".
 With "Real", Flarelog writes the real UTC time or the current METAR weather of the departure airport (wind, gusts as
 turbulence, visibility, up to three cloud layers) into Aerofly. Departure airport: SimBrief plan, otherwise the booking,
 otherwise the ICAO code entered in the **Departure** field, otherwise the airport where the aircraft is or was last

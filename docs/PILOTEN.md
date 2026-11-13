@@ -46,7 +46,7 @@ Rechts oben zeigt die Routenübersicht Abflug mit Bahn und SID, die Wegpunkte so
 
 ## Uhrzeit und Wetter (optional)
 
-Rechts oben im Programm: **Uhrzeit** „Aerofly“ oder „Real“, **Wetter** „Aerofly“ oder „Real (Departure)“.
+Zahnrad → „Zeit und Wetter in Aerofly“: **Uhrzeit** „Aerofly“ oder „Real“, **Wetter** „Aerofly“ oder „Real (Departure)“.
 Mit „Real“ trägt Flarelog die echte UTC-Zeit bzw. das aktuelle METAR-Wetter des Abflugplatzes (Wind, Böen als
 Turbulenz, Sicht, bis zu drei Wolkenschichten) in Aerofly ein. Abflugplatz: SimBrief-Plan, sonst Buchung, sonst der
 im Feld **Departure** eingetragene ICAO-Code, sonst der Platz, an dem das Flugzeug gerade steht bzw. zuletzt stand.

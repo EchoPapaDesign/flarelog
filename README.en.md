@@ -97,7 +97,7 @@ Flarelog then shows **"Connected to Aerofly FS 4"** in green at the top.
 - **SimBrief:** gear icon → SimBrief username → **Load plan**
 - **Airline:** briefcase icon → your VA's website and personal API key → **Connect & load bookings**
   → click on the booked flight
-- **Time/weather:** set to **Real** at the top right before you start Aerofly
+- **Time/weather:** gear icon → "Time and weather in Aerofly" → **Real**, before you start Aerofly
 
 **5. Fly**
 Start at the gate or on the apron and begin taxiing – Flarelog records everything automatically. After landing,

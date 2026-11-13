@@ -91,7 +91,7 @@ Oben in Flarelog steht dann grün **„Verbunden mit Aerofly FS 4“**.
 - **SimBrief:** Zahnrad → SimBrief-Benutzername → **Plan laden**
 - **Airline:** Koffer-Symbol → Webseite der VA und persönlicher API-Schlüssel → **Verbinden & Buchungen laden**
   → gebuchten Flug anklicken
-- **Uhrzeit/Wetter:** rechts oben auf **Real** stellen, bevor du Aerofly startest
+- **Uhrzeit/Wetter:** Zahnrad → „Zeit und Wetter in Aerofly“ → **Real**, bevor du Aerofly startest
 
 **5. Fliegen**
 Am Gate oder Vorfeld beginnen und losrollen – Flarelog zeichnet alles automatisch auf. Nach der Landung
