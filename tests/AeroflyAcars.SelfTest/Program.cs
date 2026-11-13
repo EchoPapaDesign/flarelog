@@ -1019,6 +1019,55 @@ t.Test("Im Programm eingebettet: Änderungslisten (de/en) und Kabinenansagen", (
         t.True(names.Contains("Flarelog.Sounds." + cue), cue);
 });
 
+
+t.Test("Landung auf unebener Bahn (LEAS 29: Kuppe, dann Gefälle) wird beim Aufsetzen erkannt", () =>
+{
+    // Nachgestellt nach AeRodris Testflug LEBB–LEAS: Aufsetzen mit 120 kt, danach steigt die Bahn in Aerofly
+    // um 4 ft und fällt dann um 12 ft. Früher galt das Gefälle als „Ausschweben“ – erkannt wurde erst bei 37 kt.
+    const string rwyCsv = """
+"id","airport_ref","airport_ident","length_ft","width_ft","surface","lighted","closed","le_ident","le_latitude_deg","le_longitude_deg","le_elevation_ft","le_heading_degT","le_displaced_threshold_ft","he_ident","he_latitude_deg","he_longitude_deg","he_elevation_ft","he_heading_degT","he_displaced_threshold_ft"
+1,1,"XLEA",10500,150,"ASP",1,0,"36",32.860,-97.0,600,0,,"18",32.889,-97.0,600,180,
+""";
+    var runways = RunwayDatabase.ParseCsv(new StringReader(rwyCsv));
+    var apt = new Airport("XLEA", "Testplatz", "large_airport", 32.875, -97.0, 600, null, "XLEA");
+    var tracker = new FlightTracker(null, null, new AirportDatabase(new[] { apt }), runways);
+    var announcedAt = new List<int>();
+    var announcedRate = new List<double>();
+    var b = new SampleBuilder();
+    var start = new DateTimeOffset(2026, 11, 13, 8, 9, 0, TimeSpan.Zero);
+    double lat = 32.8256, alt = 1300, gs = 125, rolled = 0;   // setzt kurz hinter der Schwelle auf, rollt auf der Bahn aus
+    int sec = 0, contactSec = -1;
+    tracker.TouchdownDetected += (_, r) => { announcedAt.Add(sec); announcedRate.Add(r); };
+    // Bahnoberfläche in Aerofly: 600 ft am Aufsetzpunkt, +4 ft nach 600 m, dann bis 1.800 m auf 592 ft.
+    double Surface(double m) => m <= 600 ? 600 + 4 * m / 600 : 604 - 12 * Math.Min(1, (m - 600) / 1200);
+    void Step(double vsFpm, double decelKt = 0)
+    {
+        gs = Math.Max(0, gs - decelKt);
+        double moveM = gs * 0.514444;
+        lat += gs / 3600.0 / 60.0;
+        if (contactSec >= 0) { rolled += moveM; alt = Surface(rolled); }
+        else alt = Math.Max(600, alt + vsFpm / 60.0);
+        var smp = b.Add(new GpsMessage("T", -97.0, lat, Math.Round(alt / Geo.FeetPerMeter, 1), 0, gs / Geo.KnotsPerMeterPerSecond),
+            start.AddSeconds(++sec));
+        if (smp is not null) tracker.Add(smp);
+    }
+
+    while (alt > 600) Step(-650, decelKt: 0.05);                 // stabiler Endanflug bis zum Aufsetzen
+    contactSec = sec;
+    gs = 120;
+    for (int i = 0; i < 60 && gs > 0; i++) Step(0, decelKt: gs > 60 ? 2.5 : 1.5);   // Bremsen, Reverse
+    for (int i = 0; i < 45; i++) Step(0);                          // steht noch auf der Bahn
+
+    t.True(tracker.Touchdown is not null, "Landung erkannt");
+    t.Range((tracker.Touchdown!.Value - start.AddSeconds(contactSec)).TotalSeconds, -2, 2, "Aufsetzzeitpunkt (s)");
+    t.Range(tracker.TouchdownSample!.GroundSpeedKt, 110, 130, "Groundspeed beim Aufsetzen");
+    t.Range(tracker.LandingRateFpm!.Value, -800, -400, "Landerate");
+    t.Equal(1, announcedAt.Count);
+    t.Range(announcedAt[0] - contactSec, 1, 8, "Ansage s nach dem Aufsetzen");
+    t.Range(announcedRate[0], -800, -400, "angesagte Landerate");
+    t.False(tracker.IsFinished, "kein Block on, solange das Flugzeug auf der Bahn steht");
+});
+
 return t.Summary();
 
 static FlightTracker Fly(FlightPlan? plan) => FlyWith(plan, null, null, out _);

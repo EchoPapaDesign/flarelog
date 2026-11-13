@@ -39,6 +39,13 @@ public sealed class FlightTracker
     public const double TouchdownMaxAboveFieldFt = 300;
     public const double TouchdownConfirmKt = 50;
     public const double TouchdownConfirmDecelKt = 8;
+    /// <summary>
+    /// So viel Geschwindigkeit (kt) verliert nur ein Flugzeug am Boden in <see cref="GroundRollWindow"/> – in der Luft,
+    /// auch beim Abfangen und Ausschweben, geht es deutlich langsamer. Danach gilt der Kandidat als Aufsetzen, auch wenn
+    /// die Höhe weiter fällt: Bahnen in Aerofly sind nicht immer eben (LEAS 29: Kuppe, dahinter 12 ft Gefälle).
+    /// </summary>
+    public const double GroundRollDecelKt = 10;
+    public static readonly TimeSpan GroundRollWindow = TimeSpan.FromSeconds(8);
     public const double TaxiInKt = 30;
     public const double StoppedKt = 1;
     public static readonly TimeSpan PauseMinTime = TimeSpan.FromSeconds(3);
@@ -108,6 +115,8 @@ public sealed class FlightTracker
         public bool FieldElevationKnown { get; } = fieldKnown;
         public Airport? Airport { get; } = airport;
         public bool Announced { get; set; }
+        /// <summary>Seit dem Kandidaten so stark abgebremst, wie es nur am Boden geht.</summary>
+        public bool Rolling { get; set; }
     }
 
     /// <param name="plan">SimBrief-Plan (optional).</param>
@@ -275,7 +284,8 @@ public sealed class FlightTracker
 
             case FlightPhase.TaxiIn:
                 if (s.GroundSpeedKt >= RestartTakeoffKt) { Restart(s); break; }
-                if (s.GroundSpeedKt < StoppedKt)
+                // Stehen auf der Bahn (z. B. am Bahnende vor dem Abrollen) ist noch nicht die Parkposition.
+                if (s.GroundSpeedKt < StoppedKt && !OnRunway(s))
                 {
                     _stoppedSince ??= s.Time;
                     if (s.Time - _stoppedSince.Value >= ParkingTime)
@@ -447,9 +457,13 @@ public sealed class FlightTracker
             // Über einer bekannten Bahn ist die Neigung herausgerechnet: Schon 1 ft weiteres Sinken heißt Ausschweben.
             // Ohne Bahndaten ist gleichmäßiges leichtes Sinken (< 1 ft/s) eher eine abschüssige Bahn.
             double sinceCand = (s.Time - cand.Sample.Time).TotalSeconds;
-            bool settled = onRunway
+            if (!cand.Rolling && s.Time - cand.Sample.Time <= GroundRollWindow &&
+                cand.Sample.GroundSpeedKt - s.GroundSpeedKt >= GroundRollDecelKt)
+                cand.Rolling = true;
+            // Wer so bremst, rollt – weiteres Sinken ist dann die Bahn selbst, kein Ausschweben.
+            bool settled = !cand.Rolling && (onRunway
                 ? diff < -TouchdownSettleOnRunwayFt
-                : diff < -TouchdownSettleFt && sinceCand > 0 && diff / sinceCand < -TouchdownMaxAltChangeFtPerSec;
+                : diff < -TouchdownSettleFt && sinceCand > 0 && diff / sinceCand < -TouchdownMaxAltChangeFtPerSec);
             if (settled)
             {
                 // Weiter gesunken: Das war das Abfangen bzw. Ausschweben, aufgesetzt wird erst noch.
@@ -499,14 +513,7 @@ public sealed class FlightTracker
                          && s.GroundSpeedKt <= cand.Sample.GroundSpeedKt - TouchdownConfirmDecelKt;
         if (!confirmed)
         {
-            // Schnelle Meldung: seit 2,5 s flach und nah genug an der Bahn bzw. Platzhöhe.
-            if (!cand.Announced && cand.FieldElevationKnown &&
-                s.Time - cand.Sample.Time >= TouchdownAnnounceDelay &&
-                Math.Abs(LevelDiff(s, cand.Sample, cand.Airport)) <= TouchdownAnnounceFlatFt &&
-                HeightAboveGround(cand.Sample, cand.Airport) is { Height: { } h } g && Math.Abs(h) <= g.AnnounceLimit &&
-                // Nur über die Platzhöhe (keine Bahndaten) ist das ungenau – Courchevel: Platz 6.583 ft, Schwelle rund
-                // 300 ft tiefer, ein Abfangen im Anflug sähe wie ein Aufsetzen aus. Dann muss auch gebremst werden.
-                (g.OverRunway || cand.Sample.GroundSpeedKt - s.GroundSpeedKt >= AnnounceMinDecelKt))
+            if (!cand.Announced && (QuickAnnounce(cand, s) || RollingAnnounce(cand, s)))
             {
                 cand.Announced = true;
                 var first = FirstContact(cand);
@@ -526,6 +533,36 @@ public sealed class FlightTracker
         SetPhase(FlightPhase.Landing, cand.Sample.Time,
             TouchdownText(cand.LandingRateFpm, cand.Sample.GroundSpeedKt) + At(ArrivalAirport));
         return true;
+    }
+
+    /// <summary>Steht das Flugzeug auf einer Bahn des Zielplatzes? Ohne Bahndaten: nein.</summary>
+    private bool OnRunway(FlightSample s)
+    {
+        var airport = ArrivalAirport ?? _airports?.Nearest(s.Latitude, s.Longitude, ArrivalAirportRadiusNm);
+        return airport is not null && _runways?.GroundElevationAt(airport, s.Latitude, s.Longitude) is not null;
+    }
+
+    /// <summary>Schnelle Meldung: seit 2,5 s flach und nah genug an der Bahn bzw. Platzhöhe.</summary>
+    private bool QuickAnnounce(TouchdownCandidate cand, FlightSample s)
+    {
+        if (!cand.FieldElevationKnown || s.Time - cand.Sample.Time < TouchdownAnnounceDelay) return false;
+        if (Math.Abs(LevelDiff(s, cand.Sample, cand.Airport)) > TouchdownAnnounceFlatFt) return false;
+        var g = HeightAboveGround(cand.Sample, cand.Airport);
+        if (g.Height is not { } h || Math.Abs(h) > g.AnnounceLimit) return false;
+        // Nur über die Platzhöhe (keine Bahndaten) ist das ungenau – Courchevel: Platz 6.583 ft, Schwelle rund
+        // 300 ft tiefer, ein Abfangen im Anflug sähe wie ein Aufsetzen aus. Dann muss auch gebremst werden.
+        return g.OverRunway || cand.Sample.GroundSpeedKt - s.GroundSpeedKt >= AnnounceMinDecelKt;
+    }
+
+    /// <summary>
+    /// Meldung beim Ausrollen: so stark gebremst, wie es nur am Boden geht, und die Höhe hat sich seit dem Kandidaten
+    /// kaum geändert. Greift auch, wenn Bahn- oder Platzhöhe aus der Datenbank nicht zur Szenerie in Aerofly passt.
+    /// </summary>
+    private bool RollingAnnounce(TouchdownCandidate cand, FlightSample s)
+    {
+        if (!cand.Rolling) return false;
+        if (Math.Abs(LevelDiff(s, cand.Sample, cand.Airport)) > TouchdownToleranceFt) return false;
+        return HeightAboveGround(cand.Sample, cand.Airport).Height is not { } h || Math.Abs(h) <= TouchdownMaxAboveFieldFt;
     }
 
     /// <summary>
