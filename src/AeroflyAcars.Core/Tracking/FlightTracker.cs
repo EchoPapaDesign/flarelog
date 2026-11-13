@@ -575,13 +575,15 @@ public sealed class FlightTracker
 
     /// <summary>
     /// Meldung beim Ausrollen: so stark gebremst, wie es nur am Boden geht, und die Höhe hat sich seit dem Kandidaten
-    /// kaum geändert. Greift auch, wenn Bahn- oder Platzhöhe aus der Datenbank nicht zur Szenerie in Aerofly passt.
+    /// kaum geändert. Greift auch, wenn die Bahn hinter dem Aufsetzpunkt nicht eben ist oder die Höhe aus der
+    /// Datenbank um mehr als die enge Grenze der schnellen Meldung von der Szenerie abweicht (bis 300 ft).
     /// </summary>
     private bool RollingAnnounce(TouchdownCandidate cand, FlightSample s)
     {
-        if (!cand.Rolling) return false;
+        // Ohne bekannte Platz- oder Bahnhöhe bleibt es bei der Meldung nach dem Ausrollen (Bestätigung).
+        if (!cand.Rolling || !cand.FieldElevationKnown) return false;
         if (Math.Abs(LevelDiff(s, cand.Sample, cand.Airport)) > TouchdownToleranceFt) return false;
-        return HeightAboveGround(cand.Sample, cand.Airport).Height is not { } h || Math.Abs(h) <= TouchdownMaxAboveFieldFt;
+        return HeightAboveGround(cand.Sample, cand.Airport).Height is { } h && Math.Abs(h) <= TouchdownMaxAboveFieldFt;
     }
 
     /// <summary>
