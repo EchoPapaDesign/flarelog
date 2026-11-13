@@ -1282,11 +1282,13 @@ public sealed class AcarsEngine : IDisposable
             var plan = _plan;
             var s = tracker.LastSample;
             var samples = tracker.Samples;
-            int step = Math.Max(1, samples.Count / 1500);
-            var track = new List<double[]>(samples.Count / step + 2);
-            for (int i = 0; i < samples.Count; i += step)
-                track.Add(new[] { samples[i].Latitude, samples[i].Longitude });
-            if (s is not null) track.Add(new[] { s.Latitude, s.Longitude });
+            // Am Boden geglättet: Aerofly rundet die Position grob, die Rollspur wäre sonst eine Treppe.
+            var display = TrackSmoothing.ForDisplay(samples);
+            int step = Math.Max(1, display.Count / 1500);
+            var track = new List<double[]>(display.Count / step + 2);
+            for (int i = 0; i < display.Count; i += step)
+                track.Add(new[] { display[i].Lat, display[i].Lon });
+            if (display.Count > 0) track.Add(new[] { display[^1].Lat, display[^1].Lon });
 
             var now = DateTimeOffset.UtcNow;
             bool connected = IsConnectedLocked();

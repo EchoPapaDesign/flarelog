@@ -1,8 +1,22 @@
 # Änderungen
 
-## Unveröffentlicht – Kabinenansagen
+## Unveröffentlicht – Kabinenansagen und Feedback aus dem Mac-Test
 
-- **Kabinenansagen:** Begrüßung am Gate, Pushback und Sicherheitseinweisung, Steigflug, Reiseflughöhe, Sinkflug und
+- **Landung sofort erkannt, auch auf unebenen Bahnen:** Fiel die Bahn hinter dem Aufsetzpunkt ab (z. B. LEAS 29),
+  hielt Flarelog das für Ausschweben und erkannte die Landung erst beim Ausrollen – mit falscher Landerate,
+  Groundspeed und Ausrollstrecke und einer Ansage 10–15 s zu spät. Jetzt zählt das Aufsetzen, die Ansage kommt
+  nach wenigen Sekunden.
+- **Stehen auf der Bahn ist kein Block on mehr:** Die Aufzeichnung läuft weiter, bis an der Parkposition gehalten wird
+- **Ruhigere Rollspur:** Aerofly meldet die Position nur auf etwa 10 m genau; am Boden wird die Linie jetzt geglättet
+- **Übersichtlichere Oberfläche:** Jedes Symbol links öffnet eine eigene Ansicht statt eines Fensters über der
+  Karte; das Flight Log bleibt sichtbar. Beim Verkleinern des Fensters überdeckt nichts mehr das Flight Log.
+- **Einstellungen an einem Ort:** Uhrzeit und Wetter für Aerofly stehen jetzt in den Einstellungen
+- **Update-Hinweis dezent:** Roter Punkt am Zahnrad und kurzer Hinweis statt eines festen Knopfs oben
+- **Flight Log in Vergangenheitsform mit Höhe:** z. B. „Sinkflug ab FL150 begonnen“, „Stufensteigflug ab FL350“
+- **Wegpunkte auf der Karte:** Name beim Drüberfahren als gut lesbares helles Kärtchen
+- **Mac:** Protokoll jetzt in `~/Library/Logs/Flarelog/Flarelog.log`
+
+- **Kabinenansagen:** Begrüßung am Gate, Pushback und Sicherheitseinweisung, Steigflug (ab FL100), Reiseflughöhe, Sinkflug und
   nach der Landung – automatisch passend zur Flugphase, jede Ansage einmal pro Flug. Soundpack von AeRodri.
 - Einstellungen → Kabinenansagen: an/aus, „Ansage testen“, „Eigene Ansagen …“ (gleichnamige WAV-Dateien in
   `Dokumente/Flarelog/Sounds` ersetzen die mitgelieferten)

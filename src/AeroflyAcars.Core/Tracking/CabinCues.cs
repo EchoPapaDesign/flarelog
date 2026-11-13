@@ -21,14 +21,22 @@ public sealed class CabinCues
     /// <summary>Bis zu dieser Groundspeed gilt das Flugzeug als stehend (Begrüßung am Gate).</summary>
     public const double ParkedKt = 1;
 
+    /// <summary>Steigflug-Ansage beim Durchsteigen von FL100 – wie in echt, wenn die Anschnallzeichen ausgehen.</summary>
+    public const double ClimbingMessageAltFt = 10000;
+
     private readonly HashSet<string> _played = new();
     private bool _tookOff;
 
-    /// <summary>Erster Messpunkt eines Flugs: steht das Flugzeug, kommt die Begrüßung.</summary>
+    /// <summary>
+    /// Jeder Messpunkt: Begrüßung, wenn das Flugzeug beim ersten Kontakt steht; Steigflug-Ansage beim Durchsteigen
+    /// von FL100.
+    /// </summary>
     public IReadOnlyList<string> OnSample(FlightSample sample, FlightPhase phase)
     {
         if (phase == FlightPhase.Preflight && sample.GroundSpeedKt <= ParkedKt && _played.Count == 0)
             return Play(WelcomeOnboard);
+        if (_tookOff && phase is FlightPhase.Climb or FlightPhase.Cruise && sample.AltitudeFt >= ClimbingMessageAltFt)
+            return Play(ClimbingMessage);
         return [];
     }
 
@@ -42,10 +50,9 @@ public sealed class CabinCues
             case FlightPhase.TakeoffRoll:
                 _tookOff = true;
                 return [];
-            case FlightPhase.Climb when _tookOff:
-                return Play(ClimbingMessage);
+            // Reiseflug unter FL100: Steigflug-Ansage kommt direkt davor.
             case FlightPhase.Cruise when _tookOff:
-                return Play(CruiseAltitude);
+                return Play(ClimbingMessage, CruiseAltitude);
             // Kurze Flüge gehen manchmal direkt in den Anflug – dann kommt die Sinkflug-Ansage dort.
             case FlightPhase.Descent when _tookOff:
             case FlightPhase.Approach when _tookOff:

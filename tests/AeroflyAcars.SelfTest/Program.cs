@@ -1000,6 +1000,20 @@ t.Test("Kabinenansagen: Aufzeichnung im Flug ohne Start-Ansagen", () =>
     t.Equal(CabinCues.AfterTouchdown, cues.OnEvent(new FlightEvent(now, FlightPhase.TaxiIn, "Rollen")).Single());
 });
 
+t.Test("Kabinenansagen: Steigflug-Ansage beim Durchsteigen von FL100", () =>
+{
+    var cues = new CabinCues();
+    var now = DateTimeOffset.UtcNow;
+    FlightSample At(double alt) => new(now, 43, -3, alt, 250, 0, 0, 0, 0, 2000);
+    cues.OnEvent(new FlightEvent(now, FlightPhase.TaxiOut, "Block off"));
+    cues.OnEvent(new FlightEvent(now, FlightPhase.TakeoffRoll, "Start"));
+    t.Equal(0, cues.OnEvent(new FlightEvent(now, FlightPhase.Climb, "Abheben")).Count);
+    t.Equal(0, cues.OnSample(At(9000), FlightPhase.Climb).Count);
+    t.Equal(CabinCues.ClimbingMessage, cues.OnSample(At(10100), FlightPhase.Climb).Single());
+    t.Equal(0, cues.OnSample(At(12000), FlightPhase.Climb).Count);
+    t.Equal(CabinCues.CruiseAltitude, cues.OnEvent(new FlightEvent(now, FlightPhase.Cruise, "FL350")).Single());
+});
+
 t.Test("Kabinenansagen: Dateinamen des Soundpacks liegen bei", () =>
 {
     var dir = AppContext.BaseDirectory;
@@ -1066,6 +1080,45 @@ t.Test("Landung auf unebener Bahn (LEAS 29: Kuppe, dann Gefälle) wird beim Aufs
     t.Range(announcedAt[0] - contactSec, 1, 8, "Ansage s nach dem Aufsetzen");
     t.Range(announcedRate[0], -800, -400, "angesagte Landerate");
     t.False(tracker.IsFinished, "kein Block on, solange das Flugzeug auf der Bahn steht");
+});
+
+
+t.Test("Rollspur: Treppenstufen durch grob gerundete Positionen werden geglättet", () =>
+{
+    // Rollen mit 15 kt auf Kurs 30°, Position wie bei Aerofly auf 4 Nachkommastellen gerundet.
+    var samples = new List<FlightSample>();
+    var start = new DateTimeOffset(2026, 11, 13, 7, 31, 0, TimeSpan.Zero);
+    double lat0 = 43.3010, lon0 = -2.9100, ms = 15 * 0.514444;
+    double cos = Math.Cos(lat0 * Math.PI / 180);
+    var exact = new List<(double Lat, double Lon)>();
+    for (int i = 0; i < 120; i++)
+    {
+        double north = ms * i * Math.Cos(30 * Math.PI / 180), east = ms * i * Math.Sin(30 * Math.PI / 180);
+        double lat = lat0 + north / 111_120.0, lon = lon0 + east / (111_120.0 * cos);
+        exact.Add((lat, lon));
+        samples.Add(new FlightSample(start.AddSeconds(i), Math.Round(lat, 4), Math.Round(lon, 4), 150, 15, 30, 30, 0, 0, 0));
+    }
+    double MaxOffM(IReadOnlyList<(double Lat, double Lon)> pts)
+    {
+        double max = 0;
+        for (int i = 10; i < pts.Count - 10; i++)   // Ränder ohne volles Fenster auslassen
+        {
+            double dn = (pts[i].Lat - lat0) * 111_120.0, de = (pts[i].Lon - lon0) * 111_120.0 * cos;
+            // Abstand von der Geraden durch den Startpunkt mit Kurs 30°
+            double off = Math.Abs(dn * Math.Sin(30 * Math.PI / 180) - de * Math.Cos(30 * Math.PI / 180));
+            max = Math.Max(max, off);
+        }
+        return max;
+    }
+    var raw = samples.Select(x => (x.Latitude, x.Longitude)).ToList();
+    var smooth = TrackSmoothing.ForDisplay(samples);
+    double rawOff = MaxOffM(raw), smoothOff = MaxOffM(smooth);
+    t.True(rawOff > 3, $"Rohspur zackig ({rawOff:F1} m)");
+    t.True(smoothOff < rawOff / 2, $"geglättet deutlich ruhiger ({smoothOff:F1} m statt {rawOff:F1} m)");
+
+    // In der Luft bleibt jeder Punkt unverändert.
+    var air = new List<FlightSample> { new(start, 43.3, -2.9, 3000, 200, 0, 0, 0, 0, 0), new(start.AddSeconds(1), 43.31, -2.9, 3000, 200, 0, 0, 0, 0, 0) };
+    t.Equal(43.31, TrackSmoothing.ForDisplay(air)[1].Lat);
 });
 
 return t.Summary();

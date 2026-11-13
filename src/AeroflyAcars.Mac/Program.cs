@@ -133,10 +133,13 @@ static void OpenExternal(string url)
     }
 }
 
-// Meldungen landen in ~/Library/Logs/Flarelog.log.
+// Meldungen landen in ~/Library/Logs/Flarelog/Flarelog.log (eigener Ordner, damit man ihn beim Support findet).
 static Action<string> OpenLog()
 {
-    var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Logs", "Flarelog.log");
+    var logs = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Logs");
+    var path = Path.Combine(logs, "Flarelog", "Flarelog.log");
+    // Alte Datei direkt in ~/Library/Logs (bis 0.9.0-beta.5) aufräumen.
+    try { File.Delete(Path.Combine(logs, "Flarelog.log")); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     var gate = new object();
     try
     {

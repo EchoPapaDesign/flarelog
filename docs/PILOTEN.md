@@ -21,7 +21,7 @@ Windows (Broadcast an 127.0.0.1, Port 49002).
 Es gibt keine Installation. Zum Entfernen die .exe löschen, optional auch
 `%APPDATA%\Flarelog` (Einstellungen) und `%LOCALAPPDATA%\Flarelog` (Flughafenlisten).
 Unter macOS: `~/Library/Application Support/Flarelog` und `~/Library/Caches/Flarelog`, Protokoll in
-`~/Library/Logs/Flarelog.log`.
+`~/Library/Logs/Flarelog/Flarelog.log`.
 
 ## 2. Aerofly FS 4 einstellen
 

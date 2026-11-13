@@ -50,7 +50,7 @@ jobs:
           # Muss sich innerhalb von 20 s selbst beenden (Fenster schließen, Flug speichern).
           for i in $(seq 1 20); do kill -0 $pid 2>/dev/null || break; sleep 1; done
           if kill -0 $pid 2>/dev/null; then kill -9 $pid; echo "Flarelog hat sich nach SIGTERM nicht beendet"; exit 1; fi
-          echo "--- Flarelog.log ---"; cat ~/Library/Logs/Flarelog.log || true
+          echo "--- Flarelog.log ---"; cat ~/Library/Logs/Flarelog/Flarelog.log || true
           grep -q '"canQuit":true' state.json
           echo "Display antwortet, Beenden-Knopf aktiv"
 

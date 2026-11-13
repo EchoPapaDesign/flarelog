@@ -1,8 +1,22 @@
 # Changes
 
-## Unreleased – Cabin announcements
+## Unreleased – Cabin announcements and feedback from the Mac test
 
-- **Cabin announcements:** welcome at the gate, pushback and safety briefing, climb, cruise altitude, descent and
+- **Touchdown detected right away, also on uneven runways:** if the runway dropped away after the touchdown point
+  (e.g. LEAS 29), Flarelog took it for floating and only detected the landing during the rollout – with a wrong
+  landing rate, ground speed and rollout distance, and the callout 10–15 s late. Now the actual touchdown counts and
+  the callout comes after a few seconds.
+- **Standing on the runway is no longer block on:** recording continues until you stop at the parking position
+- **Smoother taxi track:** Aerofly reports the position only to about 10 m; on the ground the line is now smoothed
+- **Clearer interface:** every icon on the left opens its own view instead of a window over the map; the flight log
+  stays visible. Making the window smaller no longer covers the flight log.
+- **Settings in one place:** time and weather for Aerofly are now in the settings
+- **Discreet update notice:** a red dot on the gear icon and a short message instead of a fixed button at the top
+- **Flight log in past tense with altitude:** e.g. "Descent started from FL150", "Step climb from FL350"
+- **Waypoints on the map:** the name appears as an easy-to-read light tag on hover
+- **Mac:** log file now in `~/Library/Logs/Flarelog/Flarelog.log`
+
+- **Cabin announcements:** welcome at the gate, pushback and safety briefing, climb (passing FL100), cruise altitude, descent and
   after landing – automatically matched to the flight phase, each announcement once per flight. Soundpack by AeRodri.
 - Settings → Cabin announcements: on/off, "Test announcement", "Own announcements …" (WAV files with the same name in
   `Documents/Flarelog/Sounds` replace the built-in ones)

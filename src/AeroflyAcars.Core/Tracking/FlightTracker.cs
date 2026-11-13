@@ -98,6 +98,7 @@ public sealed class FlightTracker
     private FlightPhase? _pendingPhase;
     private int _pendingCount;
     private DateTimeOffset _pendingSince;
+    private double _pendingFromAltFt;
     private TouchdownCandidate? _candidate;
     private double _approachMinAltFt = double.MaxValue;
     private readonly HashSet<FlightEvent> _goAroundEvents = new(ReferenceEqualityComparer.Instance);
@@ -360,6 +361,7 @@ public sealed class FlightTracker
             _pendingPhase = target;
             _pendingCount = 0;
             _pendingSince = s.Time;
+            _pendingFromAltFt = s.AltitudeFt;   // Höhe, an der der Phasenwechsel begann
         }
 
         if (++_pendingCount < PhaseConfirmSamples) return;
@@ -374,7 +376,24 @@ public sealed class FlightTracker
         }
         else if (target == FlightPhase.Cruise)
         {
-            text = Lang.T("Reiseflug in ", "Cruise at ") + FormatAltitude(s.AltitudeFt);
+            text = Lang.T($"Reiseflughöhe {FormatAltitude(s.AltitudeFt)} erreicht", $"Cruise reached at {FormatAltitude(s.AltitudeFt)}");
+        }
+        else if (target == FlightPhase.Climb)
+        {
+            // Nach dem Reiseflug ist erneutes Steigen ein Stufensteigflug (Step climb), kein neuer Start.
+            string from = FormatAltitude(_pendingFromAltFt);
+            text = Phase == FlightPhase.Cruise
+                ? Lang.T($"Stufensteigflug ab {from}", $"Step climb from {from}")
+                : Lang.T($"Steigflug ab {from}", $"Climb from {from}");
+        }
+        else if (target == FlightPhase.Descent)
+        {
+            string from = FormatAltitude(_pendingFromAltFt);
+            text = Lang.T($"Sinkflug ab {from} begonnen", $"Descent started from {from}");
+        }
+        else if (target == FlightPhase.Approach)
+        {
+            text = Lang.T($"Anflug begonnen ({FormatAltitude(s.AltitudeFt)})", $"Approach started ({FormatAltitude(s.AltitudeFt)})");
         }
         else
         {

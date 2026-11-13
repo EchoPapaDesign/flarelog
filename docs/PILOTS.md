@@ -21,7 +21,7 @@ same settings as on Windows
 There is no installer. To remove Flarelog, delete the .exe, and optionally also
 `%APPDATA%\Flarelog` (settings) and `%LOCALAPPDATA%\Flarelog` (airport lists).
 On macOS: `~/Library/Application Support/Flarelog` and `~/Library/Caches/Flarelog`, log file in
-`~/Library/Logs/Flarelog.log`.
+`~/Library/Logs/Flarelog/Flarelog.log`.
 
 ## 2. Set up Aerofly FS 4
 

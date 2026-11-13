@@ -21,13 +21,14 @@ public static class MapPage
     --text: #e7e9ec; --muted: #8b93a0; --dim: #5d6573;
     --accent: #3fd68a; --accent-dim: rgba(63, 214, 138, .14);
     --warn: #f2b43c; --bad: #f05a5a; --route: #9aa4b2;
+    --logw: 360px;   /* rechte Spalte (Flight Log) */
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text);
     font: 14px/1.4 "Segoe UI", system-ui, sans-serif; overflow: hidden; }
   .num { font-variant-numeric: tabular-nums; }
 
-  .app { display: grid; grid-template-columns: 60px minmax(0, 1fr) 360px; height: 100vh; }
+  .app { display: grid; grid-template-columns: 60px minmax(0, 1fr) var(--logw); height: 100vh; }
 
   /* linke Leiste */
   .rail { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column;
@@ -38,9 +39,10 @@ public static class MapPage
   .rail .nav.active { background: #fff; color: #111; }
 
   /* Mitte */
-  .main { display: grid; grid-template-rows: 44px 48px 64px minmax(0, 1fr); min-width: 0; }
+  .main { display: grid; grid-template-rows: 44px 48px auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr);
+    min-width: 0; overflow: hidden; }
   .topbar { display: flex; align-items: center; gap: 22px; padding: 0 20px; border-bottom: 1px solid var(--line);
-    background: var(--panel); }
+    background: var(--panel); min-width: 0; overflow: hidden; white-space: nowrap; }
   .topbar .title { color: var(--muted); }
   .simac { color: var(--text); font-size: 13px; white-space: nowrap; }
   .simac::before { content: "✈"; color: var(--muted); margin-right: 6px; }
@@ -65,7 +67,8 @@ public static class MapPage
 
   .stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
   .stat { padding: 10px 20px; position: relative; min-width: 0; }
-  .stat label { display: block; font-size: 11px; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; }
+  .stat label { display: block; font-size: 11px; letter-spacing: .06em; color: var(--muted); text-transform: uppercase;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .stat b { display: block; font-size: 18px; font-weight: 600; white-space: nowrap; }
   .stat:first-child::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: var(--text); }
   .up { color: var(--accent); } .down { color: var(--warn); }
@@ -80,6 +83,9 @@ public static class MapPage
   .wpt-label { background: none; border: none; box-shadow: none; color: var(--muted); font-size: 11px; font-weight: 600; }
   .wpt-label::before { display: none; }
   .wpt-label.apt { color: #f05a5a; font-size: 12px; font-weight: 700; }
+  /* Wegpunkt beim Drüberfahren: kleines helles Kärtchen wie bei SimBrief, gut lesbar auf der orangen Route */
+  .leaflet-tooltip.wpt-label:not(.apt) { background: #fff; color: #111; border-radius: 4px; padding: 2px 7px;
+    font-size: 12px; font-weight: 700; letter-spacing: .02em; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
 
   .follow { position: absolute; right: 12px; bottom: 26px; z-index: 500; background: var(--panel2); border: 1px solid var(--line);
     border-radius: 6px; padding: 6px 10px; color: var(--muted); font-size: 12px; cursor: pointer; user-select: none; }
@@ -146,6 +152,9 @@ public static class MapPage
 
   .rail button.nav { border: 0; background: none; cursor: pointer; }
   .rail button.nav:hover { color: var(--text); background: var(--panel2); }
+  .rail .nav { position: relative; }
+  .rail .badge-dot { position: absolute; top: 2px; right: 2px; min-width: 16px; height: 16px; border-radius: 8px; padding: 0 4px;
+    background: var(--bad); color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; display: none; }
   .rail .bottom { margin-top: auto; margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px; }
   #notice { margin-left: auto; color: var(--dim); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; }
 
@@ -157,7 +166,9 @@ public static class MapPage
   .btn.warn { color: var(--warn); border-color: rgba(242,180,60,.5); }
   .btn:disabled { opacity: .45; cursor: default; }
 
-  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 2000; display: none; }
+  /* Jedes Symbol links öffnet eine eigene Ansicht im Kartenbereich – wie ein Kapitel. Leiste und Flight Log
+     bleiben sichtbar und bedienbar; ein anderes Symbol wechselt direkt die Ansicht. */
+  .overlay { position: fixed; top: 0; bottom: 0; left: 60px; right: var(--logw); background: var(--bg); z-index: 2000; display: none; }
   .overlay.show { display: block; }
   .news h4 { margin: 18px 0 6px; font-size: 13px; color: var(--accent); }
   .news h4:first-of-type { margin-top: 0; }
@@ -166,8 +177,10 @@ public static class MapPage
   .news code { font: 12px ui-monospace, Consolas, monospace; background: var(--panel2); padding: 0 4px; border-radius: 3px; }
   .wxraw { margin: 4px 0 6px; padding: 10px 12px; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px;
     font: 13px/1.55 ui-monospace, Consolas, monospace; color: var(--text); white-space: pre-wrap; word-break: break-word; }
-  .sheet { position: absolute; left: 60px; top: 0; bottom: 0; width: 420px; background: var(--panel); border-right: 1px solid var(--line);
-    padding: 22px 24px; overflow-y: auto; box-shadow: 10px 0 40px rgba(0,0,0,.4); }
+  .sheet { position: absolute; inset: 0; background: var(--panel); padding: 22px 28px; overflow-y: auto; }
+  .sheet > * { max-width: 620px; }
+  .sheet .conds { border: 0; padding: 0; font-size: 13px; }
+  .sheet .conds input[type=text] { flex: none; width: 92px; }
   .sheet h3 { margin: 0 0 18px; font-size: 16px; display: flex; align-items: center; }
   .sheet h3 .btn { margin-left: auto; }
   .field { margin-bottom: 18px; }
@@ -208,13 +221,23 @@ public static class MapPage
   #bookingTag { color: var(--accent); font-size: 12px; border: 1px solid var(--accent); border-radius: 4px; padding: 0 6px; display: none; }
 
   ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+  /* Schmale Fenster (ab 1.000 px): rechte Spalte schmaler, Werte auf zwei Zeilen statt abgeschnitten.
+     Steht am Ende, damit es die Grundregeln oben überschreibt. */
+  @media (max-width: 1180px) {
+    :root { --logw: 300px; }
+    .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .stat { padding: 8px 14px; }
+    .stat b { font-size: 16px; }
+    .stat:nth-child(-n+3) { border-bottom: 1px solid var(--line); }
+    .topbar, .flightbar { gap: 12px; padding: 0 14px; }
+  }
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="rail">
     <div class="logo" title="Flarelog"><svg viewBox="0 0 256 256" width="34" height="34" aria-label="Flarelog"><rect x="8" y="8" width="240" height="240" rx="56" fill="#18212b"/><rect x="40" y="180" width="176" height="22" rx="11" fill="#e9eef3"/><path d="M48 44 L92 88 C122 118 150 166 210 166" fill="none" stroke="#3fd68a" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <div class="nav active" title="Flight Tracking">
+    <div class="nav active" id="navFlight" title="Flight Tracking" style="cursor:pointer">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
     </div>
     <div class="bottom">
@@ -227,7 +250,7 @@ public static class MapPage
       <button class="nav" id="navReports" title="Berichtsordner öffnen">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
       </button>
-      <button class="nav" id="navSettings" title="Einstellungen">
+      <button class="nav" id="navSettings" title="Einstellungen"><span class="badge-dot" id="updDot">1</span>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
     </div>
@@ -239,7 +262,6 @@ public static class MapPage
       <span id="conn" class="conn"><i></i><span>Warte auf Aerofly …</span></span>
       <span id="simAc" class="simac" style="display:none" title="In Aerofly gewähltes Flugzeug"></span>
       <span id="notice"></span>
-      <button class="btn primary" id="btnUpdate" style="display:none;margin-left:12px">Update verfügbar</button>
     </header>
 
     <div class="flightbar">
@@ -285,17 +307,6 @@ public static class MapPage
         <button class="btn primary" id="btnNew" style="display:none" title="Neuen Flug aufzeichnen">Neuer Flug</button>
       </span>
     </h2>
-    <div class="conds">
-      <div class="cond"><span>Uhrzeit</span>
-        <div class="seg" id="segTime"><button data-v="0">Aerofly</button><button data-v="1">Real</button></div></div>
-      <div class="cond"><span>Wetter</span>
-        <div class="seg" id="segWx"><button data-v="0">Aerofly</button><button data-v="1">Real (Departure)</button></div></div>
-      <div class="cond" id="wxIcaoRow" style="display:none"><span>Departure</span>
-        <input type="text" id="wxIcao" maxlength="6" placeholder="ICAO" autocomplete="off" spellcheck="false"></div>
-      <div class="cinfo" id="wxAuto"></div>
-      <div class="cstat" id="condStatus"></div>
-      <div class="cinfo">Wird beim Start von Aerofly übernommen – während des Flugs kann Flarelog Zeit und Wetter nicht ändern.</div>
-    </div>
     <div id="routeCard" class="routecard">
       <div class="rc-row"><span class="rc-tag">DEP</span><b id="rcDep"></b><span id="rcSid" class="rc-proc"></span></div>
       <div id="rcWpts" class="rc-wpts"></div>
@@ -320,6 +331,12 @@ public static class MapPage
 <div id="overlay" class="overlay">
   <div class="sheet">
     <h3>Einstellungen <button class="btn" id="btnClose">Schließen</button></h3>
+    <div class="field" id="updField" style="display:none">
+      <label>Update</label>
+      <div class="hint" id="updText" style="color:var(--text)"></div>
+      <div class="row" style="margin-top:10px"><button class="btn primary" id="btnUpdate">Herunterladen</button></div>
+      <hr>
+    </div>
     <div class="field">
       <label>Sprache · Language</label>
       <div class="row"><select id="setLang">
@@ -327,6 +344,21 @@ public static class MapPage
         <option value="de">Deutsch</option>
         <option value="en">English</option>
       </select></div>
+    </div>
+    <hr>
+    <div class="field">
+      <label>Zeit und Wetter in Aerofly</label>
+      <div class="conds">
+        <div class="cond"><span>Uhrzeit</span>
+          <div class="seg" id="segTime"><button data-v="0">Aerofly</button><button data-v="1">Real</button></div></div>
+        <div class="cond"><span>Wetter</span>
+          <div class="seg" id="segWx"><button data-v="0">Aerofly</button><button data-v="1">Real (Departure)</button></div></div>
+        <div class="cond" id="wxIcaoRow" style="display:none"><span>Departure</span>
+          <input type="text" id="wxIcao" maxlength="6" placeholder="ICAO" autocomplete="off" spellcheck="false"></div>
+        <div class="cinfo" id="wxAuto"></div>
+        <div class="cstat" id="condStatus"></div>
+        <div class="cinfo">Wird beim Start von Aerofly übernommen – während des Flugs kann Flarelog Zeit und Wetter nicht ändern.</div>
+      </div>
     </div>
     <hr>
     <div class="field">
@@ -517,6 +549,10 @@ const EN = {
 "„Touchdown with … feet per minute“ ansagen": "Announce “Touchdown with … feet per minute”",
 "Stimme testen": "Test voice",
 "Was ist neu?": "What's new?",
+"Zeit und Wetter in Aerofly": "Time and weather in Aerofly",
+"Herunterladen": "Download",
+"Version {0} ist verfügbar.": "Version {0} is available.",
+"Version {0} ist verfügbar – Details unter Einstellungen.": "Version {0} is available – details under Settings.",
 "Kabinenansagen": "Cabin announcements",
 "Ansagen in den Flugphasen abspielen": "Play announcements during the flight phases",
 "Ansage testen": "Test announcement",
@@ -774,7 +810,7 @@ function closeNews() {
   $('newsOverlay').classList.remove('show');
   fetch('/api/news-seen', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Acars': '1' }, body: '{}' }).catch(() => {});
 }
-let newsChecked = false;
+let newsChecked = false, updateToastFor = null;
 $('btnNews').onclick = openNews;
 $('btnNewsClose').onclick = closeNews;
 $('newsOverlay').onclick = e => { if (e.target.id === 'newsOverlay') closeNews(); };
@@ -1024,8 +1060,14 @@ async function tick() {
   $('banner').style.display = s.paused ? 'block' : 'none';
   $('notice').textContent = s.pendingPlan ? t('Nächster Flug: {0}', s.pendingPlan) : (s.notices.length ? s.notices[s.notices.length - 1] : '');
   $('btnFinish').style.display = s.inProgress ? 'inline-block' : 'none';
-  $('btnUpdate').style.display = s.update ? 'inline-block' : 'none';
-  if (s.update) { $('btnUpdate').textContent = t('Version {0} verfügbar', s.update.version); $('btnUpdate').onclick = () => openExternal(s.update.url); }
+  // Update: kein Balken, sondern ein roter Punkt am Zahnrad, Details in den Einstellungen, einmal kurz ein Hinweis.
+  $('updDot').style.display = s.update ? 'block' : 'none';
+  $('updField').style.display = s.update ? 'block' : 'none';
+  if (s.update) {
+    $('updText').textContent = t('Version {0} ist verfügbar.', s.update.version);
+    $('btnUpdate').onclick = () => openExternal(s.update.url);
+    if (updateToastFor !== s.update.version) { updateToastFor = s.update.version; snack(t('Version {0} ist verfügbar – Details unter Einstellungen.', s.update.version)); }
+  }
   $('btnNew').style.display = (s.reportSaved || s.finished) ? 'inline-block' : 'none';
   $('btnCopy').style.display = s.landing ? 'inline-block' : 'none';
   const canSubmit = s.airline.hasKey && !!s.airline.pilot && !s.submit.pirepId && (s.reportSaved || s.finished);
@@ -1166,6 +1208,19 @@ setInterval(() => {
 }, 250);
 
 applyLang('__LANG__');   // vom Server eingesetzt – kein Umschalten nach dem Laden
+// Ein Bereich pro Symbol: Ein Klick links schließt die offene Ansicht und öffnet die neue; das Flugzeug-Symbol
+// führt zurück zur Karte. Das markierte Symbol zeigt, wo man gerade ist.
+const views = { overlay: 'navSettings', airlineOverlay: 'navAirline', weatherOverlay: 'navWeather',
+  submitOverlay: 'navFlight', newsOverlay: 'navSettings' };
+document.querySelectorAll('.rail .nav').forEach(n => n.addEventListener('click',
+  () => Object.keys(views).forEach(id => $(id).classList.remove('show')), true));
+function markNav() {
+  const open = Object.keys(views).find(id => $(id).classList.contains('show'));
+  document.querySelectorAll('.rail .nav').forEach(n => n.classList.remove('active'));
+  $(open ? views[open] : 'navFlight').classList.add('active');
+}
+Object.keys(views).forEach(id => new MutationObserver(markNav).observe($(id), { attributes: true, attributeFilter: ['class'] }));
+
 setInterval(tick, 1000);
 tick();
 </script>

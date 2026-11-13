@@ -8,7 +8,7 @@ https://www.youtube.com/@RealFlightOpsOfficial
 | `Welcome_Onboard.wav` | Flugzeug steht am Gate, wenn Flarelog die Verbindung bekommt |
 | `Pushback_Start.wav` | Block off |
 | `Safety_Briefing.wav` | direkt danach, beim Rollen zur Startbahn |
-| `Climbing_Message.wav` | Steigflug nach dem Start |
+| `Climbing_Message.wav` | Durchsteigen von FL100 (Reiseflug darunter: direkt vor der Reiseflug-Ansage) |
 | `Cruise_Altitude.wav` | Reiseflughöhe erreicht |
 | `Descending_Start.wav` | Beginn des Sinkflugs (bei kurzen Flügen: Beginn des Anflugs) |
 | `After_Touchdown.wav` | Rollen zum Gate nach der Landung |
