@@ -42,7 +42,10 @@ jobs:
       - name: Probestart (Apple Silicon)
         run: |
           ditto -x -k publish/Flarelog-macOS-AppleSilicon.zip probe
-          codesign --verify --verbose probe/Flarelog.app
+          codesign --verify --deep --strict --verbose probe/Flarelog.app
+          for lib in probe/Flarelog.app/Contents/MacOS/*.dylib; do codesign --verify --verbose "$lib"; done
+          # Wie nach dem Aufräumen durch macOS: kein entpackter Zwischenstand vorhanden.
+          rm -rf "${TMPDIR:-/tmp}/.net"
           ./probe/Flarelog.app/Contents/MacOS/Flarelog &
           pid=$!
           for i in $(seq 1 20); do curl -sf http://localhost:8080/api/state > state.json && break; sleep 1; done
@@ -51,6 +54,8 @@ jobs:
           for i in $(seq 1 20); do kill -0 $pid 2>/dev/null || break; sleep 1; done
           if kill -0 $pid 2>/dev/null; then kill -9 $pid; echo "Flarelog hat sich nach SIGTERM nicht beendet"; exit 1; fi
           echo "--- Flarelog.log ---"; cat ~/Library/Logs/Flarelog/Flarelog.log || true
+          if grep -q "Programmfenster konnte nicht" ~/Library/Logs/Flarelog/Flarelog.log; then echo "Fenster startete nicht"; exit 1; fi
+          if [ -d "${TMPDIR:-/tmp}/.net/Flarelog" ]; then echo "Native Bibliotheken wurden noch entpackt"; exit 1; fi
           grep -q '"canQuit":true' state.json
           echo "Display antwortet, Beenden-Knopf aktiv"
 

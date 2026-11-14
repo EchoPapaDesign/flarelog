@@ -1,5 +1,10 @@
 # Änderungen
 
+## Unveröffentlicht
+
+- **Mac (Apple Silicon):** Der erste Start nach einer längeren Pause konnte mit „unerwartet beendet“ scheitern.
+  Die Fenster-Bibliothek liegt jetzt fest und signiert in Flarelog.app, statt bei jedem Start entpackt zu werden.
+
 ## 0.9.0-beta.6 – Mac-App mit eigenem Fenster, Kabinenansagen, Feedback aus dem Mac-Test
 
 - **Eigenständige Mac-App:** Flarelog öffnet auf dem Mac ein eigenes Programmfenster mit Symbol im Dock – kein
