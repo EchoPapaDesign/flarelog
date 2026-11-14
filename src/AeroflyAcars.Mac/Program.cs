@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using AeroflyAcars.Core;
+using AeroflyAcars.Mac;
 using AeroflyAcars.Runtime;
 using Photino.NET;
 
