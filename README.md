@@ -54,7 +54,7 @@ Flarelog ist kostenlos, läuft komplett auf deinem PC und braucht keine Installa
 - Deutsch oder Englisch – automatisch nach der Systemsprache, umschaltbar in den Einstellungen
 
 **Berichte**
-- Jeder Flug als Text- und JSON-Datei in `Dokumente/Flarelog/Fluege`
+- Jeder Flug als Text- und JSON-Datei in `Dokumente/Flarelog/Flights`
 
 ## Schnellstart
 
@@ -107,7 +107,7 @@ Flarelog wird mit deinen Rückmeldungen besser. Bitte melde:
 - **Wünsche** – was dir im Flug oder bei deiner Airline fehlt
 
 → [**Neue Meldung anlegen**](https://github.com/EchoPapaDesign/flarelog/issues/new/choose)
-(kostenloses GitHub-Konto nötig). Am meisten hilft der Flugbericht (`.txt` aus `Dokumente\Flarelog\Fluege`),
+(kostenloses GitHub-Konto nötig). Am meisten hilft der Flugbericht (`.txt` aus `Dokumente\Flarelog\Flights`),
 dazu Flugzeug, Flughafen und was genau passiert ist.
 
 ## Für VA-Betreiber

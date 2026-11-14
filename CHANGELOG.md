@@ -1,7 +1,21 @@
 # Änderungen
 
-## Unveröffentlicht
+## 0.9.0-beta.7 – Sicherer beenden, automatische Sicherung, aufgeräumte Einstellungen
 
+- **Mac: „Nein“ beim Beenden bricht jetzt wirklich ab.** Bisher beendete sich Flarelog trotzdem und der Flug war
+  verloren. Gefragt wird beim roten Knopf und bei Cmd+Q; „Ja“ speichert den bisherigen Flug als Teilbericht.
+- **Automatische Sicherung:** Ein laufender Flug wird jede Minute gespeichert – bei Absturz oder Stromausfall fehlt
+  höchstens die letzte Minute. Der fertige Bericht ersetzt den Zwischenstand.
+- **Berichtsordner heißt jetzt „Flights“** (vorher „Fluege“); vorhandene Berichte ziehen automatisch um
+- **Sound-Ordner sichtbar:** Die Ansagen liegen in `Dokumente/Flarelog/Sounds` und lassen sich dort durch eigene
+  ersetzen; „Standard wiederherstellen“ holt die Originale zurück
+- **SimBrief-Plan verwerfen** per Knopf; ohne „Beim Start automatisch laden“ startet Flarelog ohne Plan
+- **Einstellungen neu geordnet:** Sprache, SimBrief, Zeit und Wetter, Kabinenansagen, Landeansage, Flugberichte,
+  Aerofly und Über
+- Linke Leiste aufgeräumt: kein Logo und kein Ordner-Symbol mehr (Berichtsordner in den Einstellungen), Auswahl sofort markiert
+- Wegpunkt-Kärtchen erscheint über dem Wegpunkt, nicht mehr unter dem Mauszeiger
+- Aufzeichnung im Flug begonnen: Air Time und Distanz ab Beginn der Aufzeichnung; keine leeren Teilberichte mehr
+- Mac: Fenster startet in einer Größe, die auf jedes MacBook passt; Versionsnummer vollständig (mit „beta“)
 - **Mac (Apple Silicon):** Der erste Start nach einer längeren Pause konnte mit „unerwartet beendet“ scheitern.
   Die Fenster-Bibliothek liegt jetzt fest und signiert in Flarelog.app, statt bei jedem Start entpackt zu werden.
 

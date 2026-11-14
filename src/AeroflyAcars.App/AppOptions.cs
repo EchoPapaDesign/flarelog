@@ -27,7 +27,7 @@ internal sealed class AppOptions
           --voice-test           Sprachansage einmal testen und beenden
           --dest-elev <ft>       Elevation des Zielflughafens (normalerweise nicht nötig,
                                  sie kommt aus SimBrief oder der Flughafenliste)
-          --out <ordner>         Ordner für die Flugberichte (Standard: Dokumente\Flarelog\Fluege)
+          --out <ordner>         Ordner für die Flugberichte (Standard: Dokumente\Flarelog\Flights)
           --help                 Diese Hilfe
 
         Beispiel:  dotnet run --project src\AeroflyAcars.App -- --simbrief meinname

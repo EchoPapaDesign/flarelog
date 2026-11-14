@@ -89,15 +89,21 @@ public static class ReportWriter
     }
 
     /// <summary>Speichert JSON- und Textbericht und gibt beide Pfade zurück.</summary>
-    public static (string JsonPath, string TextPath) Save(FlightReport report, string directory)
+    /// <summary>
+    /// Speichert den Bericht als JSON und Text. Mit <paramref name="basePath"/> (Pfad ohne Endung, z. B. von einer
+    /// automatischen Zwischensicherung) wird dieselbe Datei überschrieben, sonst ein neuer, freier Name gewählt.
+    /// </summary>
+    public static (string JsonPath, string TextPath) Save(FlightReport report, string directory, string? basePath = null)
     {
         Directory.CreateDirectory(directory);
-        var stamp = (report.BlockOffUtc ?? report.CreatedUtc).ToString("yyyy-MM-dd_HHmm", CultureInfo.InvariantCulture);
-        var name = Sanitize($"{stamp}_{report.Origin ?? "XXXX"}-{report.Destination ?? "XXXX"}");
-
-        var basePath = Path.Combine(directory, name);
-        for (int i = 2; File.Exists(basePath + ".json"); i++)
-            basePath = Path.Combine(directory, $"{name}_{i}");
+        if (basePath is null)
+        {
+            var stamp = (report.BlockOffUtc ?? report.CreatedUtc).ToString("yyyy-MM-dd_HHmm", CultureInfo.InvariantCulture);
+            var name = Sanitize($"{stamp}_{report.Origin ?? "XXXX"}-{report.Destination ?? "XXXX"}");
+            basePath = Path.Combine(directory, name);
+            for (int i = 2; File.Exists(basePath + ".json"); i++)
+                basePath = Path.Combine(directory, $"{name}_{i}");
+        }
 
         var jsonPath = basePath + ".json";
         var textPath = basePath + ".txt";

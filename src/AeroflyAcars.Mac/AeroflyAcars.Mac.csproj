@@ -9,6 +9,8 @@
     <RootNamespace>AeroflyAcars.Mac</RootNamespace>
     <AssemblyName>Flarelog</AssemblyName>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- MacQuitGuard: Funktionszeiger für die Objective-C-Laufzeit -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

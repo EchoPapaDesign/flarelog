@@ -135,14 +135,16 @@ public sealed class AcarsSettings
 
     public static string FilePath => Path.Combine(Folder, "settings.json");
 
+    /// <summary>Standardordner der Flugberichte: Dokumente/Flarelog/Flights (bis 0.9.0-beta.6: „Fluege“).</summary>
+    public static string DefaultReportFolder => Path.Combine(AppPaths.Documents, AppInfo.Name, "Flights");
+
     [JsonIgnore]
-    public string EffectiveReportFolder => string.IsNullOrWhiteSpace(ReportFolder)
-        ? Path.Combine(AppPaths.Documents, AppInfo.Name, "Fluege")
-        : ReportFolder;
+    public string EffectiveReportFolder => string.IsNullOrWhiteSpace(ReportFolder) ? DefaultReportFolder : ReportFolder;
 
     public static AcarsSettings Load()
     {
         MigrateLegacyFolders();
+        MigrateReportFolder();
         try
         {
             if (File.Exists(FilePath))
@@ -175,6 +177,35 @@ public sealed class AcarsSettings
              Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppInfo.FolderName));
         var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         Move(Path.Combine(docs, "Aerofly ACARS"), Path.Combine(docs, AppInfo.Name));
+    }
+
+    /// <summary>
+    /// „Fluege“ heißt seit 0.9.0-beta.7 „Flights“ – verständlich für alle. Vorhandene Berichte ziehen einmalig um;
+    /// gibt es beide Ordner schon, wandern die alten Dateien hinüber, ohne etwas zu überschreiben.
+    /// </summary>
+    private static void MigrateReportFolder()
+    {
+        var old = Path.Combine(AppPaths.Documents, AppInfo.Name, "Fluege");
+        var target = DefaultReportFolder;
+        try
+        {
+            if (!Directory.Exists(old)) return;
+            if (!Directory.Exists(target))
+            {
+                Directory.Move(old, target);
+                return;
+            }
+            foreach (var file in Directory.GetFiles(old))
+            {
+                var dest = Path.Combine(target, Path.GetFileName(file));
+                if (!File.Exists(dest)) File.Move(file, dest);
+            }
+            if (Directory.GetFileSystemEntries(old).Length == 0) Directory.Delete(old);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Dann bleiben die alten Berichte, wo sie sind – neue landen in „Flights“.
+        }
     }
 
     public void Save()

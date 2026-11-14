@@ -33,6 +33,41 @@ public sealed class CabinAnnouncer : IDisposable
 
     private static string BuiltInFolder => Path.Combine(AppPaths.Cache, "Sounds");
 
+    /// <summary>
+    /// Legt die mitgelieferten Ansagen sichtbar im Sound-Ordner ab, wenn dort noch keine WAV-Dateien liegen –
+    /// so sieht jeder, welche Dateien es gibt und wie sie heißen. Vorhandene Dateien bleiben unangetastet.
+    /// </summary>
+    public static void EnsureUserFolder()
+    {
+        try
+        {
+            if (Directory.Exists(UserFolder) && Directory.EnumerateFiles(UserFolder, "*.wav").Any()) return;
+            CopyBuiltIns(overwrite: false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Dann spielen die eingebauten Ansagen – auch ohne Ordner.
+        }
+    }
+
+    /// <summary>Mitgelieferte Ansagen in den Sound-Ordner kopieren; mit overwrite werden eigene Dateien ersetzt.</summary>
+    public static int CopyBuiltIns(bool overwrite)
+    {
+        Directory.CreateDirectory(UserFolder);
+        int copied = 0;
+        foreach (var res in typeof(CabinAnnouncer).Assembly.GetManifestResourceNames())
+        {
+            if (!res.StartsWith(ResourcePrefix, StringComparison.Ordinal)) continue;
+            var target = Path.Combine(UserFolder, res[ResourcePrefix.Length..]);
+            if (!overwrite && File.Exists(target)) continue;
+            using var stream = typeof(CabinAnnouncer).Assembly.GetManifestResourceStream(res)!;
+            using (var file = File.Create(target + ".tmp")) stream.CopyTo(file);
+            File.Move(target + ".tmp", target, overwrite: true);
+            copied++;
+        }
+        return copied;
+    }
+
     public void Play(string fileName)
     {
         if (Available && !_queue.IsAddingCompleted) _queue.Add(fileName);

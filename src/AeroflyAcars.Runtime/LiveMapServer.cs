@@ -18,6 +18,7 @@ namespace AeroflyAcars.Runtime;
 /// POST /api/open-reports  → Berichtsordner im Explorer öffnen
 /// POST /api/voice-test    → Probeansage
 /// POST /api/cabin-test    → Kabinenansage zur Probe (Begrüßung)
+/// POST /api/simbrief-clear → geladenen SimBrief-Plan verwerfen
 /// POST /api/open-sounds   → Ordner für eigene Kabinenansagen öffnen
 /// POST /api/changelog     → Änderungsliste („Was ist neu?“) in der eingestellten Sprache
 /// POST /api/news-seen     → „Was ist neu?“ für diese Version gesehen
@@ -161,6 +162,8 @@ public sealed class LiveMapServer : IDisposable
                 "/api/open-reports" => _engine.OpenReportFolder(),
                 "/api/voice-test" => _engine.VoiceTest(),
                 "/api/cabin-test" => _engine.CabinTest(),
+                "/api/simbrief-clear" => _engine.ClearSimBriefPlan(),
+                "/api/sounds-restore" => _engine.RestoreSounds(),
                 "/api/changelog" => _engine.Changelog(),
                 "/api/news-seen" => _engine.NewsSeen(),
                 "/api/open-sounds" => _engine.OpenSoundFolder(),

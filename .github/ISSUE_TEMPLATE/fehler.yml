@@ -37,5 +37,5 @@ body:
     id: bericht
     attributes:
       label: Flugbericht
-      description: Inhalt der .txt-Datei aus Dokumente\Flarelog\Fluege – oder die Datei hier hineinziehen.
+      description: Inhalt der .txt-Datei aus Dokumente\Flarelog\Flights – oder die Datei hier hineinziehen.
       render: text

@@ -54,7 +54,7 @@ Flarelog is free, runs entirely on your computer and needs no installation.
 - German or English – automatically based on your system language, switchable in the settings
 
 **Reports**
-- Every flight saved as a text and JSON file in `Documents/Flarelog/Fluege`
+- Every flight saved as a text and JSON file in `Documents/Flarelog/Flights`
 
 ## How Flarelog runs on Windows and macOS
 
@@ -112,7 +112,7 @@ Flarelog gets better with your feedback. Please report:
 - **Wishes** – what you are missing in flight or with your airline
 
 → [**Create a new report**](https://github.com/EchoPapaDesign/flarelog/issues/new/choose)
-(free GitHub account required). The flight report helps most (`.txt` from `Documents/Flarelog/Fluege`),
+(free GitHub account required). The flight report helps most (`.txt` from `Documents/Flarelog/Flights`),
 plus aircraft, airport and what exactly happened.
 
 ## For VA operators

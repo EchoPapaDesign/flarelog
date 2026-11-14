@@ -1,7 +1,21 @@
 # Changes
 
-## Unreleased
+## 0.9.0-beta.7 – Safer quitting, automatic backup, tidier settings
 
+- **Mac: "No" when quitting now really cancels.** Previously Flarelog quit anyway and the flight was lost. You are
+  asked on the red button and on Cmd+Q; "Yes" saves the flight so far as a partial report.
+- **Automatic backup:** a flight in progress is saved every minute – after a crash or power cut at most the last
+  minute is missing. The final report replaces the backup.
+- **Report folder is now called "Flights"** (previously "Fluege"); existing reports move automatically
+- **Visible sound folder:** the announcements are in `Documents/Flarelog/Sounds` and can be replaced with your own
+  there; "Restore defaults" brings back the originals
+- **Discard SimBrief plan** with a button; without "Load automatically on start" Flarelog starts without a plan
+- **Settings reordered:** language, SimBrief, time and weather, cabin announcements, landing callout, flight reports,
+  Aerofly and about
+- Left bar tidied up: no logo and no folder icon anymore (report folder is in the settings), selection highlighted instantly
+- Waypoint tag appears above the waypoint, no longer under the mouse pointer
+- Recording started in flight: air time and distance from the start of recording; no more empty partial reports
+- Mac: window opens at a size that fits every MacBook; full version number (with "beta")
 - **Mac (Apple Silicon):** the first launch after a longer break could fail with "quit unexpectedly". The window
   library is now shipped signed inside Flarelog.app instead of being unpacked at every launch.
 

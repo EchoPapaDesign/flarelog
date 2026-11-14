@@ -106,13 +106,16 @@ zurück und zeigt die Meldung der VA an.
 ## 7. Sonstiges
 
 - **Neuer Flug:** Im Flight Log nach einem gespeicherten Bericht.
-- **Berichte:** Ordner-Symbol unten links → `Dokumente\Flarelog\Fluege` (Text und JSON).
+- **Berichte:** Zahnrad → Flugberichte → „Ordner öffnen“ → `Dokumente\Flarelog\Flights` (Text und JSON).
 - **Landeansage:** Zahnrad → an/aus, „Stimme testen“. Eine englische Windows-Stimme klingt am besten
   (Windows-Einstellungen → Zeit und Sprache → Sprache → Englisch mit „Sprachausgabe“ hinzufügen).
   Am Mac wird die englische Stimme „Samantha“ verwendet, falls vorhanden.
-- **Kabinenansagen:** Zahnrad → an/aus, „Ansage testen“. Unter „Eigene Ansagen …“ öffnet sich der Ordner
-  `Dokumente\Flarelog\Sounds` – dort abgelegte WAV-Dateien mit denselben Namen wie im Soundpack
-  (z. B. `Welcome_Onboard.wav`) ersetzen die mitgelieferten.
+- **Kabinenansagen:** Zahnrad → an/aus, „Ansage testen“. Alle Ansagen liegen als WAV-Dateien in
+  `Dokumente\Flarelog\Sounds` („Sound-Ordner öffnen“). Eine Datei durch eine eigene mit genau demselben Namen
+  ersetzen (z. B. `Welcome_Onboard.wav`); „Standard wiederherstellen“ holt die Originale zurück.
+- **Wo Flarelog was ablegt:** Flugberichte in `Dokumente\Flarelog\Flights`, Ansagen in `Dokumente\Flarelog\Sounds`,
+  Einstellungen in `%APPDATA%\Flarelog\settings.json` (Mac: `~/Library/Application Support/Flarelog/settings.json`,
+  nur diese eine Datei), Flughafenlisten im Zwischenspeicher `%LOCALAPPDATA%\Flarelog` (Mac: `~/Library/Caches/Flarelog`).
 - **Zweiter Monitor:** Das Display ist zusätzlich im Browser unter `http://localhost:8080` erreichbar.
 
 ## Probleme

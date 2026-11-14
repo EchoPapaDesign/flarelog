@@ -59,7 +59,7 @@ static void RunWindow(AcarsEngine engine, string url, Action<string> log)
     window = new PhotinoWindow()
         .SetTitle(Lang.T("Flarelog – ACARS für Aerofly FS 4", "Flarelog – ACARS for Aerofly FS 4"))
         .SetUseOsDefaultSize(false)
-        .SetSize(1400, 880)
+        .SetSize(1200, 760)   // passt auf jedes MacBook (13" Air: 1280×832 Punkte) neben Menüleiste und Dock
         .SetMinSize(1000, 640)
         .Center()
         .SetResizable(true)
@@ -76,23 +76,35 @@ static void RunWindow(AcarsEngine engine, string url, Action<string> log)
                     OpenExternal(target);
             }
         })
+        // Gefragt wird vorher (MacQuitGuard). Hier ist das Fenster schon zu – Photino kann das auf dem Mac nicht mehr
+        // verhindern. Deshalb immer aufräumen: laufenden Flug als Teilbericht speichern, Ports freigeben.
         .RegisterWindowClosingHandler((_, _) =>
         {
-            if (!quitting && engine.FlightInProgress)
-            {
-                var answer = window.ShowMessage("Flarelog",
-                    Lang.T("Es wird gerade ein Flug aufgezeichnet.\n\nProgramm beenden und den bisherigen Flug als Teilbericht speichern?",
-                           "A flight is being recorded.\n\nQuit and save the flight so far as a partial report?"),
-                    PhotinoDialogButtons.YesNo, PhotinoDialogIcon.Warning);
-                if (answer != PhotinoDialogResult.Yes) return true;   // true = Fenster bleibt offen
-            }
-            // macOS beendet das Programm, sobald das letzte Fenster zu ist – deshalb hier schon aufräumen
-            // (laufenden Flug als Bericht speichern, Ports freigeben).
             engine.Dispose();
             log("Flarelog wird beendet");
             return false;
         })
+        .RegisterWindowCreatedHandler((_, _) =>
+        {
+            if (!MacQuitGuard.Install(MayQuit))
+                log("Rückfrage beim Beenden nicht verfügbar – ein laufender Flug wird beim Schließen gespeichert.");
+        })
         .Load(new Uri(url));
+
+    // Vor dem Schließen (roter Knopf) und Beenden (Cmd+Q, Dock): Läuft ein Flug, wird gefragt.
+    // Ja = speichern und beenden, Nein = Flarelog läuft einfach weiter.
+    bool MayQuit()
+    {
+        if (quitting || !engine.FlightInProgress) { quitting = true; return true; }
+        var answer = window.ShowMessage(Lang.T("Flarelog beenden?", "Quit Flarelog?"),
+            Lang.T("Es wird gerade ein Flug aufgezeichnet.\n\nFlarelog jetzt beenden? Der bisherige Flug wird als Teilbericht gespeichert.",
+                   "A flight is being recorded.\n\nDo you want to quit? The flight so far will be saved as a partial report."),
+            PhotinoDialogButtons.YesNo, PhotinoDialogIcon.Warning);
+        if (answer != PhotinoDialogResult.Yes) return false;
+        quitting = true;
+        engine.Dispose();   // sofort speichern, bevor macOS das Programm beendet
+        return true;
+    }
 
     // „Flarelog beenden“ in den Einstellungen, Abmelden/Ausschalten oder Beenden über die Aktivitätsanzeige:
     // Fenster schließen, danach wird der laufende Flug beim Aufräumen gespeichert.

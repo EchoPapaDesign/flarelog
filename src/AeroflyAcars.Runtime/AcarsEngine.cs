@@ -47,6 +47,10 @@ public sealed class AcarsEngine : IDisposable
     private DateTimeOffset? _lastReceived;
     private string? _source;
     private bool _reportSaved;
+    /// <summary>Datei (ohne Endung) des laufenden Flugs – die Zwischensicherung und der fertige Bericht nutzen dieselbe.</summary>
+    private string? _reportBase;
+    /// <summary>So oft wird ein laufender Flug im Hintergrund gesichert.</summary>
+    public static readonly TimeSpan AutosaveInterval = TimeSpan.FromMinutes(1);
     private string? _lastReportPath;
     private object? _lastCallout;
     private bool _disposed;
@@ -135,9 +139,11 @@ public sealed class AcarsEngine : IDisposable
         _server = StartServer();
         if (Settings.Voice) _speech = SpeechAnnouncer.Create();
         if (Settings.CabinAnnouncements) _cabin = new CabinAnnouncer();
+        _ = Task.Run(CabinAnnouncer.EnsureUserFolder);
         _ = Task.Run(LoadInBackgroundAsync);
         _ = Task.Run(() => WatchAeroflyAsync(_cts.Token));
         _ = Task.Run(() => LiveLoopAsync(_cts.Token));
+        _ = Task.Run(() => AutosaveLoopAsync(_cts.Token));
     }
 
     private LiveMapServer? StartServer()
@@ -265,7 +271,7 @@ public sealed class AcarsEngine : IDisposable
         lock (_gate)
         {
             string extra = "";
-            if (_tracker.Samples.Count > 0 && _tracker.Phase != FlightPhase.Preflight && !_reportSaved)
+            if (!_reportSaved && WorthSavingLocked())
             {
                 SaveReportLocked();
                 extra = L(" Der bisherige Flug wurde als Teilbericht gespeichert.", " The previous flight was saved as a partial report.");
@@ -311,6 +317,24 @@ public sealed class AcarsEngine : IDisposable
         AddNotice(message);
         _ = ApplyConditionsAsync();
         return new ActionResult(true, message);
+    }
+
+    /// <summary>Geladenen SimBrief-Plan verwerfen – vor dem Flug sofort, während eines Flugs ab dem nächsten.</summary>
+    public ActionResult ClearSimBriefPlan()
+    {
+        lock (_gate)
+        {
+            if (_plan is null && _tracker.Plan is null)
+                return new ActionResult(true, L("Es ist kein SimBrief-Plan geladen.", "No SimBrief plan is loaded."));
+            _plan = null;
+            bool canApplyNow = _tracker.Phase == FlightPhase.Preflight || _tracker.IsFinished || _reportSaved;
+            if (canApplyNow) ResetLocked();
+            var message = canApplyNow
+                ? L("SimBrief-Plan verworfen.", "SimBrief plan discarded.")
+                : L("SimBrief-Plan verworfen – der laufende Flug behält ihn bis zum Ende.", "SimBrief plan discarded – the current flight keeps it until the end.");
+            AddNotice(message);
+            return new ActionResult(true, message);
+        }
     }
 
     // ---------- Zeit und Wetter für Aerofly ----------
@@ -1225,6 +1249,21 @@ public sealed class AcarsEngine : IDisposable
         return new ActionResult(true, L("Begrüßung wird abgespielt.", "Playing the welcome announcement."));
     }
 
+    /// <summary>Mitgelieferte Ansagen wiederherstellen – ersetzt eigene Dateien gleichen Namens.</summary>
+    public ActionResult RestoreSounds()
+    {
+        try
+        {
+            _cabin?.Stop();
+            int n = CabinAnnouncer.CopyBuiltIns(overwrite: true);
+            return new ActionResult(true, L($"{n} Standard-Ansagen wiederhergestellt.", $"{n} default announcements restored."));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new ActionResult(false, L("Ansagen konnten nicht wiederhergestellt werden: ", "Could not restore the announcements: ") + ex.Message);
+        }
+    }
+
     /// <summary>Ordner für eigene Ansagen öffnen (Dokumente/Flarelog/Sounds).</summary>
     public ActionResult OpenSoundFolder()
     {
@@ -1494,9 +1533,58 @@ public sealed class AcarsEngine : IDisposable
         _cabin?.Stop();
         _tracker = CreateTracker();
         _reportSaved = false;
+        _reportBase = null;
         _lastCallout = null;
         _submittedPirepId = null;
         _submittedUrl = null;
+    }
+
+    /// <summary>
+    /// Lohnt sich ein (Teil-)Bericht? Nicht für eine Aufzeichnung, die nur aus einer Pause in der Luft besteht
+    /// (Testbericht beta.6: leerer Bericht „XXXX-XXXX“).
+    /// </summary>
+    private bool WorthSavingLocked()
+    {
+        var t = _tracker;
+        if (t.Samples.Count < 2 || t.Phase == FlightPhase.Preflight) return false;
+        if (t.BlockOff is not null || t.Takeoff is not null || t.Touchdown is not null) return true;
+        var recorded = t.Samples[^1].Time - t.Samples[0].Time - t.PausedTime;
+        return recorded >= TimeSpan.FromMinutes(1);
+    }
+
+    private async Task AutosaveLoopAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                await Task.Delay(AutosaveInterval, ct).ConfigureAwait(false);
+                lock (_gate) AutosaveLocked();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Programmende
+        }
+    }
+
+    /// <summary>
+    /// Zwischenstand eines laufenden Flugs sichern – bei Absturz, Stromausfall oder versehentlichem Beenden ist
+    /// höchstens die letzte Minute verloren. Der fertige Bericht überschreibt später dieselbe Datei.
+    /// </summary>
+    private void AutosaveLocked()
+    {
+        if (_reportSaved || !WorthSavingLocked()) return;
+        try
+        {
+            var report = FlightReportBuilder.Build(_tracker, DateTimeOffset.UtcNow, _selectedBooking, _runways);
+            var (_, textPath) = ReportWriter.Save(report, Settings.EffectiveReportFolder, _reportBase);
+            _reportBase = Path.ChangeExtension(textPath, null);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Nächster Versuch in einer Minute; der fertige Bericht meldet Fehler selbst.
+        }
     }
 
     private string? SaveReportLocked()
@@ -1505,7 +1593,8 @@ public sealed class AcarsEngine : IDisposable
         try
         {
             var report = FlightReportBuilder.Build(_tracker, DateTimeOffset.UtcNow, _selectedBooking, _runways);
-            var (_, textPath) = ReportWriter.Save(report, Settings.EffectiveReportFolder);
+            var (_, textPath) = ReportWriter.Save(report, Settings.EffectiveReportFolder, _reportBase);
+            _reportBase = null;
             _reportSaved = true;
             _lastReportPath = textPath;
             ReportSaved?.Invoke(report, textPath);
@@ -1535,7 +1624,7 @@ public sealed class AcarsEngine : IDisposable
         _disposed = true;
         lock (_gate)
         {
-            if (_tracker.Samples.Count > 0 && _tracker.Phase != FlightPhase.Preflight && !_reportSaved)
+            if (!_reportSaved && WorthSavingLocked())
                 SaveReportLocked();
         }
         _cts?.Cancel();

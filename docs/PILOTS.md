@@ -107,13 +107,17 @@ submission and shows the VA's message.
 ## 7. Other
 
 - **New flight:** in the flight log, after a report has been saved.
-- **Reports:** folder icon at the bottom left → `Documents\Flarelog\Fluege` (text and JSON).
+- **Reports:** gear icon → Flight reports → "Open folder" → `Documents\Flarelog\Flights` (text and JSON).
 - **Landing callout:** gear icon → on/off, "Test voice". An English Windows voice sounds best
   (Windows Settings → Time & language → Language → add English with "Text-to-speech").
   On the Mac, the English voice "Samantha" is used if available.
-- **Cabin announcements:** gear icon → on/off, "Test announcement". "Own announcements …" opens the folder
-  `Documents\Flarelog\Sounds` – WAV files placed there with the same names as in the soundpack
-  (e.g. `Welcome_Onboard.wav`) replace the built-in ones.
+- **Cabin announcements:** gear icon → on/off, "Test announcement". All announcements are WAV files in
+  `Documents\Flarelog\Sounds` ("Open sound folder"). Replace a file with your own one of exactly the same name
+  (e.g. `Welcome_Onboard.wav`); "Restore defaults" brings back the originals.
+- **Where Flarelog keeps its files:** flight reports in `Documents\Flarelog\Flights`, announcements in
+  `Documents\Flarelog\Sounds`, settings in `%APPDATA%\Flarelog\settings.json` (Mac:
+  `~/Library/Application Support/Flarelog/settings.json`, just this one file), airport lists in the cache
+  `%LOCALAPPDATA%\Flarelog` (Mac: `~/Library/Caches/Flarelog`).
 - **Second monitor:** the display is also available in the browser at `http://localhost:8080`.
 
 ## Troubleshooting

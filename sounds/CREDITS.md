@@ -14,7 +14,8 @@ https://www.youtube.com/@RealFlightOpsOfficial
 | `After_Touchdown.wav` | Rollen zum Gate nach der Landung |
 
 Die Dateinamen dürfen nicht geändert werden – spätere Erweiterungspakete von AeRodri bauen darauf auf.
-Gleichnamige Dateien in `Dokumente/Flarelog/Sounds` ersetzen die mitgelieferten.
+Beim ersten Start legt Flarelog alle Ansagen in `Dokumente/Flarelog/Sounds` ab. Dort lassen sie sich durch
+eigene Dateien gleichen Namens ersetzen; „Standard wiederherstellen“ in den Einstellungen holt die Originale zurück.
 
 ## Herkunft und Freigabe
 

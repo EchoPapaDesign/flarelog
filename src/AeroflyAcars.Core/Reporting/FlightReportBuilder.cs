@@ -22,11 +22,16 @@ public static class FlightReportBuilder
         };
 
         TimeSpan? blockTime = tracker.BlockOff is { } off && tracker.BlockOn is { } on ? on - off : null;
-        TimeSpan? airTime = tracker.Takeoff is { } to && tracker.Touchdown is { } td ? td - to : null;
+        // Aufzeichnung im Flug begonnen (z. B. gespeicherter Flug fortgesetzt): ab dem ersten Messpunkt rechnen.
+        DateTimeOffset? airborneFrom = tracker.Takeoff ?? (tracker.StartedAirborne && samples.Count > 0 ? (DateTimeOffset?)samples[0].Time : null);
+        TimeSpan? airTime = airborneFrom is { } to && tracker.Touchdown is { } td ? td - to : null;
 
         double? distance = null;
-        if (tracker.Takeoff is { } start)
+        if (airborneFrom is { } start)
             distance = DistanceNm(samples, start, tracker.Touchdown ?? DateTimeOffset.MaxValue);
+        if (tracker.Takeoff is null && airborneFrom is not null)
+            notes.Add(Lang.T("Air Time und Distanz ab Beginn der Aufzeichnung (in der Luft).",
+                             "Air time and distance from the start of recording (in flight)."));
 
         double? touchdownToDest = null;
         var tdSample = tracker.TouchdownSample;

@@ -152,6 +152,7 @@ public static class MapPage
 
   .rail button.nav { border: 0; background: none; cursor: pointer; }
   .rail button.nav:hover { color: var(--text); background: var(--panel2); }
+  .rail .nav.active, .rail button.nav.active:hover { background: #fff; color: #111; }
   .rail .nav { position: relative; }
   .rail .badge-dot { position: absolute; top: 2px; right: 2px; min-width: 16px; height: 16px; border-radius: 8px; padding: 0 4px;
     background: var(--bad); color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; display: none; }
@@ -236,19 +237,15 @@ public static class MapPage
 <body>
 <div class="app">
   <aside class="rail">
-    <div class="logo" title="Flarelog"><svg viewBox="0 0 256 256" width="34" height="34" aria-label="Flarelog"><rect x="8" y="8" width="240" height="240" rx="56" fill="#18212b"/><rect x="40" y="180" width="176" height="22" rx="11" fill="#e9eef3"/><path d="M48 44 L92 88 C122 118 150 166 210 166" fill="none" stroke="#3fd68a" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <div class="nav active" id="navFlight" title="Flight Tracking" style="cursor:pointer">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
     </div>
     <div class="bottom">
-      <button class="nav" id="navWeather" title="Wetter: METAR und TAF">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.1 4.5 4.5 0 0 0 7 18z"/></svg>
-      </button>
       <button class="nav" id="navAirline" title="Airline (Buchungen)">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
       </button>
-      <button class="nav" id="navReports" title="Berichtsordner öffnen">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <button class="nav" id="navWeather" title="Wetter: METAR und TAF">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.1 4.5 4.5 0 0 0 7 18z"/></svg>
       </button>
       <button class="nav" id="navSettings" title="Einstellungen"><span class="badge-dot" id="updDot">1</span>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
@@ -347,6 +344,16 @@ public static class MapPage
     </div>
     <hr>
     <div class="field">
+      <label>SimBrief-Benutzer oder Pilot-ID</label>
+      <div class="row"><input type="text" id="setSb" placeholder="z. B. meinname" autocomplete="off" spellcheck="false">
+        <button class="btn primary" id="btnSbLoad">Plan laden</button></div>
+      <label class="check"><input type="checkbox" id="setSbAuto"> Beim Start automatisch laden</label>
+      <div class="hint" id="sbHint">Lädt den zuletzt in SimBrief erzeugten Flugplan.</div>
+      <div class="hint">Ohne Haken startet Flarelog ohne Plan. Ein neu geladener Plan ersetzt den alten.</div>
+      <div class="row" style="margin-top:10px"><button class="btn" id="btnSbClear">Plan verwerfen</button></div>
+    </div>
+    <hr>
+    <div class="field">
       <label>Zeit und Wetter in Aerofly</label>
       <div class="conds">
         <div class="cond"><span>Uhrzeit</span>
@@ -362,11 +369,15 @@ public static class MapPage
     </div>
     <hr>
     <div class="field">
-      <label>SimBrief-Benutzer oder Pilot-ID</label>
-      <div class="row"><input type="text" id="setSb" placeholder="z. B. meinname" autocomplete="off" spellcheck="false">
-        <button class="btn primary" id="btnSbLoad">Plan laden</button></div>
-      <label class="check"><input type="checkbox" id="setSbAuto"> Beim Start automatisch laden</label>
-      <div class="hint" id="sbHint">Lädt den zuletzt in SimBrief erzeugten Flugplan.</div>
+      <label>Kabinenansagen</label>
+      <label class="check"><input type="checkbox" id="setCabin"> Ansagen in den Flugphasen abspielen</label>
+      <div class="row" style="margin-top:10px"><button class="btn" id="btnCabinTest">Ansage testen</button>
+        <button class="btn" id="btnSoundFolder">Sound-Ordner öffnen</button>
+        <button class="btn" id="btnSoundRestore">Standard wiederherstellen</button></div>
+      <div class="hint">Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung. Soundpack von AeRodri (RealFlightOps).</div>
+      <div class="hint">Alle Ansagen liegen als WAV-Dateien in diesem Ordner. Eine Datei durch eine eigene mit genau
+        demselben Namen ersetzen – „Standard wiederherstellen“ holt die Originale zurück.</div>
+      <div class="hint" id="setSoundFolder"></div>
     </div>
     <hr>
     <div class="field">
@@ -376,28 +387,15 @@ public static class MapPage
     </div>
     <hr>
     <div class="field">
-      <label>Kabinenansagen</label>
-      <label class="check"><input type="checkbox" id="setCabin"> Ansagen in den Flugphasen abspielen</label>
-      <div class="row" style="margin-top:10px"><button class="btn" id="btnCabinTest">Ansage testen</button>
-        <button class="btn" id="btnSoundFolder">Eigene Ansagen …</button></div>
-      <div class="hint">Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung. Soundpack von AeRodri (RealFlightOps).
-        Gleichnamige WAV-Dateien im Ordner „Eigene Ansagen“ ersetzen die mitgelieferten.</div>
-    </div>
-    <hr>
-    <div class="field">
       <label>Flugberichte</label>
       <div class="hint" id="setFolder"></div>
       <div class="row" style="margin-top:10px"><button class="btn" id="btnFolder">Ordner öffnen</button></div>
     </div>
     <hr>
     <div class="field">
-      <label>Aerofly</label>
+      <label>Aerofly und Über Flarelog</label>
       <div class="hint" id="setUdp"></div>
-    </div>
-    <hr>
-    <div class="field">
-      <label>Über</label>
-      <div class="hint" id="setVersion"></div>
+      <div class="hint" id="setVersion" style="margin-top:8px"></div>
       <div class="row" style="margin-top:10px"><button class="btn" id="btnNews">Was ist neu?</button></div>
     </div>
     <div class="field" id="quitField" style="display:none">
@@ -549,6 +547,14 @@ const EN = {
 "„Touchdown with … feet per minute“ ansagen": "Announce “Touchdown with … feet per minute”",
 "Stimme testen": "Test voice",
 "Was ist neu?": "What's new?",
+"Sound-Ordner öffnen": "Open sound folder",
+"Standard wiederherstellen": "Restore defaults",
+"Alle Ansagen auf die mitgelieferten zurücksetzen? Eigene Dateien gleichen Namens werden ersetzt.": "Reset all announcements to the built-in ones? Your own files with the same names will be replaced.",
+"Alle Ansagen liegen als WAV-Dateien in diesem Ordner. Eine Datei durch eine eigene mit genau demselben Namen ersetzen – „Standard wiederherstellen“ holt die Originale zurück.": "All announcements are WAV files in this folder. Replace a file with your own one of exactly the same name – “Restore defaults” brings back the originals.",
+"Plan verwerfen": "Discard plan",
+"Geladenen SimBrief-Plan verwerfen?": "Discard the loaded SimBrief plan?",
+"Ohne Haken startet Flarelog ohne Plan. Ein neu geladener Plan ersetzt den alten.": "Without the tick Flarelog starts without a plan. A newly loaded plan replaces the old one.",
+"Aerofly und Über Flarelog": "Aerofly and about Flarelog",
 "Zeit und Wetter in Aerofly": "Time and weather in Aerofly",
 "Herunterladen": "Download",
 "Version {0} ist verfügbar.": "Version {0} is available.",
@@ -556,8 +562,7 @@ const EN = {
 "Kabinenansagen": "Cabin announcements",
 "Ansagen in den Flugphasen abspielen": "Play announcements during the flight phases",
 "Ansage testen": "Test announcement",
-"Eigene Ansagen …": "Own announcements …",
-"Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung. Soundpack von AeRodri (RealFlightOps). Gleichnamige WAV-Dateien im Ordner „Eigene Ansagen“ ersetzen die mitgelieferten.": "Welcome, safety briefing, climb, cruise and descent, after landing. Soundpack by AeRodri (RealFlightOps). WAV files with the same name in the “Own announcements” folder replace the built-in ones.",
+"Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung. Soundpack von AeRodri (RealFlightOps).": "Welcome, safety briefing, climb, cruise and descent, after landing. Soundpack by AeRodri (RealFlightOps).",
 "Flugberichte": "Flight reports",
 "Ordner öffnen": "Open folder",
 "Über": "About",
@@ -770,8 +775,9 @@ function openSettings() {
     $('setSbAuto').checked = st.loadSimBriefOnStart;
     $('setVoice').checked = st.voice;
     $('setCabin').checked = st.cabin;
+    $('setSoundFolder').textContent = st.soundFolder;
     $('setFolder').textContent = st.reportFolder;
-    $('quitField').style.display = st.canQuit ? 'block' : 'none';
+    $('quitField').style.display = st.canQuit && !hostApp ? 'block' : 'none';
     $('setVersion').textContent = t('Flarelog {0} · ACARS für Aerofly FS 4 – Daten: OurAirports (gemeinfrei), OpenStreetMap-Mitwirkende, SimBrief.', st.version);
     $('setLang').value = st.language || 'auto';
     $('setUdp').textContent = t('Empfang auf UDP-Port {0}. In Aerofly: Sonstige Einstellungen → „Sende Fluginformation an IP Addresse“ an, Broadcast IP 127.0.0.1, Port {0}.', st.udpPort);
@@ -816,11 +822,12 @@ $('btnNewsClose').onclick = closeNews;
 $('newsOverlay').onclick = e => { if (e.target.id === 'newsOverlay') closeNews(); };
 $('btnClose').onclick = () => $('overlay').classList.remove('show');
 $('overlay').onclick = e => { if (e.target.id === 'overlay') $('overlay').classList.remove('show'); };
-$('navReports').onclick = () => post('/api/open-reports');
 $('btnFolder').onclick = () => post('/api/open-reports');
 $('btnVoiceTest').onclick = () => post('/api/voice-test');
 $('btnCabinTest').onclick = () => post('/api/cabin-test');
+$('btnSbClear').onclick = () => { if (confirm(t('Geladenen SimBrief-Plan verwerfen?'))) { resetMap(); post('/api/simbrief-clear'); } };
 $('btnSoundFolder').onclick = () => post('/api/open-sounds');
+$('btnSoundRestore').onclick = () => { if (confirm(t('Alle Ansagen auf die mitgelieferten zurücksetzen? Eigene Dateien gleichen Namens werden ersetzt.'))) post('/api/sounds-restore'); };
 $('btnQuit').onclick = async () => {
   if (!confirm(t('Flarelog beenden?'))) return;
   const res = await post('/api/quit');
@@ -1184,7 +1191,11 @@ async function tick() {
       const m = L.circleMarker([w.lat, w.lon], { radius: apt ? 7 : 4,
         color: '#111', fillColor: apt ? '#f05a5a' : '#ff9f1c', fillOpacity: 1, weight: 1.5 }).addTo(map);
       routeMarkers.push(m);
-      m.bindTooltip(w.ident, { permanent: apt, direction: 'bottom', className: apt ? 'wpt-label apt' : 'wpt-label' });
+      // Flughäfen: Name dauerhaft unter dem Punkt. Wegpunkte: Kärtchen ÜBER dem Punkt, damit der Mauszeiger,
+      // der von unten kommt, es nicht verdeckt.
+      m.bindTooltip(w.ident, apt
+        ? { permanent: true, direction: 'bottom', className: 'wpt-label apt' }
+        : { direction: 'top', offset: [0, -10], className: 'wpt-label' });
     });
     if (!p) map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
   }
@@ -1212,8 +1223,11 @@ applyLang('__LANG__');   // vom Server eingesetzt – kein Umschalten nach dem L
 // führt zurück zur Karte. Das markierte Symbol zeigt, wo man gerade ist.
 const views = { overlay: 'navSettings', airlineOverlay: 'navAirline', weatherOverlay: 'navWeather',
   submitOverlay: 'navFlight', newsOverlay: 'navSettings' };
-document.querySelectorAll('.rail .nav').forEach(n => n.addEventListener('click',
-  () => Object.keys(views).forEach(id => $(id).classList.remove('show')), true));
+document.querySelectorAll('.rail .nav').forEach(n => n.addEventListener('click', () => {
+  Object.keys(views).forEach(id => $(id).classList.remove('show'));
+  // sofort markieren, ohne Zwischenzustand
+  document.querySelectorAll('.rail .nav').forEach(x => x.classList.toggle('active', x === n));
+}, true));
 function markNav() {
   const open = Object.keys(views).find(id => $(id).classList.contains('show'));
   document.querySelectorAll('.rail .nav').forEach(n => n.classList.remove('active'));
