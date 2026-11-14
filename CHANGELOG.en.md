@@ -1,7 +1,17 @@
 # Changes
 
-## Unreleased – Cabin announcements and feedback from the Mac test
+## 0.9.0-beta.6 – Mac app with its own window, cabin announcements, feedback from the Mac test
 
+- **Standalone Mac app:** on the Mac, Flarelog opens its own program window with a Dock icon – no browser needed
+  anymore. Features, detection, reports and settings stay the same.
+- Closing the window during a flight asks first and saves the flight so far as a partial report
+- External links (update, PIREP on the VA website, map sources) open in your normal browser
+- If the window can't be opened, Flarelog starts in the browser as before (note in `~/Library/Logs/Flarelog/Flarelog.log`)
+- **Cabin announcements:** welcome at the gate, pushback and safety briefing, climb (passing FL100), cruise altitude, descent and
+  after landing – automatically matched to the flight phase, each announcement once per flight. Soundpack by AeRodri.
+- Settings → Cabin announcements: on/off, "Test announcement", "Own announcements …" (WAV files with the same name in
+  `Documents/Flarelog/Sounds` replace the built-in ones)
+- **What's new:** after an update Flarelog shows the changes once; later via Settings → About → "What's new?"
 - **Touchdown detected right away, also on uneven runways:** if the runway dropped away after the touchdown point
   (e.g. LEAS 29), Flarelog took it for floating and only detected the landing during the rollout – with a wrong
   landing rate, ground speed and rollout distance, and the callout 10–15 s late. Now the actual touchdown counts and
@@ -14,21 +24,6 @@
 - **Discreet update notice:** a red dot on the gear icon and a short message instead of a fixed button at the top
 - **Flight log in past tense with altitude:** e.g. "Descent started from FL150", "Step climb from FL350"
 - **Waypoints on the map:** the name appears as an easy-to-read light tag on hover
-- **Mac:** log file now in `~/Library/Logs/Flarelog/Flarelog.log`
-
-- **Cabin announcements:** welcome at the gate, pushback and safety briefing, climb (passing FL100), cruise altitude, descent and
-  after landing – automatically matched to the flight phase, each announcement once per flight. Soundpack by AeRodri.
-- Settings → Cabin announcements: on/off, "Test announcement", "Own announcements …" (WAV files with the same name in
-  `Documents/Flarelog/Sounds` replace the built-in ones)
-- **What's new:** after an update Flarelog shows the changes once; later via Settings → About → "What's new?"
-
-## 0.9.0-beta.5 – Mac app with its own window
-
-- **Standalone Mac app:** on the Mac, Flarelog opens its own program window with a Dock icon – no browser needed
-  anymore. Features, detection, reports and settings stay the same.
-- Closing the window during a flight asks first and saves the flight so far as a partial report
-- External links (update, PIREP on the VA website, map sources) open in your normal browser
-- If the window can't be opened, Flarelog starts in the browser as before (note in `~/Library/Logs/Flarelog.log`)
 
 ## 0.9.0-beta.4 – Feedback from the first Mac tests
 

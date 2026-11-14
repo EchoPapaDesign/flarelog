@@ -1,7 +1,18 @@
 # Änderungen
 
-## Unveröffentlicht – Kabinenansagen und Feedback aus dem Mac-Test
+## 0.9.0-beta.6 – Mac-App mit eigenem Fenster, Kabinenansagen, Feedback aus dem Mac-Test
 
+- **Eigenständige Mac-App:** Flarelog öffnet auf dem Mac ein eigenes Programmfenster mit Symbol im Dock – kein
+  Browser mehr nötig. Funktionen, Erkennung, Berichte und Einstellungen bleiben unverändert.
+- Fenster schließen während eines Flugs fragt nach und speichert den bisherigen Flug als Teilbericht
+- Externe Links (Update, PIREP auf der VA-Seite, Kartenquellen) öffnen im normalen Browser
+- Lässt sich das Fenster nicht öffnen, startet Flarelog wie bisher im Browser (Hinweis in `~/Library/Logs/Flarelog/Flarelog.log`)
+- **Kabinenansagen:** Begrüßung am Gate, Pushback und Sicherheitseinweisung, Steigflug (ab FL100), Reiseflughöhe, Sinkflug und
+  nach der Landung – automatisch passend zur Flugphase, jede Ansage einmal pro Flug. Soundpack von AeRodri.
+- Einstellungen → Kabinenansagen: an/aus, „Ansage testen“, „Eigene Ansagen …“ (gleichnamige WAV-Dateien in
+  `Dokumente/Flarelog/Sounds` ersetzen die mitgelieferten)
+- **Was ist neu:** Nach einem Update zeigt Flarelog einmal die Änderungen an; später über Einstellungen → Über →
+  „Was ist neu?“
 - **Landung sofort erkannt, auch auf unebenen Bahnen:** Fiel die Bahn hinter dem Aufsetzpunkt ab (z. B. LEAS 29),
   hielt Flarelog das für Ausschweben und erkannte die Landung erst beim Ausrollen – mit falscher Landerate,
   Groundspeed und Ausrollstrecke und einer Ansage 10–15 s zu spät. Jetzt zählt das Aufsetzen, die Ansage kommt
@@ -14,22 +25,6 @@
 - **Update-Hinweis dezent:** Roter Punkt am Zahnrad und kurzer Hinweis statt eines festen Knopfs oben
 - **Flight Log in Vergangenheitsform mit Höhe:** z. B. „Sinkflug ab FL150 begonnen“, „Stufensteigflug ab FL350“
 - **Wegpunkte auf der Karte:** Name beim Drüberfahren als gut lesbares helles Kärtchen
-- **Mac:** Protokoll jetzt in `~/Library/Logs/Flarelog/Flarelog.log`
-
-- **Kabinenansagen:** Begrüßung am Gate, Pushback und Sicherheitseinweisung, Steigflug (ab FL100), Reiseflughöhe, Sinkflug und
-  nach der Landung – automatisch passend zur Flugphase, jede Ansage einmal pro Flug. Soundpack von AeRodri.
-- Einstellungen → Kabinenansagen: an/aus, „Ansage testen“, „Eigene Ansagen …“ (gleichnamige WAV-Dateien in
-  `Dokumente/Flarelog/Sounds` ersetzen die mitgelieferten)
-- **Was ist neu:** Nach einem Update zeigt Flarelog einmal die Änderungen an; später über Einstellungen → Über →
-  „Was ist neu?“
-
-## 0.9.0-beta.5 – Mac-App mit eigenem Fenster
-
-- **Eigenständige Mac-App:** Flarelog öffnet auf dem Mac ein eigenes Programmfenster mit Symbol im Dock – kein
-  Browser mehr nötig. Funktionen, Erkennung, Berichte und Einstellungen bleiben unverändert.
-- Fenster schließen während eines Flugs fragt nach und speichert den bisherigen Flug als Teilbericht
-- Externe Links (Update, PIREP auf der VA-Seite, Kartenquellen) öffnen im normalen Browser
-- Lässt sich das Fenster nicht öffnen, startet Flarelog wie bisher im Browser (Hinweis in `~/Library/Logs/Flarelog.log`)
 
 ## 0.9.0-beta.4 – Feedback der ersten Mac-Tests
 
