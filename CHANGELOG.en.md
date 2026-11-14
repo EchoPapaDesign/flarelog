@@ -1,5 +1,10 @@
 # Changes
 
+## Unreleased
+
+- **Mac (Apple Silicon):** the first launch after a longer break could fail with "quit unexpectedly". The window
+  library is now shipped signed inside Flarelog.app instead of being unpacked at every launch.
+
 ## 0.9.0-beta.6 – Mac app with its own window, cabin announcements, feedback from the Mac test
 
 - **Standalone Mac app:** on the Mac, Flarelog opens its own program window with a Dock icon – no browser needed
