@@ -1295,6 +1295,27 @@ public sealed class AcarsEngine : IDisposable
         }
     }
 
+    /// <summary>Logbuch: einen gespeicherten Flug löschen – nicht den, der gerade aufgezeichnet wird.</summary>
+    public ActionResult LogbookDelete(string? id)
+    {
+        lock (_gate)
+        {
+            if (_reportBase is not null && string.Equals(Path.GetFileName(_reportBase), id, StringComparison.OrdinalIgnoreCase))
+                return new ActionResult(false, L("Dieser Flug wird gerade aufgezeichnet und kann nicht gelöscht werden.",
+                    "This flight is being recorded and cannot be deleted."));
+        }
+        try
+        {
+            return Logbook.Delete(Settings.EffectiveReportFolder, id)
+                ? new ActionResult(true, L("Flug gelöscht.", "Flight deleted."))
+                : new ActionResult(false, L("Flug nicht gefunden.", "Flight not found."));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new ActionResult(false, L("Flug konnte nicht gelöscht werden: ", "Could not delete the flight: ") + ex.Message);
+        }
+    }
+
     /// <summary>Logbuch: ein Flug mit Spur und Ablauf für die Detailansicht.</summary>
     public ActionResult LogbookFlight(string? id)
     {

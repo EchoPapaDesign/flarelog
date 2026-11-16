@@ -5,7 +5,7 @@
 - **Logbuch:** Neues Symbol in der linken Leiste. Zeigt alle bisherigen Flüge aus dem Berichtsordner mit Datum,
   Strecke, Flugzeug, Flugzeit, Distanz und Landerate – dazu Summen (Flüge, Flug- und Blockzeit, Distanz,
   Flughäfen, Ø Landerate) und eine Suche. Ein Klick öffnet den Flug mit Spur auf der Karte, allen Daten und dem
-  Ablauf. Ganz ohne Airline oder Konto; ein gelöschter Bericht verschwindet auch hier. Idee von AeRodri.
+  Ablauf. Ganz ohne Airline oder Konto. Testflüge lassen sich direkt im Logbuch löschen. Idee von AeRodri.
 
 ## 0.9.0-beta.7 – Sicherer beenden, automatische Sicherung, aufgeräumte Einstellungen
 

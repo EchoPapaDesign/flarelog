@@ -1048,7 +1048,7 @@ t.Test("Logbuch: liest gespeicherte Berichte, neueste zuerst, mit Summen", () =>
         };
         ReportWriter.Save(Rep(t0.AddDays(-2), "EDDF", "EGLL", 70, -150, true), dir);
         ReportWriter.Save(Rep(t0, "LEBB", "LEAS", 36, -350, true), dir);
-        ReportWriter.Save(Rep(t0.AddDays(-1), "EDDH", "EDDH", 20, null, false), dir);
+        ReportWriter.Save(Rep(t0.AddDays(-1), "EDDH", "EDDH", 20, 0, false), dir);   // 0 fpm = nicht gemessen
         File.WriteAllText(Path.Combine(dir, "fremd.json"), "{\"irgendwas\": 1}");
         File.WriteAllText(Path.Combine(dir, "kaputt.json"), "{ nicht json");
 
@@ -1057,11 +1057,13 @@ t.Test("Logbuch: liest gespeicherte Berichte, neueste zuerst, mit Summen", () =>
         t.Equal("LEBB", list[0].Origin);
         t.Equal("EDDH", list[1].Origin);
         t.True(!list[1].Complete, "Teilbericht erkannt");
+        t.True(list[1].LandingRateFpm is null && list[1].LandingRating is null, "0 fpm ausgeblendet");
         var tot = Logbook.Totals(list);
         t.Equal(3, tot.Flights);
         t.Equal(126.0, tot.AirMin);
         t.Equal(5, tot.Airports);
         t.Equal(-250.0, tot.AvgLandingRateFpm!.Value);
+        t.Equal(3, tot.BlockFlights);
 
         var one = Logbook.LoadReport(dir, list[0].Id);
         t.True(one is not null && one.Track.Count == 2, "Einzelflug mit Spur");
@@ -1070,6 +1072,10 @@ t.Test("Logbuch: liest gespeicherte Berichte, neueste zuerst, mit Summen", () =>
 
         File.Delete(Path.Combine(dir, list[2].Id + ".json"));
         t.Equal(2, Logbook.Load(dir).Count);
+        t.True(Logbook.Delete(dir, list[1].Id), "über das Logbuch gelöscht");
+        t.True(!File.Exists(Path.Combine(dir, list[1].Id + ".txt")), "Textbericht mit gelöscht");
+        t.True(!Logbook.Delete(dir, "../" + list[0].Id), "Löschen außerhalb abgelehnt");
+        t.Equal(1, Logbook.Load(dir).Count);
         t.Equal(0, Logbook.Load(Path.Combine(dir, "gibtsnicht")).Count);
     }
     finally
