@@ -16,6 +16,8 @@ namespace AeroflyAcars.Runtime;
 /// POST /api/finish        → Bericht jetzt speichern
 /// POST /api/newflight     → neuen Flug beginnen
 /// POST /api/open-reports  → Berichtsordner im Explorer öffnen
+/// POST /api/logbook       → Logbuch: alle gespeicherten Flüge mit Summen
+/// POST /api/logbook/flight → ein Flug aus dem Logbuch mit Spur und Ablauf ({ id })
 /// POST /api/voice-test    → Probeansage
 /// POST /api/cabin-test    → Kabinenansage zur Probe (Begrüßung)
 /// POST /api/simbrief-clear → geladenen SimBrief-Plan verwerfen
@@ -160,6 +162,8 @@ public sealed class LiveMapServer : IDisposable
                 "/api/finish" => _engine.FinishFlight(),
                 "/api/newflight" => _engine.NewFlight(),
                 "/api/open-reports" => _engine.OpenReportFolder(),
+                "/api/logbook" => _engine.LogbookList(),
+                "/api/logbook/flight" => _engine.LogbookFlight(JsonSerializer.Deserialize<LogbookRequest>(json, Json)?.Id),
                 "/api/voice-test" => _engine.VoiceTest(),
                 "/api/cabin-test" => _engine.CabinTest(),
                 "/api/simbrief-clear" => _engine.ClearSimBriefPlan(),

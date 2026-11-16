@@ -1033,6 +1033,51 @@ t.Test("Im Programm eingebettet: Änderungslisten (de/en) und Kabinenansagen", (
         t.True(names.Contains("Flarelog.Sounds." + cue), cue);
 });
 
+t.Test("Logbuch: liest gespeicherte Berichte, neueste zuerst, mit Summen", () =>
+{
+    var dir = Path.Combine(Path.GetTempPath(), "flarelog-logbook-" + Guid.NewGuid().ToString("N"));
+    try
+    {
+        var t0 = new DateTimeOffset(2026, 11, 14, 7, 30, 0, TimeSpan.Zero);
+        FlightReport Rep(DateTimeOffset off, string o, string d, double air, double? rate, bool complete) => new()
+        {
+            CreatedUtc = off.AddHours(1), Complete = complete, Origin = o, Destination = d, Aircraft = "A20N",
+            BlockOffUtc = off, AirTime = TimeSpan.FromMinutes(air), BlockTime = TimeSpan.FromMinutes(air + 15),
+            DistanceFlownNm = air * 4, LandingRateFpm = rate, LandingRating = rate is null ? null : "Good",
+            Track = { new TrackPoint(off, 43.3, -2.9, 150, 0, 0), new TrackPoint(off.AddMinutes(30), 43.5, -6.0, 400, 120, -700) },
+        };
+        ReportWriter.Save(Rep(t0.AddDays(-2), "EDDF", "EGLL", 70, -150, true), dir);
+        ReportWriter.Save(Rep(t0, "LEBB", "LEAS", 36, -350, true), dir);
+        ReportWriter.Save(Rep(t0.AddDays(-1), "EDDH", "EDDH", 20, null, false), dir);
+        File.WriteAllText(Path.Combine(dir, "fremd.json"), "{\"irgendwas\": 1}");
+        File.WriteAllText(Path.Combine(dir, "kaputt.json"), "{ nicht json");
+
+        var list = Logbook.Load(dir);
+        t.Equal(3, list.Count);
+        t.Equal("LEBB", list[0].Origin);
+        t.Equal("EDDH", list[1].Origin);
+        t.True(!list[1].Complete, "Teilbericht erkannt");
+        var tot = Logbook.Totals(list);
+        t.Equal(3, tot.Flights);
+        t.Equal(126.0, tot.AirMin);
+        t.Equal(5, tot.Airports);
+        t.Equal(-250.0, tot.AvgLandingRateFpm!.Value);
+
+        var one = Logbook.LoadReport(dir, list[0].Id);
+        t.True(one is not null && one.Track.Count == 2, "Einzelflug mit Spur");
+        t.True(Logbook.LoadReport(dir, "../" + list[0].Id) is null, "Pfad außerhalb abgelehnt");
+        t.True(Logbook.LoadReport(dir, null) is null, "ohne Kennung");
+
+        File.Delete(Path.Combine(dir, list[2].Id + ".json"));
+        t.Equal(2, Logbook.Load(dir).Count);
+        t.Equal(0, Logbook.Load(Path.Combine(dir, "gibtsnicht")).Count);
+    }
+    finally
+    {
+        try { Directory.Delete(dir, true); } catch (IOException) { }
+    }
+});
+
 t.Test("Kabinenansagen: aktuelles Soundpack gilt nicht als alte Fassung (sonst Dauer-Austausch)", () =>
 {
     var asm = typeof(AeroflyAcars.Runtime.CabinAnnouncer).Assembly;

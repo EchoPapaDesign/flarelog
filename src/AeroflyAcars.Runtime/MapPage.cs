@@ -221,6 +221,32 @@ public static class MapPage
   .booking .suffix { color: var(--dim); font-weight: 400; font-size: 12px; margin-left: 6px; }
   #bookingTag { color: var(--accent); font-size: 12px; border: 1px solid var(--accent); border-radius: 4px; padding: 0 6px; display: none; }
 
+  /* Logbuch: Liste mit Summen; ein Flug öffnet Karte (links) und Daten (rechts) */
+  .lb > * { max-width: 760px; }
+  .lb-totals { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px; }
+  .lb-totals div { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+  .lb-totals label { display: block; font-size: 10px; letter-spacing: .06em; color: var(--muted); text-transform: uppercase;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-totals b { font-size: 16px; white-space: nowrap; }
+  .booking .l1 .lb-date { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .lb-part { color: var(--warn); font-size: 11px; border: 1px solid rgba(242,180,60,.5); border-radius: 3px; padding: 0 4px; margin-left: 6px; font-weight: 600; }
+  .lb-detail { position: absolute; inset: 0; background: var(--panel); display: flex; flex-direction: column; }
+  .lb-head { height: 52px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line);
+    white-space: nowrap; overflow: hidden; }
+  .lb-head b { font-size: 15px; }
+  .lb-sub { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+  .lb-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; }
+  #lbMap { position: relative; min-height: 0; background: #0b0d10; }
+  .lb-side { border-left: 1px solid var(--line); padding: 16px 18px; overflow-y: auto; }
+  .lb-side .sum { grid-template-columns: 1fr 1fr; }
+  .lb-side .sum b { font-size: 14px; }
+  #lbdPhases .ev { padding: 5px 0 5px 14px; }
+  #lbdPhases .ev.phase::before { top: 11px; }
+  @media (max-width: 1180px) {
+    .lb-totals { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .lb-body { grid-template-columns: minmax(0, 1fr) 250px; }
+  }
+
   ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
   /* Schmale Fenster (ab 1.000 px): rechte Spalte schmaler, Werte auf zwei Zeilen statt abgeschnitten.
      Steht am Ende, damit es die Grundregeln oben überschreibt. */
@@ -240,6 +266,9 @@ public static class MapPage
     <div class="nav active" id="navFlight" title="Flight Tracking" style="cursor:pointer">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
     </div>
+    <button class="nav" id="navLogbook" title="Logbuch: alle bisherigen Flüge">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7M9 11h5"/></svg>
+    </button>
     <div class="bottom">
       <button class="nav" id="navAirline" title="Airline (Buchungen)">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
@@ -493,6 +522,43 @@ public static class MapPage
     <div class="hint" style="margin-top:12px">Quelle: Aviation Weather Center (aviationweather.gov). Nur zur Information für die Simulation.</div>
   </div>
 </div>
+<div id="logbookOverlay" class="overlay">
+  <div class="sheet lb" id="lbList">
+    <h3>Logbuch <button class="btn" id="btnLbClose">Schließen</button></h3>
+    <div class="lb-totals">
+      <div><label>Flüge</label><b id="lbFlights" class="num">–</b></div>
+      <div><label>Flugzeit</label><b id="lbAir" class="num">–</b></div>
+      <div><label>Blockzeit</label><b id="lbBlock" class="num">–</b></div>
+      <div><label>Distanz</label><b id="lbDist" class="num">–</b></div>
+      <div><label>Flughäfen</label><b id="lbApts" class="num">–</b></div>
+      <div><label>Ø Landerate</label><b id="lbRate" class="num">–</b></div>
+    </div>
+    <div class="field">
+      <div class="row"><input type="text" id="lbFilter" placeholder="Suchen: ICAO, Flugnummer, Flugzeug" autocomplete="off" spellcheck="false"></div>
+    </div>
+    <div id="lbRows" class="bookings"></div>
+    <div class="hint" style="margin-top:14px;word-break:normal">Das Logbuch zeigt alle Flugberichte aus dem Berichtsordner – ganz ohne Airline oder Konto.
+      Ein gelöschter Bericht verschwindet auch hier.</div>
+  </div>
+  <div class="lb-detail" id="lbDetail" style="display:none">
+    <div class="lb-head">
+      <button class="btn" id="btnLbBack">← Alle Flüge</button>
+      <b id="lbdTitle"></b>
+      <span id="lbdDate" class="lb-sub"></span>
+      <span class="spacer"></span>
+      <button class="btn" id="btnLbClose2">Schließen</button>
+    </div>
+    <div class="lb-body">
+      <div id="lbMap"></div>
+      <div class="lb-side">
+        <div class="sum" id="lbdSum"></div>
+        <div id="lbdRoute" class="hint" style="margin:-8px 0 14px;word-break:normal"></div>
+        <div class="field"><label>Ablauf</label><div id="lbdPhases"></div></div>
+        <div id="lbdNotes"></div>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="newsOverlay" class="overlay">
   <div class="sheet news">
     <h3>Was ist neu? <button class="btn" id="btnNewsClose">Schließen</button></h3>
@@ -558,6 +624,27 @@ const EN = {
 "Zeit und Wetter in Aerofly": "Time and weather in Aerofly",
 "Herunterladen": "Download",
 "Version {0} ist verfügbar.": "Version {0} is available.",
+"Logbuch: alle bisherigen Flüge": "Logbook: all your flights",
+"Logbuch": "Logbook",
+"Flüge": "Flights",
+"Flughäfen": "Airports",
+"Ø Landerate": "Ø landing",
+"Distanz": "Distance",
+"Suchen: ICAO, Flugnummer, Flugzeug": "Search: ICAO, flight number, aircraft",
+"Das Logbuch zeigt alle Flugberichte aus dem Berichtsordner – ganz ohne Airline oder Konto. Ein gelöschter Bericht verschwindet auch hier.": "The logbook shows all flight reports from the report folder – no airline or account needed. A deleted report disappears here too.",
+"← Alle Flüge": "← All flights",
+"Noch keine Flüge. Nach jedem Flug erscheint er hier von selbst.": "No flights yet. Every flight appears here automatically.",
+"Kein Flug passt zur Suche.": "No flight matches the search.",
+"Teilbericht": "partial",
+"Flugzeit {0}": "air time {0}",
+"Abflug": "Departure",
+"Ziel": "Destination",
+"Max. Höhe": "Max. altitude",
+"Bahnen": "Runways",
+"Bewertung": "Rating",
+"Durchstarten": "Go-arounds",
+"Hinweise": "Notes",
+"Ablauf": "Flight log",
 "Version {0} ist verfügbar – Details unter Einstellungen.": "Version {0} is available – details under Settings.",
 "Kabinenansagen": "Cabin announcements",
 "Ansagen in den Flugphasen abspielen": "Play announcements during the flight phases",
@@ -1218,11 +1305,157 @@ setInterval(() => {
   $('air').textContent = fmtDur(airBase.sec + extra);
 }, 250);
 
+// ---------- Logbuch ----------
+let lbEntries = [], lbMap = null, lbLayer = null;
+async function api(path, body) {
+  try {
+    const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Acars': '1' },
+      body: JSON.stringify(body ?? {}) });
+    return await r.json();
+  } catch (e) { return { ok: false, message: t('Keine Verbindung zu Flarelog') }; }
+}
+function fmtHm(min) {
+  if (min == null) return '–';
+  const m = Math.round(min);
+  return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+}
+function fmtDate(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString(LANG === 'en' ? 'en-GB' : 'de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
+    + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) + ' UTC';
+}
+function lbRoute(e) { return `${e.origin ?? '····'} → ${e.destination ?? '····'}`; }
+function renderLogbook() {
+  const q = $('lbFilter').value.trim().toUpperCase();
+  const list = q ? lbEntries.filter(e => [e.origin, e.destination, e.flight, e.aircraft, e.originName, e.destinationName]
+    .some(v => (v || '').toUpperCase().includes(q))) : lbEntries;
+  const box = $('lbRows');
+  box.innerHTML = '';
+  if (lbEntries.length === 0) {
+    box.innerHTML = '<div class="hint">' + t('Noch keine Flüge. Nach jedem Flug erscheint er hier von selbst.') + '</div>';
+    return;
+  }
+  if (list.length === 0) { box.innerHTML = '<div class="hint">' + t('Kein Flug passt zur Suche.') + '</div>'; return; }
+  list.forEach(e => {
+    const el = document.createElement('div'); el.className = 'booking';
+    const l1 = document.createElement('div'); l1.className = 'l1';
+    const a = document.createElement('span'); a.textContent = lbRoute(e);
+    if (!e.complete) { const p = document.createElement('span'); p.className = 'lb-part'; p.textContent = t('Teilbericht'); a.appendChild(p); }
+    const d = document.createElement('span'); d.className = 'lb-date'; d.textContent = fmtDate(e.date);
+    l1.append(a, d);
+    const l2 = document.createElement('div'); l2.className = 'l2';
+    const parts = [];
+    if (e.flight) parts.push(e.flight);
+    if (e.aircraft) parts.push(e.aircraft);
+    if (e.airMin != null) parts.push(t('Flugzeit {0}', fmtHm(e.airMin)));
+    if (e.distanceNm != null) parts.push(`${de(e.distanceNm)} nm`);
+    l2.textContent = parts.join(' · ');
+    if (e.landingRateFpm != null) {
+      const r = document.createElement('span'); r.className = e.landingRating || '';
+      r.textContent = (parts.length ? ' · ' : '') + `${de(e.landingRateFpm)} fpm`;
+      l2.appendChild(r);
+    }
+    el.append(l1, l2);
+    el.onclick = () => openFlight(e.id);
+    box.appendChild(el);
+  });
+}
+async function openLogbook() {
+  $('lbDetail').style.display = 'none';
+  $('lbList').style.display = 'block';
+  $('logbookOverlay').classList.add('show');
+  const res = await api('/api/logbook');
+  if (!res.ok) { snack(res.message, false); return; }
+  lbEntries = res.data.entries;
+  const tt = res.data.totals;
+  $('lbFlights').textContent = de(tt.flights);
+  $('lbAir').textContent = fmtHm(tt.airMin);
+  $('lbBlock').textContent = fmtHm(tt.blockMin);
+  $('lbDist').textContent = `${de(tt.distanceNm)} nm`;
+  $('lbApts').textContent = de(tt.airports);
+  $('lbRate').textContent = tt.avgLandingRateFpm != null ? `${de(tt.avgLandingRateFpm)} fpm` : '–';
+  renderLogbook();
+}
+async function openFlight(id) {
+  const res = await api('/api/logbook/flight', { id });
+  if (!res.ok) { snack(res.message, false); return; }
+  const f = res.data, e = f.entry;
+  $('lbList').style.display = 'none';
+  $('lbDetail').style.display = 'flex';
+  $('lbdTitle').textContent = lbRoute(e) + (e.flight ? ` · ${e.flight}` : '');
+  $('lbdDate').textContent = fmtDate(e.date) + (e.aircraft ? ` · ${e.aircraft}` : '');
+  const rows = [
+    [t('Abflug'), [e.origin, e.originName].filter(Boolean).join(' ') || '–'],
+    [t('Ziel'), [e.destination, e.destinationName].filter(Boolean).join(' ') || '–'],
+    ['Block off / on (UTC)', `${f.blockOff ?? '–'} – ${f.blockOn ?? '–'}`],
+    [t('Blockzeit'), fmtHm(e.blockMin)],
+    [t('Flugzeit'), fmtHm(e.airMin)],
+    [t('Distanz'), e.distanceNm != null ? `${de(e.distanceNm)} nm` : '–'],
+    [t('Max. Höhe'), f.maxAltFt != null ? fmtAlt(f.maxAltFt) : '–'],
+    [t('Bahnen'), `${f.depRwy ?? '–'} → ${f.arrRwy ?? '–'}`],
+    [t('Landerate'), e.landingRateFpm != null ? `${de(e.landingRateFpm)} fpm` : '–', e.landingRating],
+    [t('Bewertung'), e.landingRating ?? '–', e.landingRating],
+    ['Groundspeed', f.touchdownGsKt != null ? `${de(f.touchdownGsKt)} kt` : '–'],
+    ['Rollout', f.rolloutM != null ? `${de(f.rolloutM)} m` : '–'],
+    ['Bounces', f.bounces != null ? de(f.bounces) : '–'],
+    [t('Durchstarten'), de(f.goArounds ?? 0)],
+  ];
+  const sum = $('lbdSum'); sum.innerHTML = '';
+  rows.forEach(([k, v, cls]) => {
+    const d = document.createElement('div');
+    const l = document.createElement('label'); l.textContent = k;
+    const b = document.createElement('b'); b.textContent = v; if (cls) b.className = cls;
+    d.append(l, b); sum.appendChild(d);
+  });
+  $('lbdRoute').textContent = f.route ? 'Route: ' + f.route : '';
+  const ph = $('lbdPhases');
+  ph.innerHTML = f.phases.length ? '' : '<div class="hint">–</div>';
+  f.phases.forEach(p => {
+    const d = document.createElement('div'); d.className = 'ev phase';
+    const tm = document.createElement('time'); tm.textContent = p.time + ' UTC';
+    const s = document.createElement('span'); s.textContent = p.text;
+    d.append(tm, s); ph.appendChild(d);
+  });
+  const nb = $('lbdNotes'); nb.innerHTML = '';
+  if (f.notes.length) {
+    const fl = document.createElement('div'); fl.className = 'field';
+    const l = document.createElement('label'); l.textContent = t('Hinweise');
+    fl.appendChild(l);
+    f.notes.forEach(n => { const h = document.createElement('div'); h.className = 'hint'; h.style.wordBreak = 'normal'; h.textContent = n; fl.appendChild(h); });
+    nb.appendChild(fl);
+  }
+  if (!lbMap) {
+    lbMap = L.map('lbMap', { zoomControl: true, attributionControl: true }).setView([51, 10], 5);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, className: 'dark-tiles',
+      attribution: '&copy; OpenStreetMap-Mitwirkende' }).addTo(lbMap);
+  }
+  lbMap.invalidateSize();
+  if (lbLayer) lbLayer.remove();
+  lbLayer = L.layerGroup().addTo(lbMap);
+  const pts = f.track.map(p => [p[0], p[1]]);
+  if (pts.length > 1) {
+    const line = L.polyline(pts, { color: '#3fd68a', weight: 3, opacity: .9 }).addTo(lbLayer);
+    [[pts[0], e.origin], [pts[pts.length - 1], e.destination]].forEach(([pos, name]) => {
+      const m = L.circleMarker(pos, { radius: 6, color: '#111', fillColor: '#f05a5a', fillOpacity: 1, weight: 1.5 }).addTo(lbLayer);
+      if (name) m.bindTooltip(name, { permanent: true, direction: 'bottom', className: 'wpt-label apt' });
+    });
+    lbMap.fitBounds(line.getBounds(), { padding: [40, 40], maxZoom: 13 });
+  } else if (pts.length === 1) { lbMap.setView(pts[0], 12); }
+  setTimeout(() => lbMap.invalidateSize(), 50);
+}
+function closeLogbook() { $('logbookOverlay').classList.remove('show'); }
+$('navLogbook').onclick = openLogbook;
+$('btnLbClose').onclick = closeLogbook;
+$('btnLbClose2').onclick = closeLogbook;
+$('btnLbBack').onclick = () => { $('lbDetail').style.display = 'none'; $('lbList').style.display = 'block'; };
+$('lbFilter').oninput = renderLogbook;
+
 applyLang('__LANG__');   // vom Server eingesetzt – kein Umschalten nach dem Laden
 // Ein Bereich pro Symbol: Ein Klick links schließt die offene Ansicht und öffnet die neue; das Flugzeug-Symbol
 // führt zurück zur Karte. Das markierte Symbol zeigt, wo man gerade ist.
 const views = { overlay: 'navSettings', airlineOverlay: 'navAirline', weatherOverlay: 'navWeather',
-  submitOverlay: 'navFlight', newsOverlay: 'navSettings' };
+  submitOverlay: 'navFlight', newsOverlay: 'navSettings', logbookOverlay: 'navLogbook' };
 document.querySelectorAll('.rail .nav').forEach(n => n.addEventListener('click', () => {
   Object.keys(views).forEach(id => $(id).classList.remove('show'));
   // sofort markieren, ohne Zwischenzustand
