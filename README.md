@@ -37,6 +37,7 @@ Flarelog ist kostenlos, läuft komplett auf deinem PC und braucht keine Installa
 **Kabinenansagen**
 - Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug und nach der Landung – automatisch zur Flugphase
 - Soundpack von AeRodri (RealFlightOps); eigene Ansagen lassen sich in `Dokumente/Flarelog/Sounds` ablegen
+- 16 zusätzliche Kabinenbesatzungen aus aller Welt, ebenfalls von AeRodri – in den Einstellungen auswählen, Flarelog lädt sie herunter
 
 **Planen und Wetter**
 - SimBrief: letzten Flugplan laden, Route auf der Karte, Übersicht mit SID, Strecke und STAR

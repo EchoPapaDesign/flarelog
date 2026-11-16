@@ -1182,6 +1182,37 @@ t.Test("Landerate: zählt das Sinken direkt vor dem Aufsetzen, nicht das vor dem
     t.Range(tracker.LandingRateFpm!.Value, -280, -100, "Landerate beim Kontakt");
 });
 
+t.Test("Kabinenbesatzungen: Namen und Entpacken eines Packs (auch aus Unterordnern)", () =>
+{
+    t.Equal("United Kingdom", AeroflyAcars.Runtime.SoundPacks.DisplayName("English_UnitedKingdom"));
+    t.Equal("New Zealand", AeroflyAcars.Runtime.SoundPacks.DisplayName("English_NewZealand"));
+    t.Equal("Hong Kong", AeroflyAcars.Runtime.SoundPacks.DisplayName("English_HongKong"));
+    t.Equal("USA", AeroflyAcars.Runtime.SoundPacks.DisplayName("English_USA"));
+    t.True(!AeroflyAcars.Runtime.SoundPacks.ValidId("../x"), "Pfad abgelehnt");
+
+    var dir = Path.Combine(Path.GetTempPath(), "flarelog-pack-" + Guid.NewGuid().ToString("N"));
+    try
+    {
+        Directory.CreateDirectory(dir);
+        var zipPath = Path.Combine(dir, "English_Test.zip");
+        using (var zip = System.IO.Compression.ZipFile.Open(zipPath, System.IO.Compression.ZipArchiveMode.Create))
+        {
+            foreach (var cue in CabinCues.All)
+                using (var w = new StreamWriter(zip.CreateEntry("English_Test/" + cue.ToLowerInvariant()).Open())) w.Write("RIFF");
+            using (var w = new StreamWriter(zip.CreateEntry("__MACOSX/English_Test/._Welcome_Onboard.wav").Open())) w.Write("x");
+            using (var w = new StreamWriter(zip.CreateEntry("English_Test/readme.txt").Open())) w.Write("x");
+        }
+        var target = Path.Combine(dir, "pack");
+        t.Equal(CabinCues.All.Count, AeroflyAcars.Runtime.SoundPacks.ExtractPack(zipPath, target));
+        foreach (var cue in CabinCues.All) t.True(File.Exists(Path.Combine(target, cue)), cue);
+        t.Equal(CabinCues.All.Count, Directory.GetFiles(target).Length);
+    }
+    finally
+    {
+        try { Directory.Delete(dir, true); } catch (IOException) { }
+    }
+});
+
 t.Test("Anflug unterteilt: Initial approach bei FL100, Approach bei 5.000 ft über Platz", () =>
 {
     var tracker = new FlightTracker();

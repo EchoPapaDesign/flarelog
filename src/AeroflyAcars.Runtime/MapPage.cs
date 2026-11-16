@@ -193,6 +193,7 @@ public static class MapPage
   .field input[type=text]:focus { outline: none; border-color: var(--accent); }
   .check { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: var(--text); cursor: pointer; }
   .hint { color: var(--dim); font-size: 12px; margin-top: 6px; word-break: break-all; }
+  .hint a { color: var(--accent); }
   .sheet hr { border: 0; border-top: 1px solid var(--line); margin: 20px 0; }
 
   /* Eigene Rückfrage statt des Browser-Fensters: sieht überall gleich aus, ohne „localhost:8080 enthält“ */
@@ -420,10 +421,16 @@ public static class MapPage
     <div class="field">
       <label>Kabinenansagen</label>
       <label class="check"><input type="checkbox" id="setCabin"> Ansagen in den Flugphasen abspielen</label>
+      <div class="row" style="margin-top:10px;align-items:center"><span class="hint" style="margin:0;white-space:nowrap">Kabinenbesatzung</span>
+        <select id="setPack"><option value="">Standard</option></select></div>
+      <div class="hint" id="packInfo" style="word-break:normal"></div>
       <div class="row" style="margin-top:10px"><button class="btn" id="btnCabinTest">Ansage testen</button>
         <button class="btn" id="btnSoundFolder">Sound-Ordner öffnen</button>
         <button class="btn" id="btnSoundRestore">Standard wiederherstellen</button></div>
-      <div class="hint">Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung. Soundpack von AeRodri (RealFlightOps).</div>
+      <div class="hint" style="word-break:normal">Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung.
+        Alle Ansagen – das Standard-Pack und die 16 Kabinenbesatzungen aus aller Welt – hat AeRodri
+        (<a href="https://www.youtube.com/@RealFlightOpsOfficial" target="_blank" rel="noopener">RealFlightOps</a>) für Flarelog
+        aufgenommen und bearbeitet. Vielen Dank!</div>
       <div class="hint">Alle Ansagen liegen als WAV-Dateien in diesem Ordner. Eine Datei durch eine eigene mit genau
         demselben Namen ersetzen – „Standard wiederherstellen“ holt die Originale zurück.</div>
       <div class="hint" id="setSoundFolder"></div>
@@ -677,6 +684,13 @@ const EN = {
 "Durchstarten": "Go-arounds",
 "Hinweise": "Notes",
 "Flug löschen": "Delete flight",
+"Kabinenbesatzung": "Cabin crew",
+"Standard (AeRodri 1.1)": "Default (AeRodri 1.1)",
+"herunterladen": "download",
+"Zusätzliche Besatzungen erscheinen hier, sobald eine Internetverbindung besteht.": "Additional crews appear here once you are online.",
+"„{0}“ wird heruntergeladen …": "Downloading “{0}” …",
+"Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung. Alle Ansagen – das Standard-Pack und die 16 Kabinenbesatzungen aus aller Welt – hat AeRodri (": "Welcome, safety briefing, climb, cruise, descent and after landing. All announcements – the default pack and the 16 cabin crews from around the world – were recorded and produced for Flarelog by AeRodri (",
+") für Flarelog aufgenommen und bearbeitet. Vielen Dank!": "). Thank you!",
 "Aufzeichnung jetzt beginnen": "Start recording now",
 "Start": "Start",
 "Flugaufzeichnung": "Flight recording",
@@ -941,6 +955,7 @@ function openSettings() {
     $('setSbAuto').checked = st.loadSimBriefOnStart;
     $('setVoice').checked = st.voice;
     $('setCabin').checked = st.cabin;
+    loadPacks();
     $('setManualStart').checked = st.manualStart;
     $('setAutoFinish').checked = st.autoFinish;
     $('setSoundFolder').textContent = st.soundFolder;
@@ -1019,6 +1034,33 @@ $('setCabin').onchange = () => post('/api/settings', { cabinAnnouncements: $('se
 $('setManualStart').onchange = () => post('/api/settings', { manualStart: $('setManualStart').checked });
 $('setAutoFinish').onchange = () => post('/api/settings', { autoFinish: $('setAutoFinish').checked });
 $('btnStart').onclick = () => post('/api/start');
+// Kabinenbesatzungen: Standard plus Zusatz-Packs von AeRodri; nicht installierte werden bei Auswahl geladen.
+let packList = [];
+async function loadPacks() {
+  const res = await api('/api/soundpacks');
+  if (!res.ok) return;
+  packList = res.data.packs;
+  const sel = $('setPack');
+  sel.innerHTML = '';
+  const std = document.createElement('option'); std.value = ''; std.textContent = t('Standard (AeRodri 1.1)'); sel.appendChild(std);
+  packList.forEach(p => {
+    const o = document.createElement('option'); o.value = p.id;
+    o.textContent = p.name + (p.installed ? '' : ` – ${t('herunterladen')}${p.sizeBytes ? ' (' + Math.round(p.sizeBytes / 1048576) + ' MB)' : ''}`);
+    sel.appendChild(o);
+  });
+  sel.value = res.data.active || '';
+  $('packInfo').textContent = packList.length ? '' : t('Zusätzliche Besatzungen erscheinen hier, sobald eine Internetverbindung besteht.');
+}
+$('setPack').onchange = async () => {
+  const id = $('setPack').value;
+  const p = packList.find(x => x.id === id);
+  $('setPack').disabled = true;
+  if (p && !p.installed) { $('packInfo').textContent = t('„{0}“ wird heruntergeladen …', p.name); snack(t('„{0}“ wird heruntergeladen …', p.name)); }
+  const res = await post('/api/soundpack', { id });
+  $('setPack').disabled = false;
+  await loadPacks();
+  if (res.ok && id) post('/api/cabin-test');
+};
 $('setSbAuto').onchange = () => post('/api/settings', { loadSimBriefOnStart: $('setSbAuto').checked });
 $('setSb').onchange = () => post('/api/settings', { simBriefUser: $('setSb').value });
 $('btnSbLoad').onclick = async () => {

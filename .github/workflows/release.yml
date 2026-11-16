@@ -13,6 +13,8 @@ permissions:
 
 jobs:
   release:
+    # Nur Programmversionen (v…) bauen – das Release „soundpacks“ enthält nur die Zusatz-Kabinenbesatzungen.
+    if: startsWith(github.event.release.tag_name, 'v')
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,6 +55,7 @@ jobs:
           files: publish/Flarelog.exe
 
   mac:
+    if: startsWith(github.event.release.tag_name, 'v')
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4

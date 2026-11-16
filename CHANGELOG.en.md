@@ -2,6 +2,10 @@
 
 ## 0.9.0-beta.8 – Logbook, AeRodri's open points, report folder, window position
 
+- **16 new cabin crews by AeRodri (RealFlightOps):** Australia, Canada, Hong Kong, India, Ireland, Japan, Kenya,
+  New Zealand, Nigeria, Philippines, Singapore, South Africa, Spain, Tanzania, United Kingdom and USA – all recorded and
+  produced by AeRodri himself. Settings → Cabin announcements → Cabin crew; Flarelog downloads the chosen crew once
+  (about 30 MB each). Thank you, AeRodri!
 - **Landing callout with sign:** "Touchdown with minus 356 feet per minute"
 - **More accurate landing rate:** it now uses the sink rate in the last second before touchdown. Before, the least
   favourable of several values counted, including a 2-second average that still contained the sink before the flare –

@@ -18,6 +18,7 @@ public sealed record SettingsUpdate(string? SimBriefUser, bool? Voice, bool? Loa
 public sealed record SimBriefRequest(string? User);
 public sealed record WeatherRequest(string? Icao);
 public sealed record LogbookRequest(string? Id);
+public sealed record SoundPackRequest(string? Id);
 public sealed record ReportFolderRequest(string? Path, bool Move = true);
 public sealed record ConditionsRequest(bool? RealTime, bool? RealWeather, string? WeatherIcao = null);
 public sealed record AirlineConnectRequest(string? Url, string? ApiKey);
@@ -146,6 +147,7 @@ public sealed class AcarsEngine : IDisposable
         _server = StartServer();
         if (Settings.Voice) _speech = SpeechAnnouncer.Create();
         if (Settings.CabinAnnouncements) _cabin = new CabinAnnouncer();
+        CabinAnnouncer.ActivePack = Settings.SoundPack is { } pack && SoundPacks.IsInstalled(pack) ? pack : null;
         _ = Task.Run(CabinAnnouncer.EnsureUserFolder);
         _ = Task.Run(LoadInBackgroundAsync);
         _ = Task.Run(() => WatchAeroflyAsync(_cts.Token));
@@ -1291,6 +1293,57 @@ public sealed class AcarsEngine : IDisposable
         Settings.LastSeenVersion = AppInfo.Version;
         try { Settings.Save(); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         return new ActionResult(true, "");
+    }
+
+    private static readonly HttpClient SoundPackHttp = new() { Timeout = TimeSpan.FromMinutes(10) };
+    private int _packDownloading;
+
+    /// <summary>Kabinenbesatzungen: Standard plus die Zusatz-Packs von AeRodri (auf GitHub und installierte).</summary>
+    public async Task<ActionResult> SoundPackList()
+    {
+        var packs = await SoundPacks.ListAsync(SoundPackHttp).ConfigureAwait(false);
+        return new ActionResult(true, "", Data: new { packs, active = CabinAnnouncer.ActivePack });
+    }
+
+    /// <summary>Kabinenbesatzung wählen (null/leer = Standard). Nicht installierte Packs werden erst heruntergeladen.</summary>
+    public async Task<ActionResult> SelectSoundPack(string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            CabinAnnouncer.ActivePack = null;
+            Settings.SoundPack = null;
+            SaveSettingsQuietly();
+            return new ActionResult(true, L("Kabinenbesatzung: Standard (AeRodri 1.1).", "Cabin crew: default (AeRodri 1.1)."));
+        }
+        if (!SoundPacks.ValidId(id)) return new ActionResult(false, L("Unbekannte Kabinenbesatzung.", "Unknown cabin crew."));
+        var name = SoundPacks.DisplayName(id);
+        if (!SoundPacks.IsInstalled(id))
+        {
+            if (Interlocked.Exchange(ref _packDownloading, 1) == 1)
+                return new ActionResult(false, L("Es wird bereits ein Soundpack heruntergeladen.", "A soundpack is already downloading."));
+            try
+            {
+                await SoundPacks.InstallAsync(id, SoundPackHttp).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidDataException or UnauthorizedAccessException)
+            {
+                return new ActionResult(false, L($"„{name}“ konnte nicht geladen werden: ", $"Could not download “{name}”: ") + ex.Message);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _packDownloading, 0);
+            }
+        }
+        _cabin?.Stop();
+        CabinAnnouncer.ActivePack = id;
+        Settings.SoundPack = id;
+        SaveSettingsQuietly();
+        return new ActionResult(true, L($"Kabinenbesatzung: {name} – Soundpack von {SoundPacks.Credit}.", $"Cabin crew: {name} – soundpack by {SoundPacks.Credit}."));
+    }
+
+    private void SaveSettingsQuietly()
+    {
+        try { Settings.Save(); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 
     /// <summary>Probe: spielt die Begrüßung.</summary>

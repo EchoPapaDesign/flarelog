@@ -2,6 +2,10 @@
 
 ## 0.9.0-beta.8 – Logbuch, AeRodris offene Punkte, Berichtsordner, Fensterposition
 
+- **16 neue Kabinenbesatzungen von AeRodri (RealFlightOps):** Australia, Canada, Hong Kong, India, Ireland, Japan,
+  Kenya, New Zealand, Nigeria, Philippines, Singapore, South Africa, Spain, Tanzania, United Kingdom und USA – alle von
+  AeRodri selbst aufgenommen und bearbeitet. Einstellungen → Kabinenansagen → Kabinenbesatzung; Flarelog lädt die
+  gewählte Besatzung einmal herunter (je rund 30 MB). Vielen Dank, AeRodri!
 - **Landeansage mit Vorzeichen:** „Touchdown with minus 356 feet per minute“
 - **Landerate genauer:** Gezählt wird das Sinken in der letzten Sekunde vor dem Aufsetzen. Bisher galt der ungünstigste
   von mehreren Messwerten, darunter ein 2-s-Mittelwert mit dem Sinken vor dem Abfangen – Landungen wirkten zu hart.

@@ -25,6 +25,8 @@ public sealed class AcarsSettings
     public bool Voice { get; set; } = true;
     /// <summary>Kabinenansagen in den Flugphasen (Begrüßung, Sicherheitseinweisung, Steigflug …).</summary>
     public bool CabinAnnouncements { get; set; } = true;
+    /// <summary>Gewählte Kabinenbesatzung (Zusatz-Soundpack von AeRodri) oder null für das Standard-Pack.</summary>
+    public string? SoundPack { get; set; }
     /// <summary>Aufzeichnung erst mit dem Knopf „Start“ beginnen (sonst automatisch, sobald Aerofly Daten sendet).</summary>
     public bool ManualStart { get; set; }
     /// <summary>Flug bei Block on automatisch beenden und speichern (sonst erst mit „Beenden“).</summary>

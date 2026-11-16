@@ -23,6 +23,8 @@ namespace AeroflyAcars.Runtime;
 /// POST /api/logbook/delete → einen gespeicherten Flug löschen ({ id })
 /// POST /api/voice-test    → Probeansage
 /// POST /api/cabin-test    → Kabinenansage zur Probe (Begrüßung)
+/// POST /api/soundpacks   → Kabinenbesatzungen (Standard + Zusatz-Packs von AeRodri)
+/// POST /api/soundpack    → Kabinenbesatzung wählen, ggf. vorher herunterladen ({ id }, leer = Standard)
 /// POST /api/simbrief-clear → geladenen SimBrief-Plan verwerfen
 /// POST /api/open-sounds   → Ordner für eigene Kabinenansagen öffnen
 /// POST /api/changelog     → Änderungsliste („Was ist neu?“) in der eingestellten Sprache
@@ -173,6 +175,9 @@ public sealed class LiveMapServer : IDisposable
                 "/api/logbook/delete" => _engine.LogbookDelete(JsonSerializer.Deserialize<LogbookRequest>(json, Json)?.Id),
                 "/api/voice-test" => _engine.VoiceTest(),
                 "/api/cabin-test" => _engine.CabinTest(),
+                "/api/soundpacks" => await _engine.SoundPackList().ConfigureAwait(false),
+                "/api/soundpack" => await _engine.SelectSoundPack(
+                    JsonSerializer.Deserialize<SoundPackRequest>(json, Json)?.Id).ConfigureAwait(false),
                 "/api/simbrief-clear" => _engine.ClearSimBriefPlan(),
                 "/api/sounds-restore" => _engine.RestoreSounds(),
                 "/api/changelog" => _engine.Changelog(),
