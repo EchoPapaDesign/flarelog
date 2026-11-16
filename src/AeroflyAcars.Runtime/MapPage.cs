@@ -195,6 +195,16 @@ public static class MapPage
   .hint { color: var(--dim); font-size: 12px; margin-top: 6px; word-break: break-all; }
   .sheet hr { border: 0; border-top: 1px solid var(--line); margin: 20px 0; }
 
+  /* Eigene Rückfrage statt des Browser-Fensters: sieht überall gleich aus, ohne „localhost:8080 enthält“ */
+  .askbox { position: fixed; inset: 0; z-index: 4000; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; }
+  .askbox.show { display: flex; }
+  .askcard { width: min(440px, 90vw); background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+  .asktitle { font-size: 11px; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+  .asktext { font-size: 14px; line-height: 1.5; color: var(--text); margin-bottom: 18px; }
+  .askbtns { display: flex; justify-content: flex-end; gap: 8px; }
+  .askbtns .btn { padding: 7px 16px; }
+  .btn.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
   .snack { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); z-index: 3000; opacity: 0;
     transition: opacity .25s, transform .25s; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
     padding: 10px 16px; max-width: 70vw; pointer-events: none; }
@@ -567,6 +577,11 @@ public static class MapPage
     <div id="newsBody"></div>
   </div>
 </div>
+<div id="askBox" class="askbox"><div class="askcard" role="dialog" aria-modal="true">
+  <div class="asktitle">Flarelog</div>
+  <div id="askText" class="asktext"></div>
+  <div class="askbtns"><button class="btn" id="askNo">Abbrechen</button><button class="btn primary" id="askYes">OK</button></div>
+</div></div>
 <div id="snack" class="snack"></div>
 
 <script>
@@ -647,6 +662,11 @@ const EN = {
 "Durchstarten": "Go-arounds",
 "Hinweise": "Notes",
 "Flug löschen": "Delete flight",
+"Abbrechen": "Cancel",
+"Verwerfen": "Discard",
+"Zurücksetzen": "Reset",
+"Senden": "Send",
+"Löschen": "Delete",
 "Diesen Flug endgültig löschen? Der Bericht wird aus dem Berichtsordner entfernt.": "Delete this flight permanently? The report will be removed from the report folder.",
 "aus {0} Flügen": "from {0} flights",
 "sehr weich": "very soft",
@@ -848,6 +868,27 @@ function renderEvents(events) {
   if (atBottom) box.scrollTop = box.scrollHeight;
 }
 
+// Rückfrage im Flarelog-Fenster statt des Browser-Fensters. Enter bestätigt, Esc bricht ab.
+function ask(text, yes, danger = false) {
+  return new Promise(resolve => {
+    const box = $('askBox'), y = $('askYes'), n = $('askNo');
+    $('askText').textContent = text;
+    y.textContent = yes || 'OK';
+    y.className = 'btn ' + (danger ? 'danger' : 'primary');
+    n.textContent = t('Abbrechen');
+    const done = v => { box.classList.remove('show'); document.removeEventListener('keydown', key, true); resolve(v); };
+    const key = e => {
+      if (e.key === 'Escape') { e.preventDefault(); done(false); }
+      else if (e.key === 'Enter') { e.preventDefault(); done(true); }
+    };
+    y.onclick = () => done(true);
+    n.onclick = () => done(false);
+    box.onclick = e => { if (e.target === box) done(false); };
+    document.addEventListener('keydown', key, true);
+    box.classList.add('show');
+    (danger ? n : y).focus();
+  });
+}
 let snackTimer = null, lastState = null, quitting = false;
 function snack(text, ok = true) {
   const el = $('snack');
@@ -922,11 +963,11 @@ $('overlay').onclick = e => { if (e.target.id === 'overlay') $('overlay').classL
 $('btnFolder').onclick = () => post('/api/open-reports');
 $('btnVoiceTest').onclick = () => post('/api/voice-test');
 $('btnCabinTest').onclick = () => post('/api/cabin-test');
-$('btnSbClear').onclick = () => { if (confirm(t('Geladenen SimBrief-Plan verwerfen?'))) { resetMap(); post('/api/simbrief-clear'); } };
+$('btnSbClear').onclick = async () => { if (await ask(t('Geladenen SimBrief-Plan verwerfen?'), t('Verwerfen'))) { resetMap(); post('/api/simbrief-clear'); } };
 $('btnSoundFolder').onclick = () => post('/api/open-sounds');
-$('btnSoundRestore').onclick = () => { if (confirm(t('Alle Ansagen auf die mitgelieferten zurücksetzen? Eigene Dateien gleichen Namens werden ersetzt.'))) post('/api/sounds-restore'); };
+$('btnSoundRestore').onclick = async () => { if (await ask(t('Alle Ansagen auf die mitgelieferten zurücksetzen? Eigene Dateien gleichen Namens werden ersetzt.'), t('Zurücksetzen'), true)) post('/api/sounds-restore'); };
 $('btnQuit').onclick = async () => {
-  if (!confirm(t('Flarelog beenden?'))) return;
+  if (!(await ask(t('Flarelog beenden?'), t('Beenden'), true))) return;
   const res = await post('/api/quit');
   if (res.ok) {
     quitting = true;
@@ -946,7 +987,7 @@ $('btnSbLoad').onclick = async () => {
   $('btnSbLoad').disabled = false;
   if (res.ok) { $('overlay').classList.remove('show'); }
 };
-$('btnFinish').onclick = () => { if (confirm(t('Aufzeichnung beenden und Bericht jetzt speichern?'))) post('/api/finish'); };
+$('btnFinish').onclick = async () => { if (await ask(t('Aufzeichnung beenden und Bericht jetzt speichern?'), t('Beenden'))) post('/api/finish'); };
 $('btnNew').onclick = () => { resetMap(); post('/api/newflight'); };
 
 async function fetchWeather(icao) {
@@ -1127,7 +1168,7 @@ $('btnSubmitSend').onclick = async () => {
   const reg = $('suReg').value.trim();
   const id = reg ? '' : $('suAircraft').value;
   if (!id && !reg) { snack(t('Bitte ein Flugzeug auswählen oder ein Kennzeichen eingeben.'), false); return; }
-  if (!confirm(t('PIREP jetzt an die Airline senden?'))) return;
+  if (!(await ask(t('PIREP jetzt an die Airline senden?'), t('Senden')))) return;
   $('btnSubmitSend').disabled = true;
   const res = await post('/api/airline/submit', { aircraftId: id, registration: reg, notes: $('suNotes').value,
     flightNumber: $('suFlightNo').value });
@@ -1472,7 +1513,7 @@ $('btnLbClose2').onclick = closeLogbook;
 $('btnLbBack').onclick = () => { $('lbDetail').style.display = 'none'; $('lbList').style.display = 'block'; };
 $('lbFilter').oninput = renderLogbook;
 $('btnLbDelete').onclick = async () => {
-  if (!lbCurrent || !confirm(t('Diesen Flug endgültig löschen? Der Bericht wird aus dem Berichtsordner entfernt.'))) return;
+  if (!lbCurrent || !(await ask(t('Diesen Flug endgültig löschen? Der Bericht wird aus dem Berichtsordner entfernt.'), t('Löschen'), true))) return;
   const res = await api('/api/logbook/delete', { id: lbCurrent });
   snack(res.message, res.ok);
   if (res.ok) openLogbook();

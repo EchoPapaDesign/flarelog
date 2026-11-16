@@ -6,6 +6,8 @@
   Strecke, Flugzeug, Flugzeit, Distanz und Landerate – dazu Summen (Flüge, Flug- und Blockzeit, Distanz,
   Flughäfen, Ø Landerate) und eine Suche. Ein Klick öffnet den Flug mit Spur auf der Karte, allen Daten und dem
   Ablauf. Ganz ohne Airline oder Konto. Testflüge lassen sich direkt im Logbuch löschen. Idee von AeRodri.
+- **Eigene Rückfragen:** Fragen wie „Flug löschen?“ oder „Aufzeichnung beenden?“ erscheinen jetzt im Flarelog-Design
+  mit klaren Knöpfen (z. B. „Löschen“/„Abbrechen“) statt im Windows-Fenster mit „localhost:8080 enthält“
 
 ## 0.9.0-beta.7 – Sicherer beenden, automatische Sicherung, aufgeräumte Einstellungen
 
