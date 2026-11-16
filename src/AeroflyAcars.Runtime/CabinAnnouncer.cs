@@ -181,7 +181,7 @@ public sealed class CabinAnnouncer : IDisposable
         using var p = Process.Start(psi);
         if (p is null) return;
         _current = p;
-        p.WaitForExit(120_000);
+        p.WaitForExit(600_000);   // Sicherheitseinweisungen der Zusatz-Packs dauern bis zu 2,5 min
         _current = null;
     }
 
