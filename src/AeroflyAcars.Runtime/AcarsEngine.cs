@@ -13,7 +13,8 @@ namespace AeroflyAcars.Runtime;
 
 public sealed record ActionResult(bool Ok, string Message, string? Text = null, object? Data = null);
 public sealed record SettingsUpdate(string? SimBriefUser, bool? Voice, bool? LoadSimBriefOnStart,
-    string? AirlineUrl = null, string? AirlineApiKey = null, string? Language = null, bool? CabinAnnouncements = null);
+    string? AirlineUrl = null, string? AirlineApiKey = null, string? Language = null, bool? CabinAnnouncements = null,
+    bool? ManualStart = null, bool? AutoFinish = null);
 public sealed record SimBriefRequest(string? User);
 public sealed record WeatherRequest(string? Icao);
 public sealed record LogbookRequest(string? Id);
@@ -45,6 +46,10 @@ public sealed class AcarsEngine : IDisposable
     private SpeechAnnouncer? _speech;
     private CabinAnnouncer? _cabin;
     private CabinCues _cabinCues = new();
+    /// <summary>Bei manuellem Start: „Start“ wurde gedrückt. Bis dahin wird nur die Position angezeigt.</summary>
+    private bool _armed;
+    private FlightSample? _waitingSample;
+    private bool _finishHinted;
     private CancellationTokenSource? _cts;
     private DateTimeOffset? _lastReceived;
     private string? _source;
@@ -207,16 +212,33 @@ public sealed class AcarsEngine : IDisposable
             var sample = _builder.Add(message, now);
             if (sample is null) return;
 
+            // Manueller Start: Position zeigen, aber noch nichts aufzeichnen und keine Begrüßung.
+            if (Settings.ManualStart && !_armed)
+            {
+                _waitingSample = sample;
+                return;
+            }
+
             _tracker.Add(sample);
             PlayCabin(_cabinCues.OnSample(sample, _tracker.Phase));
             if (_tracker.IsFinished && !_reportSaved)
-                SaveReportLocked();
+            {
+                if (Settings.AutoFinish) SaveReportLocked();
+                else if (!_finishHinted)
+                {
+                    _finishHinted = true;
+                    AddNotice(L("Block on – mit „Beenden“ den Flug abschließen und speichern.", "Block on – press “Finish” to complete and save the flight."));
+                }
+            }
         }
     }
 
     private FlightTracker CreateTracker()
     {
-        var tracker = new FlightTracker(_plan, Settings.DestinationElevationFt, _airports, _runwaysProxy);
+        var tracker = new FlightTracker(_plan, Settings.DestinationElevationFt, _airports, _runwaysProxy)
+        {
+            KeepTrackingAfterArrival = !Settings.AutoFinish,
+        };
         var cues = new CabinCues();
         _cabinCues = cues;
         tracker.EventRaised += e =>
@@ -254,6 +276,20 @@ public sealed class AcarsEngine : IDisposable
     }
 
     // ---------- Bedienung (Display-Knöpfe, Konsole) ----------
+
+    /// <summary>Manueller Start: Aufzeichnung beginnt jetzt (die Begrüßung folgt mit dem nächsten Datensatz).</summary>
+    public ActionResult StartFlight()
+    {
+        lock (_gate)
+        {
+            if (_armed || !Settings.ManualStart || _tracker.Samples.Count > 0)
+                return new ActionResult(true, L("Aufzeichnung läuft bereits.", "Recording is already running."));
+            _armed = true;
+            _waitingSample = null;
+            AddNotice(L("Aufzeichnung gestartet.", "Recording started."));
+            return new ActionResult(true, L("Aufzeichnung gestartet.", "Recording started."));
+        }
+    }
 
     public ActionResult FinishFlight()
     {
@@ -1159,6 +1195,24 @@ public sealed class AcarsEngine : IDisposable
             Settings.Voice = voice;
             if (voice && _speech is null) _speech = SpeechAnnouncer.Create();
         }
+        if (update.ManualStart is { } manual)
+        {
+            lock (_gate)
+            {
+                Settings.ManualStart = manual;
+                // Läuft schon ein Flug, zeichnet er einfach weiter auf.
+                if (manual && _tracker.Samples.Count > 0) _armed = true;
+            }
+        }
+        if (update.AutoFinish is { } autoFinish)
+        {
+            lock (_gate)
+            {
+                Settings.AutoFinish = autoFinish;
+                _tracker.KeepTrackingAfterArrival = !autoFinish;
+                if (autoFinish && _tracker.IsFinished && !_reportSaved) SaveReportLocked();
+            }
+        }
         if (update.CabinAnnouncements is { } cabin)
         {
             Settings.CabinAnnouncements = cabin;
@@ -1439,8 +1493,8 @@ public sealed class AcarsEngine : IDisposable
         {
             var tracker = _tracker;
             var plan = _plan;
-            var s = tracker.LastSample;
             var samples = tracker.Samples;
+            var s = tracker.LastSample ?? _waitingSample;
             // Am Boden geglättet: Aerofly rundet die Position grob, die Rollspur wäre sonst eine Treppe.
             var display = TrackSmoothing.ForDisplay(samples);
             int step = Math.Max(1, display.Count / 1500);
@@ -1472,6 +1526,7 @@ public sealed class AcarsEngine : IDisposable
                 source = _source,
                 phase = tracker.Phase.ToDisplay(),
                 finished = tracker.IsFinished,
+                waitingForStart = Settings.ManualStart && !_armed && samples.Count == 0,
                 inProgress = samples.Count > 0 && tracker.Phase != FlightPhase.Preflight && !_reportSaved,
                 reportSaved = _reportSaved,
                 lastReport = _lastReportPath is null ? null : Path.GetFileName(_lastReportPath),
@@ -1584,7 +1639,7 @@ public sealed class AcarsEngine : IDisposable
                 {
                     time = e.Time.ToUniversalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture),
                     text = e.Text,
-                    phaseChange = e.PhaseChange,
+                    phaseChange = e.PhaseChange || e.Milestone,
                 }),
                 notices = _notices.ToArray(),
                 settings = new
@@ -1613,6 +1668,8 @@ public sealed class AcarsEngine : IDisposable
                     },
                     voice = Settings.Voice,
                     cabin = Settings.CabinAnnouncements,
+                    manualStart = Settings.ManualStart,
+                    autoFinish = Settings.AutoFinish,
                     showNews = Settings.LastSeenVersion != AppInfo.Version,
                     soundFolder = CabinAnnouncer.UserFolder,
                     reportFolder = Settings.EffectiveReportFolder,
@@ -1652,6 +1709,9 @@ public sealed class AcarsEngine : IDisposable
         _builder = new SampleBuilder();
         _cabin?.Stop();
         _tracker = CreateTracker();
+        _armed = false;
+        _waitingSample = null;
+        _finishHinted = false;
         _reportSaved = false;
         _reportBase = null;
         _lastCallout = null;

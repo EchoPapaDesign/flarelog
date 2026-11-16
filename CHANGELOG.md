@@ -1,6 +1,17 @@
 # Änderungen
 
-## 0.9.0-beta.8 – Logbuch, Berichtsordner, Fensterposition
+## 0.9.0-beta.8 – Logbuch, AeRodris offene Punkte, Berichtsordner, Fensterposition
+
+- **Landeansage mit Vorzeichen:** „Touchdown with minus 356 feet per minute“
+- **Landerate genauer:** Gezählt wird das Sinken in der letzten Sekunde vor dem Aufsetzen. Bisher galt der ungünstigste
+  von mehreren Messwerten, darunter ein 2-s-Mittelwert mit dem Sinken vor dem Abfangen – Landungen wirkten zu hart.
+- **Flug per Knopf starten:** Einstellungen → Flugaufzeichnung → „Aufzeichnung erst mit Start beginnen“. Dann beginnt
+  die Aufzeichnung – und die Begrüßung – erst mit „Start“ im Flight Log.
+- **Flug von Hand beenden:** „Flug bei Block on automatisch beenden“ abschalten – der Flug bleibt offen, die Rollspur
+  wird weiter gezeichnet, bis du auf „Beenden“ klickst. Automatisch bleibt der Standard.
+- **Anflug unterteilt:** „Initial approach“ beim Durchsinken von FL100, „Approach“ bei 5.000 ft über Platz,
+  „Final approach“ ab 3.000 ft
+- **Fenstergröße begrenzt** auf höchstens 1600 × 1000, damit die Anordnung erhalten bleibt
 
 - **Logbuch:** Neues Symbol in der linken Leiste. Zeigt alle bisherigen Flüge aus dem Berichtsordner mit Datum,
   Strecke, Flugzeug, Flugzeit, Distanz und Landerate – dazu Summen (Flüge, Flug- und Blockzeit, Distanz,

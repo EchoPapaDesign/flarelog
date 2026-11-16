@@ -14,6 +14,7 @@ namespace AeroflyAcars.Runtime;
 /// POST /api/weather      → METAR und TAF ({ icao }) – Antwort mit data { icao, metar, summary, taf }
 /// POST /api/conditions    → echte Zeit / Abflug-Wetter für Aerofly ein/aus ({ realTime, realWeather })
 /// POST /api/finish        → Bericht jetzt speichern
+/// POST /api/start       → Aufzeichnung starten (bei „Aufzeichnung erst mit Start“)
 /// POST /api/newflight     → neuen Flug beginnen
 /// POST /api/open-reports  → Berichtsordner im Explorer öffnen
 /// POST /api/report-folder → Berichtsordner ändern ({ path, move }; leerer Pfad = Standard)
@@ -162,6 +163,7 @@ public sealed class LiveMapServer : IDisposable
                 "/api/conditions" => await _engine.UpdateConditionsAsync(
                     JsonSerializer.Deserialize<ConditionsRequest>(json, Json) ?? new ConditionsRequest(null, null)).ConfigureAwait(false),
                 "/api/finish" => _engine.FinishFlight(),
+                "/api/start" => _engine.StartFlight(),
                 "/api/newflight" => _engine.NewFlight(),
                 "/api/open-reports" => _engine.OpenReportFolder(),
                 "/api/report-folder" => _engine.SetReportFolder(

@@ -20,8 +20,9 @@ internal sealed class MainForm : Form
         _engine = new AcarsEngine(AcarsSettings.Load());   // zuerst: stellt auch die Sprache ein
         Text = AeroflyAcars.Core.Lang.T("Flarelog – ACARS für Aerofly FS 4", "Flarelog – ACARS for Aerofly FS 4");
         StartPosition = FormStartPosition.CenterScreen;
-        Size = new Size(1500, 920);
+        Size = new Size(1400, 900);
         MinimumSize = new Size(1000, 640);
+        MaximumSize = new Size(1600, 1000);   // größer zerfällt das Layout (Testbericht AeRodri)
         // Dort wieder öffnen, wo Flarelog zuletzt war – sofern das noch auf einem Bildschirm liegt.
         if (_engine.Settings.SavedWindow is { } w)
         {

@@ -337,6 +337,7 @@ public static class MapPage
   <aside class="log">
     <h2>FLIGHT LOG
       <span class="actions">
+        <button class="btn primary" id="btnStart" style="display:none" title="Aufzeichnung jetzt beginnen">Start</button>
         <button class="btn warn" id="btnFinish" style="display:none" title="Aufzeichnung beenden und Bericht speichern">Beenden</button>
         <button class="btn primary" id="btnSubmit" style="display:none" title="Flug als PIREP an die Airline senden">An Airline senden</button>
         <button class="btn" id="btnSubmitted" style="display:none" title="PIREP auf der Airline-Webseite ansehen">PIREP ✓</button>
@@ -409,6 +410,14 @@ public static class MapPage
     </div>
     <hr>
     <div class="field">
+      <label>Flugaufzeichnung</label>
+      <label class="check"><input type="checkbox" id="setManualStart"> Aufzeichnung erst mit „Start“ beginnen</label>
+      <label class="check"><input type="checkbox" id="setAutoFinish"> Flug bei Block on automatisch beenden</label>
+      <div class="hint" style="word-break:normal">Mit „Start“ beginnt die Aufzeichnung erst, wenn du im Flight Log auf Start klickst – auch die
+        Begrüßung kommt dann erst. Ohne automatisches Beenden läuft der Flug nach Block on weiter, bis du auf „Beenden“ klickst.</div>
+    </div>
+    <hr>
+    <div class="field">
       <label>Kabinenansagen</label>
       <label class="check"><input type="checkbox" id="setCabin"> Ansagen in den Flugphasen abspielen</label>
       <div class="row" style="margin-top:10px"><button class="btn" id="btnCabinTest">Ansage testen</button>
@@ -422,7 +431,7 @@ public static class MapPage
     <hr>
     <div class="field">
       <label>Landeansage</label>
-      <label class="check"><input type="checkbox" id="setVoice"> „Touchdown with … feet per minute“ ansagen</label>
+      <label class="check"><input type="checkbox" id="setVoice"> „Touchdown with minus … feet per minute“ ansagen</label>
       <div class="row" style="margin-top:10px"><button class="btn" id="btnVoiceTest">Stimme testen</button></div>
     </div>
     <hr>
@@ -633,7 +642,7 @@ const EN = {
 "Beim Start automatisch laden": "Load automatically on start",
 "Lädt den zuletzt in SimBrief erzeugten Flugplan.": "Loads the flight plan you last generated in SimBrief.",
 "Landeansage": "Landing callout",
-"„Touchdown with … feet per minute“ ansagen": "Announce “Touchdown with … feet per minute”",
+"„Touchdown with minus … feet per minute“ ansagen": "Announce “Touchdown with minus … feet per minute”",
 "Stimme testen": "Test voice",
 "Was ist neu?": "What's new?",
 "Sound-Ordner öffnen": "Open sound folder",
@@ -668,6 +677,13 @@ const EN = {
 "Durchstarten": "Go-arounds",
 "Hinweise": "Notes",
 "Flug löschen": "Delete flight",
+"Aufzeichnung jetzt beginnen": "Start recording now",
+"Start": "Start",
+"Flugaufzeichnung": "Flight recording",
+"Aufzeichnung erst mit „Start“ beginnen": "Start recording only with “Start”",
+"Flug bei Block on automatisch beenden": "Finish the flight automatically at block on",
+"Mit „Start“ beginnt die Aufzeichnung erst, wenn du im Flight Log auf Start klickst – auch die Begrüßung kommt dann erst. Ohne automatisches Beenden läuft der Flug nach Block on weiter, bis du auf „Beenden“ klickst.": "With “Start”, recording only begins when you click Start in the flight log – the welcome announcement too. Without automatic finish, the flight stays open after block on until you click “Finish”.",
+"Bereit – mit „Start“ beginnt die Aufzeichnung.": "Ready – recording begins with “Start”.",
 "Vorhandene Berichte in den neuen Ordner verschieben": "Move existing reports to the new folder",
 "Übernehmen": "Apply",
 "Standard": "Default",
@@ -830,6 +846,7 @@ const routeLine = L.polyline([], { color: '#ff9f1c', weight: 3, opacity: .9, das
 const trackLine = L.polyline([], { color: '#3fd68a', weight: 3, opacity: .9 }).addTo(map);
 let marker = null, routeKey = '', firstFix = true, follow = true;
 let lastCalloutId = null, toastTimer = null, eventCount = -1;
+let lastWaitKey = false;
 let airBase = null; // { sec, at, running }
 
 $('follow').onclick = () => { follow = !follow; $('follow').classList.toggle('on', follow); };
@@ -866,12 +883,13 @@ function showToast(c) {
 }
 
 function renderEvents(events) {
-  if (events.length === eventCount) return;
-  eventCount = events.length;
+  const waitKey = !!(lastState && lastState.waitingForStart);
+  if (events.length === eventCount && waitKey === lastWaitKey) return;
+  eventCount = events.length; lastWaitKey = waitKey;
   const box = $('events');
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   box.innerHTML = events.length === 0
-    ? '<div class="empty">' + t('Noch keine Einträge – Aerofly starten und losrollen.') + '</div>'
+    ? '<div class="empty">' + (lastState && lastState.waitingForStart ? t('Bereit – mit „Start“ beginnt die Aufzeichnung.') : t('Noch keine Einträge – Aerofly starten und losrollen.')) + '</div>'
     : events.map(e => `<div class="ev ${e.phaseChange ? 'phase' : 'note'}"><time>${e.time} UTC</time><span></span></div>`).join('');
   // Text sicher einsetzen (kein HTML aus Daten)
   box.querySelectorAll('.ev span').forEach((el, i) => el.textContent = events[i].text);
@@ -923,6 +941,8 @@ function openSettings() {
     $('setSbAuto').checked = st.loadSimBriefOnStart;
     $('setVoice').checked = st.voice;
     $('setCabin').checked = st.cabin;
+    $('setManualStart').checked = st.manualStart;
+    $('setAutoFinish').checked = st.autoFinish;
     $('setSoundFolder').textContent = st.soundFolder;
     $('setFolder').textContent = '';
     $('setFolderPath').value = st.reportFolder;
@@ -996,6 +1016,9 @@ $('btnQuit').onclick = async () => {
 $('setLang').onchange = async () => { const res = await post('/api/settings', { language: $('setLang').value }); if (res.ok && lastState) tick(); };
 $('setVoice').onchange = () => post('/api/settings', { voice: $('setVoice').checked });
 $('setCabin').onchange = () => post('/api/settings', { cabinAnnouncements: $('setCabin').checked });
+$('setManualStart').onchange = () => post('/api/settings', { manualStart: $('setManualStart').checked });
+$('setAutoFinish').onchange = () => post('/api/settings', { autoFinish: $('setAutoFinish').checked });
+$('btnStart').onclick = () => post('/api/start');
 $('setSbAuto').onchange = () => post('/api/settings', { loadSimBriefOnStart: $('setSbAuto').checked });
 $('setSb').onchange = () => post('/api/settings', { simBriefUser: $('setSb').value });
 $('btnSbLoad').onclick = async () => {
@@ -1223,6 +1246,7 @@ async function tick() {
   $('banner').style.display = s.paused ? 'block' : 'none';
   $('notice').textContent = s.pendingPlan ? t('Nächster Flug: {0}', s.pendingPlan) : (s.notices.length ? s.notices[s.notices.length - 1] : '');
   $('btnFinish').style.display = s.inProgress ? 'inline-block' : 'none';
+  $('btnStart').style.display = s.waitingForStart ? 'inline-block' : 'none';
   // Update: kein Balken, sondern ein roter Punkt am Zahnrad, Details in den Einstellungen, einmal kurz ein Hinweis.
   $('updDot').style.display = s.update ? 'block' : 'none';
   $('updField').style.display = s.update ? 'block' : 'none';

@@ -25,6 +25,10 @@ public sealed class AcarsSettings
     public bool Voice { get; set; } = true;
     /// <summary>Kabinenansagen in den Flugphasen (Begrüßung, Sicherheitseinweisung, Steigflug …).</summary>
     public bool CabinAnnouncements { get; set; } = true;
+    /// <summary>Aufzeichnung erst mit dem Knopf „Start“ beginnen (sonst automatisch, sobald Aerofly Daten sendet).</summary>
+    public bool ManualStart { get; set; }
+    /// <summary>Flug bei Block on automatisch beenden und speichern (sonst erst mit „Beenden“).</summary>
+    public bool AutoFinish { get; set; } = true;
     /// <summary>Version, deren „Was ist neu?“ zuletzt gezeigt wurde.</summary>
     public string? LastSeenVersion { get; set; }
     /// <summary>Sprache: "auto" (wie das System), "de" oder "en".</summary>
@@ -39,7 +43,7 @@ public sealed class AcarsSettings
     /// <summary>Gespeicherte Fensterposition, wenn sie plausibel ist (sonst null → zentriert öffnen).</summary>
     [JsonIgnore]
     public (int X, int Y, int W, int H)? SavedWindow =>
-        WindowBounds is { Length: 4 } b && b[2] >= 600 && b[3] >= 400 && b[2] <= 20000 && b[3] <= 20000 ? (b[0], b[1], b[2], b[3]) : null;
+        WindowBounds is { Length: 4 } b && b[2] >= 600 && b[3] >= 400 && b[2] <= 1600 && b[3] <= 1000 ? (b[0], b[1], b[2], b[3]) : null;
 
     /// <summary>Adresse der phpVMS-Airline, z. B. https://www.meine-va.de</summary>
     public string? AirlineUrl { get; set; }

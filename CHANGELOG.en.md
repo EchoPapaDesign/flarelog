@@ -1,6 +1,18 @@
 # Changes
 
-## 0.9.0-beta.8 – Logbook, report folder, window position
+## 0.9.0-beta.8 – Logbook, AeRodri's open points, report folder, window position
+
+- **Landing callout with sign:** "Touchdown with minus 356 feet per minute"
+- **More accurate landing rate:** it now uses the sink rate in the last second before touchdown. Before, the least
+  favourable of several values counted, including a 2-second average that still contained the sink before the flare –
+  landings looked harder than they were.
+- **Start the flight with a button:** Settings → Flight recording → "Start recording only with Start". Recording – and
+  the welcome announcement – then begin only when you click Start in the flight log.
+- **Finish the flight manually:** turn off "Finish the flight automatically at block on" – the flight stays open and the
+  taxi track keeps being drawn until you click "Finish". Automatic stays the default.
+- **Approach subdivided:** "Initial approach" passing FL100, "Approach" at 5,000 ft above the airport, "Final approach"
+  from 3,000 ft
+- **Window size limited** to at most 1600 × 1000 so the layout stays intact
 
 - **Logbook:** new icon in the left bar. Shows all your flights from the report folder with date, route, aircraft,
   air time, distance and landing rate – plus totals (flights, air and block time, distance, airports, avg. landing

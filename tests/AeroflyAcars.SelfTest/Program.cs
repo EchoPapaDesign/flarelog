@@ -167,9 +167,9 @@ t.Test("SimBrief-Fehler wird gemeldet", () =>
 
 t.Test("Landeansage: Text und Bewertung", () =>
 {
-    t.Equal("Touchdown with 177 feet per minute. Good.", LandingCallout.Text(-177.2));
-    t.Equal("Touchdown with 320 feet per minute. Mediocre.", LandingCallout.Text(-320));
-    t.Equal("Touchdown with 512 feet per minute. Hard.", LandingCallout.Text(-512));
+    t.Equal("Touchdown with minus 177 feet per minute. Good.", LandingCallout.Text(-177.2));
+    t.Equal("Touchdown with minus 320 feet per minute. Mediocre.", LandingCallout.Text(-320));
+    t.Equal("Touchdown with minus 512 feet per minute. Hard.", LandingCallout.Text(-512));
     t.Equal("Good", LandingCallout.Rating(-240));
     t.Equal("Mediocre", LandingCallout.Rating(-400));
 });
@@ -1145,6 +1145,66 @@ t.Test("Landung auf unebener Bahn (LEAS 29: Kuppe, dann Gefälle) wird beim Aufs
     t.False(tracker.IsFinished, "kein Block on, solange das Flugzeug auf der Bahn steht");
 });
 
+
+t.Test("Landerate: zählt das Sinken direkt vor dem Aufsetzen, nicht das vor dem Abfangen", () =>
+{
+    // A320: -700 fpm im Endanflug, ab 40 ft abgefangen auf rund -150 fpm. Gemeldet werden soll die Sinkrate beim
+    // Kontakt – nicht der 2-s-Mittelwert, der noch das steile Sinken vor dem Abfangen enthält (AeRodri: zu hart).
+    const string rwyCsv = """
+"id","airport_ref","airport_ident","length_ft","width_ft","surface","lighted","closed","le_ident","le_latitude_deg","le_longitude_deg","le_elevation_ft","le_heading_degT","le_displaced_threshold_ft","he_ident","he_latitude_deg","he_longitude_deg","he_elevation_ft","he_heading_degT","he_displaced_threshold_ft"
+1,1,"XFLR",10500,150,"ASP",1,0,"36",32.860,-97.0,600,0,,"18",32.889,-97.0,600,180,
+""";
+    var runways = RunwayDatabase.ParseCsv(new StringReader(rwyCsv));
+    var apt = new Airport("XFLR", "Testplatz", "large_airport", 32.875, -97.0, 600, null, "XFLR");
+    var tracker = new FlightTracker(null, null, new AirportDatabase(new[] { apt }), runways);
+    var b = new SampleBuilder();
+    var start = new DateTimeOffset(2026, 11, 16, 8, 0, 0, TimeSpan.Zero);
+    double lat = 32.8256, alt = 1300, gs = 130;
+    int sec = 0;
+    bool onGround = false;
+    void Step(double vsFpm, double decelKt = 0)
+    {
+        gs = Math.Max(0, gs - decelKt);
+        lat += gs / 3600.0 / 60.0;
+        alt = onGround ? 600 : Math.Max(600, alt + vsFpm / 60.0);
+        var smp = b.Add(new GpsMessage("T", -97.0, lat, Math.Round(alt / Geo.FeetPerMeter, 1), 0, gs / Geo.KnotsPerMeterPerSecond),
+            start.AddSeconds(++sec));
+        if (smp is not null) tracker.Add(smp);
+    }
+    while (alt > 640) Step(-700);                       // stabiler Endanflug bis 40 ft
+    double vs = -700;
+    while (alt > 600) { vs = Math.Min(-150, vs + 110); Step(vs); }   // Abfangen: in ~5 s auf -150 fpm
+    onGround = true;
+    for (int i = 0; i < 60 && gs > 0; i++) Step(0, decelKt: gs > 60 ? 2.5 : 1.5);
+    for (int i = 0; i < 40; i++) Step(0);
+
+    t.True(tracker.Touchdown is not null, "Landung erkannt");
+    t.Range(tracker.LandingRateFpm!.Value, -280, -100, "Landerate beim Kontakt");
+});
+
+t.Test("Anflug unterteilt: Initial approach bei FL100, Approach bei 5.000 ft über Platz", () =>
+{
+    var tracker = new FlightTracker();
+    var b = new SampleBuilder();
+    var start = new DateTimeOffset(2026, 11, 16, 9, 0, 0, TimeSpan.Zero);
+    double lat = 50.0, alt = 12000;
+    int sec = 0;
+    void Step(double vsFpm)
+    {
+        lat += 250 / 3600.0 / 60.0;
+        alt += vsFpm / 60.0;
+        var smp = b.Add(new GpsMessage("T", 8.0, lat, Math.Round(alt / Geo.FeetPerMeter, 1), 0, 250 / Geo.KnotsPerMeterPerSecond),
+            start.AddSeconds(++sec));
+        if (smp is not null) tracker.Add(smp);
+    }
+    for (int i = 0; i < 30; i++) Step(0);            // Reiseflug (Aufzeichnung im Flug begonnen)
+    while (alt > 2500) Step(-1500);                 // Sinkflug
+    var ms = tracker.Events.Where(e => e.Milestone).ToList();
+    t.Equal(2, ms.Count);
+    t.True(ms[0].Text.Contains("FL100"), "zuerst FL100: " + ms[0].Text);
+    t.True(ms[1].Text.Contains("5"), "dann 5.000 ft: " + ms[1].Text);
+    t.True(ms[0].Time < ms[1].Time, "Reihenfolge");
+});
 
 t.Test("Rollspur: Treppenstufen durch grob gerundete Positionen werden geglättet", () =>
 {

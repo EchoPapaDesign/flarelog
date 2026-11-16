@@ -61,7 +61,8 @@ static void RunWindow(AcarsEngine engine, string url, Action<string> log)
         .SetTitle(Lang.T("Flarelog – ACARS für Aerofly FS 4", "Flarelog – ACARS for Aerofly FS 4"))
         .SetUseOsDefaultSize(false)
         .SetSize(1200, 760)   // passt auf jedes MacBook (13" Air: 1280×832 Punkte) neben Menüleiste und Dock
-        .SetMinSize(1000, 640);
+        .SetMinSize(1000, 640)
+        .SetMaxSize(1600, 1000);   // größer zerfällt das Layout (Testbericht AeRodri)
     // Dort wieder öffnen, wo Flarelog zuletzt war (Wunsch ApfelFlieger); beim ersten Start mittig.
     var saved = engine.Settings.SavedWindow;
     if (saved is { } w)
