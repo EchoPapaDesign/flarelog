@@ -20,7 +20,9 @@ public sealed record LogbookEntry(
     bool Complete);
 
 /// <summary>Summen über alle Flüge im Logbuch.</summary>
-public sealed record LogbookTotals(int Flights, double AirMin, double BlockMin, double DistanceNm, int Airports, double? AvgLandingRateFpm);
+/// <remarks>Block- und Flugzeit zählen nur Flüge, die sie haben; BlockFlights/AirFlights sagen, wie viele das sind.</remarks>
+public sealed record LogbookTotals(int Flights, double AirMin, int AirFlights, double BlockMin, int BlockFlights,
+    double DistanceNm, int Airports, double? AvgLandingRateFpm);
 
 /// <summary>
 /// Logbuch: liest die gespeicherten Flugberichte (JSON) aus dem Berichtsordner. Es gibt keine eigene Datenbank –
@@ -81,7 +83,9 @@ public static class Logbook
         return new LogbookTotals(
             entries.Count,
             entries.Sum(e => e.AirMin ?? 0),
+            entries.Count(e => e.AirMin is not null),
             entries.Sum(e => e.BlockMin ?? 0),
+            entries.Count(e => e.BlockMin is not null),
             entries.Sum(e => e.DistanceNm ?? 0),
             airports.Count,
             rates.Count > 0 ? rates.Average() : null);
@@ -92,7 +96,24 @@ public static class Logbook
         r.BlockOffUtc ?? r.TakeoffUtc ?? r.Track.FirstOrDefault()?.Time ?? r.CreatedUtc,
         r.Flight, r.Origin, r.Destination, r.OriginName, r.DestinationName, r.Aircraft,
         r.BlockTime?.TotalMinutes, r.AirTime?.TotalMinutes, r.DistanceFlownNm,
-        r.LandingRateFpm, r.LandingRating, r.Complete);
+        // 0 fpm heißt: keine Landerate gemessen (z. B. Schwebeflug) – nicht anzeigen und nicht mitteln.
+        Rate(r), Rate(r) is null ? null : r.LandingRating, r.Complete);
+
+    private static double? Rate(FlightReport r) => r.LandingRateFpm is { } v && Math.Abs(v) >= 1 ? v : null;
+
+    /// <summary>
+    /// Bericht aus dem Logbuch löschen (JSON und Text). Liefert false, wenn es ihn nicht gibt oder die Kennung ungültig ist.
+    /// </summary>
+    public static bool Delete(string folder, string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id) || id.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || id.Contains("..")) return false;
+        var json = Path.Combine(folder, id + ".json");
+        if (!File.Exists(json)) return false;
+        File.Delete(json);
+        var text = Path.Combine(folder, id + ".txt");
+        if (File.Exists(text)) File.Delete(text);
+        return true;
+    }
 
     private static LogbookEntry? ReadEntry(string path)
     {

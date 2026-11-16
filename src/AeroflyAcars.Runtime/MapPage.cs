@@ -228,6 +228,7 @@ public static class MapPage
   .lb-totals label { display: block; font-size: 10px; letter-spacing: .06em; color: var(--muted); text-transform: uppercase;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lb-totals b { font-size: 16px; white-space: nowrap; }
+  .lb-totals small { display: block; color: var(--dim); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .booking .l1 .lb-date { color: var(--muted); font-weight: 400; font-size: 12px; }
   .lb-part { color: var(--warn); font-size: 11px; border: 1px solid rgba(242,180,60,.5); border-radius: 3px; padding: 0 4px; margin-left: 6px; font-weight: 600; }
   .lb-detail { position: absolute; inset: 0; background: var(--panel); display: flex; flex-direction: column; }
@@ -527,8 +528,8 @@ public static class MapPage
     <h3>Logbuch <button class="btn" id="btnLbClose">Schließen</button></h3>
     <div class="lb-totals">
       <div><label>Flüge</label><b id="lbFlights" class="num">–</b></div>
-      <div><label>Flugzeit</label><b id="lbAir" class="num">–</b></div>
-      <div><label>Blockzeit</label><b id="lbBlock" class="num">–</b></div>
+      <div><label>Flugzeit</label><b id="lbAir" class="num">–</b><small id="lbAirN"></small></div>
+      <div><label>Blockzeit</label><b id="lbBlock" class="num">–</b><small id="lbBlockN"></small></div>
       <div><label>Distanz</label><b id="lbDist" class="num">–</b></div>
       <div><label>Flughäfen</label><b id="lbApts" class="num">–</b></div>
       <div><label>Ø Landerate</label><b id="lbRate" class="num">–</b></div>
@@ -546,6 +547,7 @@ public static class MapPage
       <b id="lbdTitle"></b>
       <span id="lbdDate" class="lb-sub"></span>
       <span class="spacer"></span>
+      <button class="btn warn" id="btnLbDelete">Flug löschen</button>
       <button class="btn" id="btnLbClose2">Schließen</button>
     </div>
     <div class="lb-body">
@@ -644,6 +646,14 @@ const EN = {
 "Bewertung": "Rating",
 "Durchstarten": "Go-arounds",
 "Hinweise": "Notes",
+"Flug löschen": "Delete flight",
+"Diesen Flug endgültig löschen? Der Bericht wird aus dem Berichtsordner entfernt.": "Delete this flight permanently? The report will be removed from the report folder.",
+"aus {0} Flügen": "from {0} flights",
+"sehr weich": "very soft",
+"gut": "good",
+"fest": "firm",
+"hart": "hard",
+"sehr hart": "very hard",
 "Ablauf": "Flight log",
 "Version {0} ist verfügbar – Details unter Einstellungen.": "Version {0} is available – details under Settings.",
 "Kabinenansagen": "Cabin announcements",
@@ -1325,6 +1335,14 @@ function fmtDate(iso) {
   return d.toLocaleDateString(LANG === 'en' ? 'en-GB' : 'de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
     + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) + ' UTC';
 }
+// Bewertung aus der Landerate – gleiche Stufen wie im Bericht, aber immer in der eingestellten Sprache
+// (ältere Berichte haben die Bewertung in der Sprache gespeichert, in der sie aufgezeichnet wurden).
+function rateText(fpm) {
+  if (fpm == null) return '–';
+  return fpm >= -60 ? t('sehr weich') : fpm >= -240 ? t('gut') : fpm >= -400 ? t('fest') : fpm >= -600 ? t('hart') : t('sehr hart');
+}
+function rateClass(fpm) { return fpm == null ? '' : fpm >= -240 ? 'Good' : fpm >= -400 ? 'Mediocre' : 'Hard'; }
+let lbCurrent = null;
 function lbRoute(e) { return `${e.origin ?? '····'} → ${e.destination ?? '····'}`; }
 function renderLogbook() {
   const q = $('lbFilter').value.trim().toUpperCase();
@@ -1352,7 +1370,7 @@ function renderLogbook() {
     if (e.distanceNm != null) parts.push(`${de(e.distanceNm)} nm`);
     l2.textContent = parts.join(' · ');
     if (e.landingRateFpm != null) {
-      const r = document.createElement('span'); r.className = e.landingRating || '';
+      const r = document.createElement('span'); r.className = rateClass(e.landingRateFpm);
       r.textContent = (parts.length ? ' · ' : '') + `${de(e.landingRateFpm)} fpm`;
       l2.appendChild(r);
     }
@@ -1371,7 +1389,9 @@ async function openLogbook() {
   const tt = res.data.totals;
   $('lbFlights').textContent = de(tt.flights);
   $('lbAir').textContent = fmtHm(tt.airMin);
-  $('lbBlock').textContent = fmtHm(tt.blockMin);
+  $('lbBlock').textContent = tt.blockFlights ? fmtHm(tt.blockMin) : '–';
+  $('lbAirN').textContent = tt.airFlights < tt.flights ? t('aus {0} Flügen', tt.airFlights) : '';
+  $('lbBlockN').textContent = tt.blockFlights < tt.flights ? t('aus {0} Flügen', tt.blockFlights) : '';
   $('lbDist').textContent = `${de(tt.distanceNm)} nm`;
   $('lbApts').textContent = de(tt.airports);
   $('lbRate').textContent = tt.avgLandingRateFpm != null ? `${de(tt.avgLandingRateFpm)} fpm` : '–';
@@ -1381,6 +1401,7 @@ async function openFlight(id) {
   const res = await api('/api/logbook/flight', { id });
   if (!res.ok) { snack(res.message, false); return; }
   const f = res.data, e = f.entry;
+  lbCurrent = e.id;
   $('lbList').style.display = 'none';
   $('lbDetail').style.display = 'flex';
   $('lbdTitle').textContent = lbRoute(e) + (e.flight ? ` · ${e.flight}` : '');
@@ -1394,8 +1415,8 @@ async function openFlight(id) {
     [t('Distanz'), e.distanceNm != null ? `${de(e.distanceNm)} nm` : '–'],
     [t('Max. Höhe'), f.maxAltFt != null ? fmtAlt(f.maxAltFt) : '–'],
     [t('Bahnen'), `${f.depRwy ?? '–'} → ${f.arrRwy ?? '–'}`],
-    [t('Landerate'), e.landingRateFpm != null ? `${de(e.landingRateFpm)} fpm` : '–', e.landingRating],
-    [t('Bewertung'), e.landingRating ?? '–', e.landingRating],
+    [t('Landerate'), e.landingRateFpm != null ? `${de(e.landingRateFpm)} fpm` : '–', rateClass(e.landingRateFpm)],
+    [t('Bewertung'), rateText(e.landingRateFpm), rateClass(e.landingRateFpm)],
     ['Groundspeed', f.touchdownGsKt != null ? `${de(f.touchdownGsKt)} kt` : '–'],
     ['Rollout', f.rolloutM != null ? `${de(f.rolloutM)} m` : '–'],
     ['Bounces', f.bounces != null ? de(f.bounces) : '–'],
@@ -1450,6 +1471,12 @@ $('btnLbClose').onclick = closeLogbook;
 $('btnLbClose2').onclick = closeLogbook;
 $('btnLbBack').onclick = () => { $('lbDetail').style.display = 'none'; $('lbList').style.display = 'block'; };
 $('lbFilter').oninput = renderLogbook;
+$('btnLbDelete').onclick = async () => {
+  if (!lbCurrent || !confirm(t('Diesen Flug endgültig löschen? Der Bericht wird aus dem Berichtsordner entfernt.'))) return;
+  const res = await api('/api/logbook/delete', { id: lbCurrent });
+  snack(res.message, res.ok);
+  if (res.ok) openLogbook();
+};
 
 applyLang('__LANG__');   // vom Server eingesetzt – kein Umschalten nach dem Laden
 // Ein Bereich pro Symbol: Ein Klick links schließt die offene Ansicht und öffnet die neue; das Flugzeug-Symbol
