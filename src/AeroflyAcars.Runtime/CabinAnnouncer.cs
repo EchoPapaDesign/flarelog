@@ -41,13 +41,50 @@ public sealed class CabinAnnouncer : IDisposable
     {
         try
         {
-            if (Directory.Exists(UserFolder) && Directory.EnumerateFiles(UserFolder, "*.wav").Any()) return;
-            CopyBuiltIns(overwrite: false);
+            if (Directory.Exists(UserFolder) && Directory.EnumerateFiles(UserFolder, "*.wav").Any())
+                UpgradeOldDefaults();
+            else
+                CopyBuiltIns(overwrite: false);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // Dann spielen die eingebauten Ansagen – auch ohne Ordner.
         }
+    }
+
+    /// <summary>
+    /// SHA-256 früher mitgelieferter Ansagen (Soundpack 1.0). Liegt eine davon unverändert im Sound-Ordner,
+    /// ersetzt Flarelog sie durch die aktuelle Fassung – eigene Dateien haben andere Prüfsummen und bleiben.
+    /// </summary>
+    public static readonly HashSet<string> PreviousDefaults = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "0f603e367de51ea13ce404cd94645b0d12ddd05466331aff789a832ac3d74136", // After_Touchdown 1.0
+        "cadf0494bec6471275b09b7807bb007e27366b7b96cbf00915efdddbd4c15e04", // Climbing_Message 1.0
+        "19f6c5c547ea323dfc0dbc55fe562f13a619702b017c93f5c2fd75444c98cd4c", // Cruise_Altitude 1.0
+        "568d71fb7096e91815878861e036bed56530f19e5149dcd5c0ec10c2ea1f868e", // Descending_Start 1.0
+        "8f94d9f0ad02d005ed337d501c814e312a29ad5d02d9d99702e3f141fff7771b", // Safety_Briefing 1.0
+        "b3b8972a51cefcc77e5e1840552c79a4927a83bcfa507ecbc9735acbc0892cd3", // Welcome_Onboard 1.0
+    };
+
+    /// <summary>Unveränderte alte Standard-Ansagen im Sound-Ordner durch die aktuellen ersetzen; liefert die Anzahl.</summary>
+    public static int UpgradeOldDefaults()
+    {
+        int replaced = 0;
+        foreach (var res in typeof(CabinAnnouncer).Assembly.GetManifestResourceNames())
+        {
+            if (!res.StartsWith(ResourcePrefix, StringComparison.Ordinal)) continue;
+            var target = Path.Combine(UserFolder, res[ResourcePrefix.Length..]);
+            if (!File.Exists(target)) continue;
+            string hash;
+            using (var f = File.OpenRead(target))
+                hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(f));
+            if (!PreviousDefaults.Contains(hash)) continue;
+            using var stream = typeof(CabinAnnouncer).Assembly.GetManifestResourceStream(res)!;
+            using (var file = File.Create(target + ".tmp")) stream.CopyTo(file);
+            File.Move(target + ".tmp", target, overwrite: true);
+            replaced++;
+        }
+        return replaced;
     }
 
     /// <summary>Mitgelieferte Ansagen in den Sound-Ordner kopieren; mit overwrite werden eigene Dateien ersetzt.</summary>

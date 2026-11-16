@@ -1,7 +1,10 @@
 # Kabinenansagen – Flarelog Soundpack
 
-Die WAV-Dateien in diesem Ordner sind das **Flarelog Soundpack** von **AeRodri (RealFlightOps)**,
+Die WAV-Dateien in diesem Ordner sind das **Flarelog Soundpack 1.1** von **AeRodri (RealFlightOps)**,
 https://www.youtube.com/@RealFlightOpsOfficial
+
+Version 1.1 (14.11.2026): Hintergrundrauschen entfernt, Lautstärke angeglichen, Soundeffekte ergänzt,
+Boarding-Atmosphäre in der Begrüßung.
 
 | Datei | Wann sie in Flarelog abgespielt wird |
 |---|---|
