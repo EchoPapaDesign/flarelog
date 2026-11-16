@@ -16,6 +16,7 @@ public sealed record SettingsUpdate(string? SimBriefUser, bool? Voice, bool? Loa
     string? AirlineUrl = null, string? AirlineApiKey = null, string? Language = null, bool? CabinAnnouncements = null);
 public sealed record SimBriefRequest(string? User);
 public sealed record WeatherRequest(string? Icao);
+public sealed record LogbookRequest(string? Id);
 public sealed record ConditionsRequest(bool? RealTime, bool? RealWeather, string? WeatherIcao = null);
 public sealed record AirlineConnectRequest(string? Url, string? ApiKey);
 public sealed record BookingSelectRequest(string? FlightId);
@@ -1278,6 +1279,51 @@ public sealed class AcarsEngine : IDisposable
         {
             return new ActionResult(false, L("Ordner konnte nicht geöffnet werden: ", "Could not open the folder: ") + ex.Message);
         }
+    }
+
+    /// <summary>Logbuch: alle gespeicherten Flüge im Berichtsordner mit Summen.</summary>
+    public ActionResult LogbookList()
+    {
+        try
+        {
+            var entries = Logbook.Load(Settings.EffectiveReportFolder);
+            return new ActionResult(true, "", Data: new { entries, totals = Logbook.Totals(entries) });
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new ActionResult(false, L("Logbuch konnte nicht gelesen werden: ", "Could not read the logbook: ") + ex.Message);
+        }
+    }
+
+    /// <summary>Logbuch: ein Flug mit Spur und Ablauf für die Detailansicht.</summary>
+    public ActionResult LogbookFlight(string? id)
+    {
+        var r = Logbook.LoadReport(Settings.EffectiveReportFolder, id);
+        if (r is null) return new ActionResult(false, L("Flug nicht gefunden.", "Flight not found."));
+        // Für die Karte reichen höchstens 2.000 Punkte; erster und letzter bleiben immer.
+        int step = Math.Max(1, (int)Math.Ceiling(r.Track.Count / 2000.0));
+        var track = r.Track.Where((p, i) => i % step == 0 || i == r.Track.Count - 1)
+            .Select(p => new[] { Math.Round(p.Latitude, 5), Math.Round(p.Longitude, 5), Math.Round(p.AltitudeFt) }).ToList();
+        var a = r.Analysis;
+        return new ActionResult(true, "", Data: new
+        {
+            entry = Logbook.ToEntry(id!, r),
+            route = r.Route,
+            maxAltFt = r.MaxAltitudeFt,
+            plannedDistanceNm = r.PlannedDistanceNm,
+            touchdownGsKt = r.TouchdownGroundSpeedKt,
+            goArounds = r.GoArounds,
+            bounces = a?.Bounces,
+            depRwy = a?.DepartureRunway,
+            arrRwy = a?.ArrivalRunway,
+            rolloutM = a?.RolloutM,
+            approachRating = a?.ApproachRating,
+            blockOff = r.BlockOffUtc?.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture),
+            blockOn = r.BlockOnUtc?.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture),
+            track,
+            phases = r.Phases.Select(e => new { time = e.Time.ToString("HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture), text = e.Text }),
+            notes = r.Notes,
+        });
     }
 
     public ActionResult OpenReportFolder()
