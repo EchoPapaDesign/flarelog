@@ -1033,6 +1033,18 @@ t.Test("Im Programm eingebettet: Änderungslisten (de/en) und Kabinenansagen", (
         t.True(names.Contains("Flarelog.Sounds." + cue), cue);
 });
 
+t.Test("Kabinenansagen: aktuelles Soundpack gilt nicht als alte Fassung (sonst Dauer-Austausch)", () =>
+{
+    var asm = typeof(AeroflyAcars.Runtime.CabinAnnouncer).Assembly;
+    t.Equal(6, AeroflyAcars.Runtime.CabinAnnouncer.PreviousDefaults.Count);
+    foreach (var cue in CabinCues.All)
+    {
+        using var s = asm.GetManifestResourceStream("Flarelog.Sounds." + cue)!;
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(s));
+        t.True(!AeroflyAcars.Runtime.CabinAnnouncer.PreviousDefaults.Contains(hash), cue);
+    }
+});
+
 
 t.Test("Landung auf unebener Bahn (LEAS 29: Kuppe, dann Gefälle) wird beim Aufsetzen erkannt", () =>
 {

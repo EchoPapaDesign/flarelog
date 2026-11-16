@@ -2,6 +2,8 @@
 
 ## 0.9.0-beta.7 – Safer quitting, automatic backup, tidier settings
 
+- **New soundpack 1.1 by AeRodri:** cleaner recordings, balanced volume, sound effects and boarding ambience in
+  the welcome. Unchanged old announcements in the sound folder are replaced automatically; your own files stay.
 - **Mac: "No" when quitting now really cancels.** Previously Flarelog quit anyway and the flight was lost. You are
   asked on the red button and on Cmd+Q; "Yes" saves the flight so far as a partial report.
 - **Automatic backup:** a flight in progress is saved every minute – after a crash or power cut at most the last

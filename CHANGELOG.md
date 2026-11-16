@@ -2,6 +2,9 @@
 
 ## 0.9.0-beta.7 – Sicherer beenden, automatische Sicherung, aufgeräumte Einstellungen
 
+- **Neues Soundpack 1.1 von AeRodri:** sauberere Aufnahmen, ausgeglichene Lautstärke, Soundeffekte und
+  Boarding-Atmosphäre bei der Begrüßung. Unveränderte alte Ansagen im Sound-Ordner werden automatisch ersetzt,
+  eigene Dateien bleiben.
 - **Mac: „Nein“ beim Beenden bricht jetzt wirklich ab.** Bisher beendete sich Flarelog trotzdem und der Flug war
   verloren. Gefragt wird beim roten Knopf und bei Cmd+Q; „Ja“ speichert den bisherigen Flug als Teilbericht.
 - **Automatische Sicherung:** Ein laufender Flug wird jede Minute gespeichert – bei Absturz oder Stromausfall fehlt
