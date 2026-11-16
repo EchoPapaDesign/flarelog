@@ -20,6 +20,19 @@ Die Dateinamen dürfen nicht geändert werden – spätere Erweiterungspakete vo
 Beim ersten Start legt Flarelog alle Ansagen in `Dokumente/Flarelog/Sounds` ab. Dort lassen sie sich durch
 eigene Dateien gleichen Namens ersetzen; „Standard wiederherstellen“ in den Einstellungen holt die Originale zurück.
 
+## Zusätzliche Kabinenbesatzungen
+
+Zusätzlich hat AeRodri **16 Kabinenbesatzungen** aus aller Welt komplett selbst für Flarelog aufgenommen, bereinigt,
+gepegelt und zusammengestellt – alle auf Englisch, frei nutzbar und frei weiterzugeben:
+Australia, Canada, Hong Kong, India, Ireland, Japan, Kenya, New Zealand, Nigeria, Philippines, Singapore,
+South Africa, Spain, Tanzania, United Kingdom und USA.
+
+Sie sind zusammen über 500 MB groß und deshalb nicht in Flarelog eingebaut. Sie liegen im GitHub-Release
+[„soundpacks“](https://github.com/EchoPapaDesign/flarelog/releases/tag/soundpacks); Flarelog lädt eine Besatzung
+herunter, sobald man sie unter Einstellungen → Kabinenansagen → Kabinenbesatzung auswählt.
+
+Vielen Dank an AeRodri für viele Stunden Arbeit – und für die gründlichen Testberichte, die Flarelog geprägt haben.
+
 ## Herkunft und Freigabe
 
 AeRodri hat das Soundpack im November 2026 für Flarelog zur Verfügung gestellt und im Forum der IPACS-Community

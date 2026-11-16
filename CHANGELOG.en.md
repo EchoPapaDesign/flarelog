@@ -1,11 +1,33 @@
 # Changes
 
-## 0.9.0-beta.8 – Logbook
+## 0.9.0-beta.8 – Logbook, AeRodri's open points, report folder, window position
+
+- **16 new cabin crews by AeRodri (RealFlightOps):** Australia, Canada, Hong Kong, India, Ireland, Japan, Kenya,
+  New Zealand, Nigeria, Philippines, Singapore, South Africa, Spain, Tanzania, United Kingdom and USA – all recorded and
+  produced by AeRodri himself. Settings → Cabin announcements → Cabin crew; Flarelog downloads the chosen crew once
+  (about 30 MB each). Thank you, AeRodri!
+- **Landing callout with sign:** "Touchdown with minus 356 feet per minute"
+- **More accurate landing rate:** it now uses the sink rate in the last second before touchdown. Before, the least
+  favourable of several values counted, including a 2-second average that still contained the sink before the flare –
+  landings looked harder than they were.
+- **Start the flight with a button:** Settings → Flight recording → "Start recording only with Start". Recording – and
+  the welcome announcement – then begin only when you click Start in the flight log.
+- **Finish the flight manually:** turn off "Finish the flight automatically at block on" – the flight stays open and the
+  taxi track keeps being drawn until you click "Finish". Automatic stays the default.
+- **Approach subdivided:** "Initial approach" passing FL100, "Approach" at 5,000 ft above the airport, "Final approach"
+  from 3,000 ft
+- **Window size limited** to at most 1600 × 1000 so the layout stays intact
 
 - **Logbook:** new icon in the left bar. Shows all your flights from the report folder with date, route, aircraft,
   air time, distance and landing rate – plus totals (flights, air and block time, distance, airports, avg. landing
   rate) and a search. A click opens the flight with its track on the map, all data and the flight log. No airline
   or account needed. Test flights can be deleted right in the logbook. Idea by AeRodri.
+- **Choose your report folder:** Settings → Flight reports: enter a path, "Apply" – existing reports can move
+  along. "Default" goes back to `Documents/Flarelog/Flights`. Requested by ApfelFlieger.
+- **Window position:** Flarelog opens where it was last (Windows and Mac). If that spot is no longer on any screen, it
+  opens centred. Requested by ApfelFlieger.
+- **Mac menu tidied up:** Copy and Paste are in the "Edit" menu, "Quit Flarelog" is the last line of the app menu –
+  like other Mac apps. Requested by ApfelFlieger.
 - **Own confirmation dialogs:** questions like "Delete flight?" or "Stop recording?" now appear in the Flarelog
   style with clear buttons (e.g. "Delete"/"Cancel") instead of the system box saying "localhost:8080 says"
 

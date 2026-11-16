@@ -37,6 +37,7 @@ Flarelog is free, runs entirely on your computer and needs no installation.
 **Cabin announcements**
 - Welcome, safety briefing, climb, cruise, descent and after landing – automatically matched to the flight phase
 - Soundpack by AeRodri (RealFlightOps); own announcements can be placed in `Documents/Flarelog/Sounds`
+- 16 additional cabin crews from around the world, also by AeRodri – pick one in the settings and Flarelog downloads it
 
 **Planning and weather**
 - SimBrief: load your latest flight plan, route on the map, overview with SID, enroute and STAR

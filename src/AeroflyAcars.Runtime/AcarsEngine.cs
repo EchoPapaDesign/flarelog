@@ -13,10 +13,13 @@ namespace AeroflyAcars.Runtime;
 
 public sealed record ActionResult(bool Ok, string Message, string? Text = null, object? Data = null);
 public sealed record SettingsUpdate(string? SimBriefUser, bool? Voice, bool? LoadSimBriefOnStart,
-    string? AirlineUrl = null, string? AirlineApiKey = null, string? Language = null, bool? CabinAnnouncements = null);
+    string? AirlineUrl = null, string? AirlineApiKey = null, string? Language = null, bool? CabinAnnouncements = null,
+    bool? ManualStart = null, bool? AutoFinish = null);
 public sealed record SimBriefRequest(string? User);
 public sealed record WeatherRequest(string? Icao);
 public sealed record LogbookRequest(string? Id);
+public sealed record SoundPackRequest(string? Id);
+public sealed record ReportFolderRequest(string? Path, bool Move = true);
 public sealed record ConditionsRequest(bool? RealTime, bool? RealWeather, string? WeatherIcao = null);
 public sealed record AirlineConnectRequest(string? Url, string? ApiKey);
 public sealed record BookingSelectRequest(string? FlightId);
@@ -44,6 +47,10 @@ public sealed class AcarsEngine : IDisposable
     private SpeechAnnouncer? _speech;
     private CabinAnnouncer? _cabin;
     private CabinCues _cabinCues = new();
+    /// <summary>Bei manuellem Start: „Start“ wurde gedrückt. Bis dahin wird nur die Position angezeigt.</summary>
+    private bool _armed;
+    private FlightSample? _waitingSample;
+    private bool _finishHinted;
     private CancellationTokenSource? _cts;
     private DateTimeOffset? _lastReceived;
     private string? _source;
@@ -140,6 +147,7 @@ public sealed class AcarsEngine : IDisposable
         _server = StartServer();
         if (Settings.Voice) _speech = SpeechAnnouncer.Create();
         if (Settings.CabinAnnouncements) _cabin = new CabinAnnouncer();
+        CabinAnnouncer.ActivePack = Settings.SoundPack is { } pack && SoundPacks.IsInstalled(pack) ? pack : null;
         _ = Task.Run(CabinAnnouncer.EnsureUserFolder);
         _ = Task.Run(LoadInBackgroundAsync);
         _ = Task.Run(() => WatchAeroflyAsync(_cts.Token));
@@ -206,16 +214,33 @@ public sealed class AcarsEngine : IDisposable
             var sample = _builder.Add(message, now);
             if (sample is null) return;
 
+            // Manueller Start: Position zeigen, aber noch nichts aufzeichnen und keine Begrüßung.
+            if (Settings.ManualStart && !_armed)
+            {
+                _waitingSample = sample;
+                return;
+            }
+
             _tracker.Add(sample);
             PlayCabin(_cabinCues.OnSample(sample, _tracker.Phase));
             if (_tracker.IsFinished && !_reportSaved)
-                SaveReportLocked();
+            {
+                if (Settings.AutoFinish) SaveReportLocked();
+                else if (!_finishHinted)
+                {
+                    _finishHinted = true;
+                    AddNotice(L("Block on – mit „Beenden“ den Flug abschließen und speichern.", "Block on – press “Finish” to complete and save the flight."));
+                }
+            }
         }
     }
 
     private FlightTracker CreateTracker()
     {
-        var tracker = new FlightTracker(_plan, Settings.DestinationElevationFt, _airports, _runwaysProxy);
+        var tracker = new FlightTracker(_plan, Settings.DestinationElevationFt, _airports, _runwaysProxy)
+        {
+            KeepTrackingAfterArrival = !Settings.AutoFinish,
+        };
         var cues = new CabinCues();
         _cabinCues = cues;
         tracker.EventRaised += e =>
@@ -253,6 +278,20 @@ public sealed class AcarsEngine : IDisposable
     }
 
     // ---------- Bedienung (Display-Knöpfe, Konsole) ----------
+
+    /// <summary>Manueller Start: Aufzeichnung beginnt jetzt (die Begrüßung folgt mit dem nächsten Datensatz).</summary>
+    public ActionResult StartFlight()
+    {
+        lock (_gate)
+        {
+            if (_armed || !Settings.ManualStart || _tracker.Samples.Count > 0)
+                return new ActionResult(true, L("Aufzeichnung läuft bereits.", "Recording is already running."));
+            _armed = true;
+            _waitingSample = null;
+            AddNotice(L("Aufzeichnung gestartet.", "Recording started."));
+            return new ActionResult(true, L("Aufzeichnung gestartet.", "Recording started."));
+        }
+    }
 
     public ActionResult FinishFlight()
     {
@@ -1158,6 +1197,24 @@ public sealed class AcarsEngine : IDisposable
             Settings.Voice = voice;
             if (voice && _speech is null) _speech = SpeechAnnouncer.Create();
         }
+        if (update.ManualStart is { } manual)
+        {
+            lock (_gate)
+            {
+                Settings.ManualStart = manual;
+                // Läuft schon ein Flug, zeichnet er einfach weiter auf.
+                if (manual && _tracker.Samples.Count > 0) _armed = true;
+            }
+        }
+        if (update.AutoFinish is { } autoFinish)
+        {
+            lock (_gate)
+            {
+                Settings.AutoFinish = autoFinish;
+                _tracker.KeepTrackingAfterArrival = !autoFinish;
+                if (autoFinish && _tracker.IsFinished && !_reportSaved) SaveReportLocked();
+            }
+        }
         if (update.CabinAnnouncements is { } cabin)
         {
             Settings.CabinAnnouncements = cabin;
@@ -1236,6 +1293,57 @@ public sealed class AcarsEngine : IDisposable
         Settings.LastSeenVersion = AppInfo.Version;
         try { Settings.Save(); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         return new ActionResult(true, "");
+    }
+
+    private static readonly HttpClient SoundPackHttp = new() { Timeout = TimeSpan.FromMinutes(10) };
+    private int _packDownloading;
+
+    /// <summary>Kabinenbesatzungen: Standard plus die Zusatz-Packs von AeRodri (auf GitHub und installierte).</summary>
+    public async Task<ActionResult> SoundPackList()
+    {
+        var packs = await SoundPacks.ListAsync(SoundPackHttp).ConfigureAwait(false);
+        return new ActionResult(true, "", Data: new { packs, active = CabinAnnouncer.ActivePack });
+    }
+
+    /// <summary>Kabinenbesatzung wählen (null/leer = Standard). Nicht installierte Packs werden erst heruntergeladen.</summary>
+    public async Task<ActionResult> SelectSoundPack(string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            CabinAnnouncer.ActivePack = null;
+            Settings.SoundPack = null;
+            SaveSettingsQuietly();
+            return new ActionResult(true, L("Kabinenbesatzung: Standard (AeRodri 1.1).", "Cabin crew: default (AeRodri 1.1)."));
+        }
+        if (!SoundPacks.ValidId(id)) return new ActionResult(false, L("Unbekannte Kabinenbesatzung.", "Unknown cabin crew."));
+        var name = SoundPacks.DisplayName(id);
+        if (!SoundPacks.IsInstalled(id))
+        {
+            if (Interlocked.Exchange(ref _packDownloading, 1) == 1)
+                return new ActionResult(false, L("Es wird bereits ein Soundpack heruntergeladen.", "A soundpack is already downloading."));
+            try
+            {
+                await SoundPacks.InstallAsync(id, SoundPackHttp).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidDataException or UnauthorizedAccessException)
+            {
+                return new ActionResult(false, L($"„{name}“ konnte nicht geladen werden: ", $"Could not download “{name}”: ") + ex.Message);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _packDownloading, 0);
+            }
+        }
+        _cabin?.Stop();
+        CabinAnnouncer.ActivePack = id;
+        Settings.SoundPack = id;
+        SaveSettingsQuietly();
+        return new ActionResult(true, L($"Kabinenbesatzung: {name} – Soundpack von {SoundPacks.Credit}.", $"Cabin crew: {name} – soundpack by {SoundPacks.Credit}."));
+    }
+
+    private void SaveSettingsQuietly()
+    {
+        try { Settings.Save(); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 
     /// <summary>Probe: spielt die Begrüßung.</summary>
@@ -1347,6 +1455,58 @@ public sealed class AcarsEngine : IDisposable
         });
     }
 
+    /// <summary>
+    /// Berichtsordner ändern (leer = Standard). Mit <c>Move</c> ziehen vorhandene Berichte mit um – sonst bleiben sie im
+    /// alten Ordner und erscheinen nicht mehr im Logbuch.
+    /// </summary>
+    public ActionResult SetReportFolder(ReportFolderRequest req)
+    {
+        var raw = (req.Path ?? "").Trim().Trim('"');
+        if (raw.StartsWith("~/", StringComparison.Ordinal) || raw == "~")
+            raw = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), raw.Length > 2 ? raw[2..] : "");
+        string target;
+        try
+        {
+            target = raw.Length == 0 ? AcarsSettings.DefaultReportFolder : Path.GetFullPath(raw);
+            if (raw.Length > 0 && !Path.IsPathRooted(raw))
+                return new ActionResult(false, L("Bitte einen vollständigen Pfad angeben, z. B. ", "Please enter a full path, e.g. ") + AcarsSettings.DefaultReportFolder);
+            Directory.CreateDirectory(target);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return new ActionResult(false, L("Ordner kann nicht verwendet werden: ", "Folder cannot be used: ") + ex.Message);
+        }
+
+        var old = Settings.EffectiveReportFolder;
+        int moved = 0;
+        if (req.Move && !string.Equals(Path.GetFullPath(old).TrimEnd(Path.DirectorySeparatorChar), target.TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase)
+            && Directory.Exists(old))
+        {
+            lock (_gate)
+            {
+                foreach (var file in Directory.EnumerateFiles(old).Where(f => f.EndsWith(".json", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)).ToList())
+                {
+                    var dest = Path.Combine(target, Path.GetFileName(file));
+                    if (File.Exists(dest)) continue;
+                    try { File.Move(file, dest); if (file.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) moved++; }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+                }
+                // Läuft gerade eine Aufzeichnung, sichert sie ab jetzt im neuen Ordner weiter.
+                if (_reportBase is not null) _reportBase = Path.Combine(target, Path.GetFileName(_reportBase));
+            }
+        }
+
+        Settings.ReportFolder = raw.Length == 0 ? null : target;
+        try { Settings.Save(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new ActionResult(false, L("Einstellungen konnten nicht gespeichert werden: ", "Settings could not be saved: ") + ex.Message);
+        }
+        var msg = L("Berichtsordner: ", "Report folder: ") + target;
+        if (moved > 0) msg += L($" – {moved} Berichte verschoben.", $" – {moved} reports moved.");
+        return new ActionResult(true, msg);
+    }
+
     public ActionResult OpenReportFolder()
     {
         try
@@ -1386,8 +1546,8 @@ public sealed class AcarsEngine : IDisposable
         {
             var tracker = _tracker;
             var plan = _plan;
-            var s = tracker.LastSample;
             var samples = tracker.Samples;
+            var s = tracker.LastSample ?? _waitingSample;
             // Am Boden geglättet: Aerofly rundet die Position grob, die Rollspur wäre sonst eine Treppe.
             var display = TrackSmoothing.ForDisplay(samples);
             int step = Math.Max(1, display.Count / 1500);
@@ -1419,6 +1579,7 @@ public sealed class AcarsEngine : IDisposable
                 source = _source,
                 phase = tracker.Phase.ToDisplay(),
                 finished = tracker.IsFinished,
+                waitingForStart = Settings.ManualStart && !_armed && samples.Count == 0,
                 inProgress = samples.Count > 0 && tracker.Phase != FlightPhase.Preflight && !_reportSaved,
                 reportSaved = _reportSaved,
                 lastReport = _lastReportPath is null ? null : Path.GetFileName(_lastReportPath),
@@ -1531,7 +1692,7 @@ public sealed class AcarsEngine : IDisposable
                 {
                     time = e.Time.ToUniversalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture),
                     text = e.Text,
-                    phaseChange = e.PhaseChange,
+                    phaseChange = e.PhaseChange || e.Milestone,
                 }),
                 notices = _notices.ToArray(),
                 settings = new
@@ -1560,6 +1721,8 @@ public sealed class AcarsEngine : IDisposable
                     },
                     voice = Settings.Voice,
                     cabin = Settings.CabinAnnouncements,
+                    manualStart = Settings.ManualStart,
+                    autoFinish = Settings.AutoFinish,
                     showNews = Settings.LastSeenVersion != AppInfo.Version,
                     soundFolder = CabinAnnouncer.UserFolder,
                     reportFolder = Settings.EffectiveReportFolder,
@@ -1599,6 +1762,9 @@ public sealed class AcarsEngine : IDisposable
         _builder = new SampleBuilder();
         _cabin?.Stop();
         _tracker = CreateTracker();
+        _armed = false;
+        _waitingSample = null;
+        _finishHinted = false;
         _reportSaved = false;
         _reportBase = null;
         _lastCallout = null;

@@ -29,6 +29,10 @@ public sealed class FlightTracker
     public const double ClimbVsFpm = 300;
     public const double DescentVsFpm = -300;
     public const double ApproachHeightFt = 3000;
+    /// <summary>Unterteilung des Anflugs (Testbericht AeRodri): Initial approach beim Durchsinken von FL100,
+    /// Approach bei 5.000 ft über Platz, Final approach bei 3.000 ft (<see cref="ApproachHeightFt"/>).</summary>
+    public const double InitialApproachAltFt = 10000;
+    public const double IntermediateApproachHeightFt = 5000;
     /// <summary>Als Durchstarten zählt erneutes Steigen nur, wenn der Anflug tiefer als das (ft über Platz) war.
     /// Höher ist es Manövrieren, etwa in der Platzrunde oder beim Warten.</summary>
     public const double GoAroundMaxHeightFt = 1000;
@@ -90,6 +94,7 @@ public sealed class FlightTracker
     private readonly IAirportLookup? _airports;
     private readonly IRunwayLookup? _runways;
     private bool _settling;
+    private bool _initialApproachLogged, _approach5000Logged;
     private bool _announcedWhileSettling;
     /// <summary>Gemessene Höhe am Boden minus Bahnhöhe laut Datenbank, bestimmt am Startlauf.</summary>
     private double? _groundOffsetFt;
@@ -166,6 +171,12 @@ public sealed class FlightTracker
 
     public bool IsFinished => Phase == FlightPhase.Arrived;
 
+    /// <summary>
+    /// Nach Block on die Position weiter aufzeichnen (Rollspur auf der Karte), bis der Flug von Hand beendet wird.
+    /// Phasen und Auswertung ändern sich dann nicht mehr (Testbericht AeRodri: „die grüne Linie hört auf“).
+    /// </summary>
+    public bool KeepTrackingAfterArrival { get; set; }
+
     /// <summary>Wird bei jedem Eintrag ins Flight Log ausgelöst (im Thread des Aufrufers von <see cref="Add"/>).</summary>
     public event Action<FlightEvent>? EventRaised;
 
@@ -178,7 +189,11 @@ public sealed class FlightTracker
 
     public void Add(FlightSample s)
     {
-        if (IsFinished) return;
+        if (IsFinished)
+        {
+            if (KeepTrackingAfterArrival && (LastSample is not { } last || !SamePosition(last, s))) _samples.Add(s);
+            return;
+        }
 
         var prev = LastSample;
 
@@ -328,6 +343,7 @@ public sealed class FlightTracker
         double groundRef = DestinationElevationFt ?? DepartureElevationFt ?? 0;
         double departureRef = DepartureElevationFt ?? groundRef;
         if (Phase == FlightPhase.Approach) _approachMinAltFt = Math.Min(_approachMinAltFt, s.AltitudeFt);
+        LogApproachMilestones(s, groundRef);
 
         FlightPhase target;
         if (s.VerticalSpeedFpm > ClimbVsFpm)
@@ -393,7 +409,7 @@ public sealed class FlightTracker
         }
         else if (target == FlightPhase.Approach)
         {
-            text = Lang.T($"Anflug begonnen ({FormatAltitude(s.AltitudeFt)})", $"Approach started ({FormatAltitude(s.AltitudeFt)})");
+            text = Lang.T($"Endanflug begonnen ({FormatAltitude(s.AltitudeFt)})", $"Final approach started ({FormatAltitude(s.AltitudeFt)})");
         }
         else
         {
@@ -404,6 +420,28 @@ public sealed class FlightTracker
         if (target == FlightPhase.Approach) _approachMinAltFt = s.AltitudeFt;
         SetPhase(target, _pendingSince, text);
         if (goAround) _goAroundEvents.Add(_events[^1]);
+    }
+
+    /// <summary>Im Sinkflug: „Initial approach“ beim Durchsinken von FL100, „Approach“ bei 5.000 ft über Platz.</summary>
+    private void LogApproachMilestones(FlightSample s, double groundRef)
+    {
+        if (_samples.Count < 2 || s.VerticalSpeedFpm >= DescentVsFpm) return;
+        if (Phase is not (FlightPhase.Cruise or FlightPhase.Descent or FlightPhase.Approach)) return;
+        var p = _samples[^2];
+        if (!_initialApproachLogged && p.AltitudeFt >= InitialApproachAltFt && s.AltitudeFt < InitialApproachAltFt
+            && MaxAltitudeFt > InitialApproachAltFt + 500)
+        {
+            _initialApproachLogged = true;
+            Milestone(s.Time, Lang.T("Einleitender Anflug (Initial approach) – FL100 durchsunken", "Initial approach – passing FL100"));
+        }
+        double h = IntermediateApproachHeightFt;
+        if (!_approach5000Logged && p.AltitudeFt - groundRef >= h && s.AltitudeFt - groundRef < h
+            && MaxAltitudeFt - groundRef > h + 500)
+        {
+            _approach5000Logged = true;
+            Milestone(s.Time, Lang.T(string.Create(Lang.Culture, $"Anflug – {h:N0} ft über Platz"),
+                                     string.Create(Lang.Culture, $"Approach – {h:N0} ft above airport")));
+        }
     }
 
     /// <summary>Abgleich der Aerofly-Höhe mit der Bahnhöhe aus der Datenbank, solange das Flugzeug am Boden steht.</summary>
@@ -621,11 +659,27 @@ public sealed class FlightTracker
             var x = _samples[i];
             var p = _samples[i - 1];
             double dt = (x.Time - p.Time).TotalSeconds;
-            // Sinkrate gegenüber der Bahn direkt vor dem Kontakt (berechnete VS, Bahnneigung herausgerechnet).
-            double slope = dt > 0 ? (Ground(x) - Ground(p)) / dt * 60 : 0;
-            double rate = Math.Min(p.VerticalSpeedFpm, x.VerticalSpeedFpm) - slope;
-            if (dt > 0) rate = Math.Min(rate, (H(i) - H(i - 1)) / dt * 60);
-            return new TouchdownCandidate(x, Math.Min(rate, cand.LandingRateFpm), cand.FieldElevationKnown, cand.Airport)
+            // Sinkrate gegenüber der Bahn in der letzten Sekunde vor dem Kontakt – direkt aus der Höhe über der Bahn
+            // (Bahnneigung herausgerechnet). Früher zählte der ungünstigste von mehreren Werten, darunter die über 2 s
+            // gemittelte Vertikalgeschwindigkeit; die enthält noch das Sinken vor dem Abfangen, Landungen wirkten
+            // dadurch härter, als sie waren (Testbericht AeRodri, LEAS: -356 fpm).
+            double contact = dt > 0 ? (H(i) - H(i - 1)) / dt * 60 : double.NaN;
+            double airborne = double.NaN;
+            if (i >= 2)
+            {
+                var pp = _samples[i - 2];
+                double dta = (p.Time - pp.Time).TotalSeconds;
+                if (dta > 0 && dta <= TouchdownMaxSampleGapSec) airborne = (H(i - 1) - H(i - 2)) / dta * 60;
+            }
+            // Fällt der Kontakt mitten in die letzte Sekunde, unterschätzt sie das Sinken – dann zählt die Sekunde davor.
+            double rate = double.IsNaN(airborne) ? contact : double.IsNaN(contact) ? airborne : Math.Min(airborne, contact);
+            if (double.IsNaN(rate) || rate > -10)
+            {
+                // Keine verwertbare Höhenänderung (z. B. sehr weiches Aufsetzen nach Ballooning): berechnete VS.
+                double slope = dt > 0 ? (Ground(x) - Ground(p)) / dt * 60 : 0;
+                rate = Math.Min(rate is double r && !double.IsNaN(r) ? r : 0, x.VerticalSpeedFpm - slope);
+            }
+            return new TouchdownCandidate(x, rate, cand.FieldElevationKnown, cand.Airport)
             {
                 Announced = cand.Announced,
             };
@@ -827,12 +881,17 @@ public sealed class FlightTracker
 
     private void SetPhase(FlightPhase phase, DateTimeOffset time, string text)
     {
+        // Wieder gestiegen (Durchstarten, Platzrunde): beim nächsten Anflug erneut unterteilen.
+        if (phase == FlightPhase.Climb) _initialApproachLogged = _approach5000Logged = false;
         Phase = phase;
         Raise(new FlightEvent(time, phase, text));
     }
 
     private void Log(DateTimeOffset time, string text) =>
         Raise(new FlightEvent(time, Phase, text, PhaseChange: false));
+
+    private void Milestone(DateTimeOffset time, string text) =>
+        Raise(new FlightEvent(time, Phase, text, PhaseChange: false, Milestone: true));
 
     private void Raise(FlightEvent e)
     {

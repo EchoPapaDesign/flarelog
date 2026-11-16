@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace AeroflyAcars.Core.Tracking;
 
-/// <summary>Ansagetext nach dem Aufsetzen, z. B. "Touchdown with 177 feet per minute. Good."</summary>
+/// <summary>Ansagetext nach dem Aufsetzen, z. B. "Touchdown with minus 177 feet per minute. Good."</summary>
 public static class LandingCallout
 {
     /// <summary>Bis zu dieser Sinkrate (Betrag, fpm) gilt die Landung als "Good".</summary>
@@ -17,10 +17,15 @@ public static class LandingCallout
         return sink <= GoodLimitFpm ? "Good" : sink <= MediocreLimitFpm ? "Mediocre" : "Hard";
     }
 
+    /// <summary>
+    /// Ausgeschrieben „minus“ statt „-“: Sprachausgaben lesen das Vorzeichen sonst nicht vor (Testbericht AeRodri),
+    /// und eine Sinkrate ist beim Aufsetzen immer negativ.
+    /// </summary>
     public static string Text(double landingRateFpm)
     {
         int fpm = (int)Math.Round(Math.Abs(landingRateFpm));
+        string sign = landingRateFpm < 0 && fpm > 0 ? "minus " : "";
         return string.Create(CultureInfo.InvariantCulture,
-            $"Touchdown with {fpm} feet per minute. {Rating(landingRateFpm)}.");
+            $"Touchdown with {sign}{fpm} feet per minute. {Rating(landingRateFpm)}.");
     }
 }

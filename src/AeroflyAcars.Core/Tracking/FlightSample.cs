@@ -14,7 +14,8 @@ public sealed record FlightSample(
     double VerticalSpeedFpm);
 
 /// <summary>Ein Eintrag im Flight Log: ein Phasenwechsel oder ein Hinweis (z. B. Pause).</summary>
-public sealed record FlightEvent(DateTimeOffset Time, FlightPhase Phase, string Text, bool PhaseChange = true);
+/// <param name="Milestone">Wichtiger Punkt ohne Phasenwechsel (z. B. „Initial approach“) – im Flight Log wie eine Phase gezeigt.</param>
+public sealed record FlightEvent(DateTimeOffset Time, FlightPhase Phase, string Text, bool PhaseChange = true, bool Milestone = false);
 
 public enum FlightPhase
 {

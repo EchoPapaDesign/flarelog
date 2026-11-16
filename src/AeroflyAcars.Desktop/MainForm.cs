@@ -20,8 +20,21 @@ internal sealed class MainForm : Form
         _engine = new AcarsEngine(AcarsSettings.Load());   // zuerst: stellt auch die Sprache ein
         Text = AeroflyAcars.Core.Lang.T("Flarelog – ACARS für Aerofly FS 4", "Flarelog – ACARS for Aerofly FS 4");
         StartPosition = FormStartPosition.CenterScreen;
-        Size = new Size(1500, 920);
+        Size = new Size(1400, 900);
         MinimumSize = new Size(1000, 640);
+        MaximumSize = new Size(1600, 1000);   // größer zerfällt das Layout (Testbericht AeRodri)
+        // Dort wieder öffnen, wo Flarelog zuletzt war – sofern das noch auf einem Bildschirm liegt.
+        if (_engine.Settings.SavedWindow is { } w)
+        {
+            var rect = new Rectangle(w.X, w.Y, w.W, w.H);
+            var titleBar = new Rectangle(w.X + 40, w.Y, Math.Max(100, w.W - 80), 30);
+            if (Screen.AllScreens.Any(sc => sc.WorkingArea.IntersectsWith(titleBar)))
+            {
+                StartPosition = FormStartPosition.Manual;
+                Bounds = rect;
+                if (_engine.Settings.WindowMaximized) WindowState = FormWindowState.Maximized;
+            }
+        }
         BackColor = Background;
         try
         {
@@ -133,7 +146,23 @@ internal sealed class MainForm : Form
                 return;
             }
         }
+        SaveWindowPosition();
         _engine.Dispose();
+    }
+
+    private void SaveWindowPosition()
+    {
+        try
+        {
+            var r = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+            _engine.Settings.WindowBounds = new[] { r.X, r.Y, r.Width, r.Height };
+            _engine.Settings.WindowMaximized = WindowState == FormWindowState.Maximized;
+            _engine.Settings.Save();
+        }
+        catch (Exception)
+        {
+            // nicht schlimm – dann öffnet Flarelog beim nächsten Mal mittig
+        }
     }
 
     private static void OpenExternal(string uri)

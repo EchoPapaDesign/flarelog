@@ -1,11 +1,32 @@
 # Änderungen
 
-## 0.9.0-beta.8 – Logbuch
+## 0.9.0-beta.8 – Logbuch, AeRodris offene Punkte, Berichtsordner, Fensterposition
+
+- **16 neue Kabinenbesatzungen von AeRodri (RealFlightOps):** Australia, Canada, Hong Kong, India, Ireland, Japan,
+  Kenya, New Zealand, Nigeria, Philippines, Singapore, South Africa, Spain, Tanzania, United Kingdom und USA – alle von
+  AeRodri selbst aufgenommen und bearbeitet. Einstellungen → Kabinenansagen → Kabinenbesatzung; Flarelog lädt die
+  gewählte Besatzung einmal herunter (je rund 30 MB). Vielen Dank, AeRodri!
+- **Landeansage mit Vorzeichen:** „Touchdown with minus 356 feet per minute“
+- **Landerate genauer:** Gezählt wird das Sinken in der letzten Sekunde vor dem Aufsetzen. Bisher galt der ungünstigste
+  von mehreren Messwerten, darunter ein 2-s-Mittelwert mit dem Sinken vor dem Abfangen – Landungen wirkten zu hart.
+- **Flug per Knopf starten:** Einstellungen → Flugaufzeichnung → „Aufzeichnung erst mit Start beginnen“. Dann beginnt
+  die Aufzeichnung – und die Begrüßung – erst mit „Start“ im Flight Log.
+- **Flug von Hand beenden:** „Flug bei Block on automatisch beenden“ abschalten – der Flug bleibt offen, die Rollspur
+  wird weiter gezeichnet, bis du auf „Beenden“ klickst. Automatisch bleibt der Standard.
+- **Anflug unterteilt:** „Initial approach“ beim Durchsinken von FL100, „Approach“ bei 5.000 ft über Platz,
+  „Final approach“ ab 3.000 ft
+- **Fenstergröße begrenzt** auf höchstens 1600 × 1000, damit die Anordnung erhalten bleibt
 
 - **Logbuch:** Neues Symbol in der linken Leiste. Zeigt alle bisherigen Flüge aus dem Berichtsordner mit Datum,
   Strecke, Flugzeug, Flugzeit, Distanz und Landerate – dazu Summen (Flüge, Flug- und Blockzeit, Distanz,
   Flughäfen, Ø Landerate) und eine Suche. Ein Klick öffnet den Flug mit Spur auf der Karte, allen Daten und dem
   Ablauf. Ganz ohne Airline oder Konto. Testflüge lassen sich direkt im Logbuch löschen. Idee von AeRodri.
+- **Berichtsordner frei wählbar:** Einstellungen → Flugberichte: Pfad eintragen, „Übernehmen“ – vorhandene Berichte
+  ziehen auf Wunsch mit um. „Standard“ führt zurück zu `Dokumente/Flarelog/Flights`. Wunsch von ApfelFlieger.
+- **Fensterposition:** Flarelog öffnet dort, wo es zuletzt war (Windows und Mac). Liegt die Stelle auf keinem
+  Bildschirm mehr, öffnet es mittig. Wunsch von ApfelFlieger.
+- **Mac-Menü aufgeräumt:** Kopieren und Einfügen stehen im Menü „Bearbeiten“, „Flarelog beenden“ als letzte Zeile im
+  Programm-Menü – wie bei anderen Mac-Programmen. Wunsch von ApfelFlieger.
 - **Eigene Rückfragen:** Fragen wie „Flug löschen?“ oder „Aufzeichnung beenden?“ erscheinen jetzt im Flarelog-Design
   mit klaren Knöpfen (z. B. „Löschen“/„Abbrechen“) statt im Windows-Fenster mit „localhost:8080 enthält“
 

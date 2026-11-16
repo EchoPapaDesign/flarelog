@@ -117,11 +117,22 @@ public sealed class CabinAnnouncer : IDisposable
         StopCurrent();
     }
 
-    /// <summary>Datei zu einer Ansage: eigene Datei, sonst die mitgelieferte; null, wenn es keine gibt.</summary>
+    /// <summary>Gewählte Zusatz-Besatzung (Ordnername unter Sounds/Packs) oder null für das Standard-Pack.</summary>
+    public static string? ActivePack { get; set; }
+
+    /// <summary>
+    /// Datei zu einer Ansage: aus der gewählten Zusatz-Besatzung, sonst eigene Datei im Sound-Ordner, sonst die
+    /// mitgelieferte; null, wenn es keine gibt.
+    /// </summary>
     public static string? Resolve(string fileName)
     {
         try
         {
+            if (ActivePack is { } pack && SoundPacks.ValidId(pack))
+            {
+                var inPack = Path.Combine(SoundPacks.PackFolder(pack), fileName);
+                if (File.Exists(inPack)) return inPack;
+            }
             var own = Path.Combine(UserFolder, fileName);
             if (File.Exists(own)) return own;
             return ExtractBuiltIn(fileName);
@@ -170,7 +181,7 @@ public sealed class CabinAnnouncer : IDisposable
         using var p = Process.Start(psi);
         if (p is null) return;
         _current = p;
-        p.WaitForExit(120_000);
+        p.WaitForExit(600_000);   // Sicherheitseinweisungen der Zusatz-Packs dauern bis zu 2,5 min
         _current = null;
     }
 

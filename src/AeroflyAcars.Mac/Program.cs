@@ -62,7 +62,14 @@ static void RunWindow(AcarsEngine engine, string url, Action<string> log)
         .SetUseOsDefaultSize(false)
         .SetSize(1200, 760)   // passt auf jedes MacBook (13" Air: 1280×832 Punkte) neben Menüleiste und Dock
         .SetMinSize(1000, 640)
-        .Center()
+        .SetMaxSize(1600, 1000);   // größer zerfällt das Layout (Testbericht AeRodri)
+    // Dort wieder öffnen, wo Flarelog zuletzt war (Wunsch ApfelFlieger); beim ersten Start mittig.
+    var saved = engine.Settings.SavedWindow;
+    if (saved is { } w)
+        window.SetUseOsDefaultLocation(false).SetLocation(new System.Drawing.Point(w.X, w.Y)).SetSize(w.W, w.H);
+    else
+        window.Center();
+    window
         .SetResizable(true)
         .SetContextMenuEnabled(false)
         .SetDevToolsEnabled(false)
@@ -89,13 +96,39 @@ static void RunWindow(AcarsEngine engine, string url, Action<string> log)
         {
             if (!MacQuitGuard.Install(MayQuit))
                 log("Rückfrage beim Beenden nicht verfügbar – ein laufender Flug wird beim Schließen gespeichert.");
+            try { MacMenu.Arrange(); }
+            catch (Exception ex) { log($"Menü nicht angepasst: {ex.Message}"); }
+            // Gespeicherte Position liegt auf keinem Bildschirm mehr (z. B. zweiter Monitor abgesteckt): mittig öffnen.
+            if (saved is { } s)
+            {
+                try
+                {
+                    var bar = new System.Drawing.Rectangle(s.X + 40, s.Y, Math.Max(100, s.W - 80), 30);
+                    if (!window.Monitors.Any(m => m.MonitorArea.IntersectsWith(bar))) window.Center();
+                }
+                catch (Exception) { /* Bildschirme nicht abfragbar – Position so lassen */ }
+            }
         })
         .Load(new Uri(url));
 
     // Vor dem Schließen (roter Knopf) und Beenden (Cmd+Q, Dock): Läuft ein Flug, wird gefragt.
     // Ja = speichern und beenden, Nein = Flarelog läuft einfach weiter.
+    void SaveWindowPosition()
+    {
+        try
+        {
+            var loc = window.Location;
+            var size = window.Size;
+            if (size.Width < 600 || size.Height < 400) return;   // schon zu oder minimiert – alte Position behalten
+            engine.Settings.WindowBounds = new[] { loc.X, loc.Y, size.Width, size.Height };
+            engine.Settings.Save();
+        }
+        catch (Exception) { /* nicht schlimm – dann mittig */ }
+    }
+
     bool MayQuit()
     {
+        SaveWindowPosition();
         if (quitting || !engine.FlightInProgress) { quitting = true; return true; }
         var answer = window.ShowMessage(Lang.T("Flarelog beenden?", "Quit Flarelog?"),
             Lang.T("Es wird gerade ein Flug aufgezeichnet.\n\nFlarelog jetzt beenden? Der bisherige Flug wird als Teilbericht gespeichert.",
@@ -111,6 +144,7 @@ static void RunWindow(AcarsEngine engine, string url, Action<string> log)
     // Fenster schließen, danach wird der laufende Flug beim Aufräumen gespeichert.
     void CloseWindow()
     {
+        SaveWindowPosition();
         quitting = true;
         try { window.Invoke(window.Close); }
         catch (Exception ex) { log($"Fenster ließ sich nicht schließen: {ex.Message}"); Environment.Exit(0); }

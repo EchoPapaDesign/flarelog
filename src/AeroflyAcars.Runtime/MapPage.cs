@@ -193,6 +193,7 @@ public static class MapPage
   .field input[type=text]:focus { outline: none; border-color: var(--accent); }
   .check { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: var(--text); cursor: pointer; }
   .hint { color: var(--dim); font-size: 12px; margin-top: 6px; word-break: break-all; }
+  .hint a { color: var(--accent); }
   .sheet hr { border: 0; border-top: 1px solid var(--line); margin: 20px 0; }
 
   /* Eigene Rückfrage statt des Browser-Fensters: sieht überall gleich aus, ohne „localhost:8080 enthält“ */
@@ -337,6 +338,7 @@ public static class MapPage
   <aside class="log">
     <h2>FLIGHT LOG
       <span class="actions">
+        <button class="btn primary" id="btnStart" style="display:none" title="Aufzeichnung jetzt beginnen">Start</button>
         <button class="btn warn" id="btnFinish" style="display:none" title="Aufzeichnung beenden und Bericht speichern">Beenden</button>
         <button class="btn primary" id="btnSubmit" style="display:none" title="Flug als PIREP an die Airline senden">An Airline senden</button>
         <button class="btn" id="btnSubmitted" style="display:none" title="PIREP auf der Airline-Webseite ansehen">PIREP ✓</button>
@@ -409,12 +411,26 @@ public static class MapPage
     </div>
     <hr>
     <div class="field">
+      <label>Flugaufzeichnung</label>
+      <label class="check"><input type="checkbox" id="setManualStart"> Aufzeichnung erst mit „Start“ beginnen</label>
+      <label class="check"><input type="checkbox" id="setAutoFinish"> Flug bei Block on automatisch beenden</label>
+      <div class="hint" style="word-break:normal">Mit „Start“ beginnt die Aufzeichnung erst, wenn du im Flight Log auf Start klickst – auch die
+        Begrüßung kommt dann erst. Ohne automatisches Beenden läuft der Flug nach Block on weiter, bis du auf „Beenden“ klickst.</div>
+    </div>
+    <hr>
+    <div class="field">
       <label>Kabinenansagen</label>
       <label class="check"><input type="checkbox" id="setCabin"> Ansagen in den Flugphasen abspielen</label>
+      <div class="row" style="margin-top:10px;align-items:center"><span class="hint" style="margin:0;white-space:nowrap">Kabinenbesatzung</span>
+        <select id="setPack"><option value="">Standard</option></select></div>
+      <div class="hint" id="packInfo" style="word-break:normal"></div>
       <div class="row" style="margin-top:10px"><button class="btn" id="btnCabinTest">Ansage testen</button>
         <button class="btn" id="btnSoundFolder">Sound-Ordner öffnen</button>
         <button class="btn" id="btnSoundRestore">Standard wiederherstellen</button></div>
-      <div class="hint">Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung. Soundpack von AeRodri (RealFlightOps).</div>
+      <div class="hint" style="word-break:normal">Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung.
+        Alle Ansagen – das Standard-Pack und die 16 Kabinenbesatzungen aus aller Welt – hat AeRodri
+        (<a href="https://www.youtube.com/@RealFlightOpsOfficial" target="_blank" rel="noopener">RealFlightOps</a>) für Flarelog
+        aufgenommen und bearbeitet. Vielen Dank!</div>
       <div class="hint">Alle Ansagen liegen als WAV-Dateien in diesem Ordner. Eine Datei durch eine eigene mit genau
         demselben Namen ersetzen – „Standard wiederherstellen“ holt die Originale zurück.</div>
       <div class="hint" id="setSoundFolder"></div>
@@ -422,14 +438,20 @@ public static class MapPage
     <hr>
     <div class="field">
       <label>Landeansage</label>
-      <label class="check"><input type="checkbox" id="setVoice"> „Touchdown with … feet per minute“ ansagen</label>
+      <label class="check"><input type="checkbox" id="setVoice"> „Touchdown with minus … feet per minute“ ansagen</label>
       <div class="row" style="margin-top:10px"><button class="btn" id="btnVoiceTest">Stimme testen</button></div>
     </div>
     <hr>
     <div class="field">
       <label>Flugberichte</label>
+      <div class="row"><input type="text" id="setFolderPath" autocomplete="off" spellcheck="false"></div>
+      <label class="check"><input type="checkbox" id="setFolderMove" checked> Vorhandene Berichte in den neuen Ordner verschieben</label>
+      <div class="row" style="margin-top:10px"><button class="btn primary" id="btnFolderApply">Übernehmen</button>
+        <button class="btn" id="btnFolderDefault">Standard</button>
+        <button class="btn" id="btnFolder">Ordner öffnen</button></div>
+      <div class="hint" style="word-break:normal">Hier speichert Flarelog jeden Flug – das Logbuch zeigt die Flüge aus diesem Ordner.
+        Vollständigen Pfad eintragen, z. B. auch einen Cloud-Ordner.</div>
       <div class="hint" id="setFolder"></div>
-      <div class="row" style="margin-top:10px"><button class="btn" id="btnFolder">Ordner öffnen</button></div>
     </div>
     <hr>
     <div class="field">
@@ -627,7 +649,7 @@ const EN = {
 "Beim Start automatisch laden": "Load automatically on start",
 "Lädt den zuletzt in SimBrief erzeugten Flugplan.": "Loads the flight plan you last generated in SimBrief.",
 "Landeansage": "Landing callout",
-"„Touchdown with … feet per minute“ ansagen": "Announce “Touchdown with … feet per minute”",
+"„Touchdown with minus … feet per minute“ ansagen": "Announce “Touchdown with minus … feet per minute”",
 "Stimme testen": "Test voice",
 "Was ist neu?": "What's new?",
 "Sound-Ordner öffnen": "Open sound folder",
@@ -662,6 +684,24 @@ const EN = {
 "Durchstarten": "Go-arounds",
 "Hinweise": "Notes",
 "Flug löschen": "Delete flight",
+"Kabinenbesatzung": "Cabin crew",
+"Standard (AeRodri 1.1)": "Default (AeRodri 1.1)",
+"herunterladen": "download",
+"Zusätzliche Besatzungen erscheinen hier, sobald eine Internetverbindung besteht.": "Additional crews appear here once you are online.",
+"„{0}“ wird heruntergeladen …": "Downloading “{0}” …",
+"Begrüßung, Sicherheitseinweisung, Steig-, Reise- und Sinkflug, nach der Landung. Alle Ansagen – das Standard-Pack und die 16 Kabinenbesatzungen aus aller Welt – hat AeRodri (": "Welcome, safety briefing, climb, cruise, descent and after landing. All announcements – the default pack and the 16 cabin crews from around the world – were recorded and produced for Flarelog by AeRodri (",
+") für Flarelog aufgenommen und bearbeitet. Vielen Dank!": "). Thank you!",
+"Aufzeichnung jetzt beginnen": "Start recording now",
+"Start": "Start",
+"Flugaufzeichnung": "Flight recording",
+"Aufzeichnung erst mit „Start“ beginnen": "Start recording only with “Start”",
+"Flug bei Block on automatisch beenden": "Finish the flight automatically at block on",
+"Mit „Start“ beginnt die Aufzeichnung erst, wenn du im Flight Log auf Start klickst – auch die Begrüßung kommt dann erst. Ohne automatisches Beenden läuft der Flug nach Block on weiter, bis du auf „Beenden“ klickst.": "With “Start”, recording only begins when you click Start in the flight log – the welcome announcement too. Without automatic finish, the flight stays open after block on until you click “Finish”.",
+"Bereit – mit „Start“ beginnt die Aufzeichnung.": "Ready – recording begins with “Start”.",
+"Vorhandene Berichte in den neuen Ordner verschieben": "Move existing reports to the new folder",
+"Übernehmen": "Apply",
+"Standard": "Default",
+"Hier speichert Flarelog jeden Flug – das Logbuch zeigt die Flüge aus diesem Ordner. Vollständigen Pfad eintragen, z. B. auch einen Cloud-Ordner.": "Flarelog saves every flight here – the logbook shows the flights from this folder. Enter a full path, a cloud folder works too.",
 "Abbrechen": "Cancel",
 "Verwerfen": "Discard",
 "Zurücksetzen": "Reset",
@@ -820,6 +860,7 @@ const routeLine = L.polyline([], { color: '#ff9f1c', weight: 3, opacity: .9, das
 const trackLine = L.polyline([], { color: '#3fd68a', weight: 3, opacity: .9 }).addTo(map);
 let marker = null, routeKey = '', firstFix = true, follow = true;
 let lastCalloutId = null, toastTimer = null, eventCount = -1;
+let lastWaitKey = false;
 let airBase = null; // { sec, at, running }
 
 $('follow').onclick = () => { follow = !follow; $('follow').classList.toggle('on', follow); };
@@ -856,12 +897,13 @@ function showToast(c) {
 }
 
 function renderEvents(events) {
-  if (events.length === eventCount) return;
-  eventCount = events.length;
+  const waitKey = !!(lastState && lastState.waitingForStart);
+  if (events.length === eventCount && waitKey === lastWaitKey) return;
+  eventCount = events.length; lastWaitKey = waitKey;
   const box = $('events');
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   box.innerHTML = events.length === 0
-    ? '<div class="empty">' + t('Noch keine Einträge – Aerofly starten und losrollen.') + '</div>'
+    ? '<div class="empty">' + (lastState && lastState.waitingForStart ? t('Bereit – mit „Start“ beginnt die Aufzeichnung.') : t('Noch keine Einträge – Aerofly starten und losrollen.')) + '</div>'
     : events.map(e => `<div class="ev ${e.phaseChange ? 'phase' : 'note'}"><time>${e.time} UTC</time><span></span></div>`).join('');
   // Text sicher einsetzen (kein HTML aus Daten)
   box.querySelectorAll('.ev span').forEach((el, i) => el.textContent = events[i].text);
@@ -913,8 +955,12 @@ function openSettings() {
     $('setSbAuto').checked = st.loadSimBriefOnStart;
     $('setVoice').checked = st.voice;
     $('setCabin').checked = st.cabin;
+    loadPacks();
+    $('setManualStart').checked = st.manualStart;
+    $('setAutoFinish').checked = st.autoFinish;
     $('setSoundFolder').textContent = st.soundFolder;
-    $('setFolder').textContent = st.reportFolder;
+    $('setFolder').textContent = '';
+    $('setFolderPath').value = st.reportFolder;
     $('quitField').style.display = st.canQuit && !hostApp ? 'block' : 'none';
     $('setVersion').textContent = t('Flarelog {0} · ACARS für Aerofly FS 4 – Daten: OurAirports (gemeinfrei), OpenStreetMap-Mitwirkende, SimBrief.', st.version);
     $('setLang').value = st.language || 'auto';
@@ -961,6 +1007,13 @@ $('newsOverlay').onclick = e => { if (e.target.id === 'newsOverlay') closeNews()
 $('btnClose').onclick = () => $('overlay').classList.remove('show');
 $('overlay').onclick = e => { if (e.target.id === 'overlay') $('overlay').classList.remove('show'); };
 $('btnFolder').onclick = () => post('/api/open-reports');
+async function setFolder(path) {
+  const res = await post('/api/report-folder', { path, move: $('setFolderMove').checked });
+  if (res.ok && lastState) { await tick(); $('setFolderPath').value = lastState.settings.reportFolder; }
+}
+$('btnFolderApply').onclick = () => setFolder($('setFolderPath').value);
+$('btnFolderDefault').onclick = () => setFolder('');
+$('setFolderPath').onkeydown = e => { if (e.key === 'Enter') setFolder($('setFolderPath').value); };
 $('btnVoiceTest').onclick = () => post('/api/voice-test');
 $('btnCabinTest').onclick = () => post('/api/cabin-test');
 $('btnSbClear').onclick = async () => { if (await ask(t('Geladenen SimBrief-Plan verwerfen?'), t('Verwerfen'))) { resetMap(); post('/api/simbrief-clear'); } };
@@ -978,6 +1031,36 @@ $('btnQuit').onclick = async () => {
 $('setLang').onchange = async () => { const res = await post('/api/settings', { language: $('setLang').value }); if (res.ok && lastState) tick(); };
 $('setVoice').onchange = () => post('/api/settings', { voice: $('setVoice').checked });
 $('setCabin').onchange = () => post('/api/settings', { cabinAnnouncements: $('setCabin').checked });
+$('setManualStart').onchange = () => post('/api/settings', { manualStart: $('setManualStart').checked });
+$('setAutoFinish').onchange = () => post('/api/settings', { autoFinish: $('setAutoFinish').checked });
+$('btnStart').onclick = () => post('/api/start');
+// Kabinenbesatzungen: Standard plus Zusatz-Packs von AeRodri; nicht installierte werden bei Auswahl geladen.
+let packList = [];
+async function loadPacks() {
+  const res = await api('/api/soundpacks');
+  if (!res.ok) return;
+  packList = res.data.packs;
+  const sel = $('setPack');
+  sel.innerHTML = '';
+  const std = document.createElement('option'); std.value = ''; std.textContent = t('Standard (AeRodri 1.1)'); sel.appendChild(std);
+  packList.forEach(p => {
+    const o = document.createElement('option'); o.value = p.id;
+    o.textContent = p.name + (p.installed ? '' : ` – ${t('herunterladen')}${p.sizeBytes ? ' (' + Math.round(p.sizeBytes / 1048576) + ' MB)' : ''}`);
+    sel.appendChild(o);
+  });
+  sel.value = res.data.active || '';
+  $('packInfo').textContent = packList.length ? '' : t('Zusätzliche Besatzungen erscheinen hier, sobald eine Internetverbindung besteht.');
+}
+$('setPack').onchange = async () => {
+  const id = $('setPack').value;
+  const p = packList.find(x => x.id === id);
+  $('setPack').disabled = true;
+  if (p && !p.installed) { $('packInfo').textContent = t('„{0}“ wird heruntergeladen …', p.name); snack(t('„{0}“ wird heruntergeladen …', p.name)); }
+  const res = await post('/api/soundpack', { id });
+  $('setPack').disabled = false;
+  await loadPacks();
+  if (res.ok && id) post('/api/cabin-test');
+};
 $('setSbAuto').onchange = () => post('/api/settings', { loadSimBriefOnStart: $('setSbAuto').checked });
 $('setSb').onchange = () => post('/api/settings', { simBriefUser: $('setSb').value });
 $('btnSbLoad').onclick = async () => {
@@ -1205,6 +1288,7 @@ async function tick() {
   $('banner').style.display = s.paused ? 'block' : 'none';
   $('notice').textContent = s.pendingPlan ? t('Nächster Flug: {0}', s.pendingPlan) : (s.notices.length ? s.notices[s.notices.length - 1] : '');
   $('btnFinish').style.display = s.inProgress ? 'inline-block' : 'none';
+  $('btnStart').style.display = s.waitingForStart ? 'inline-block' : 'none';
   // Update: kein Balken, sondern ein roter Punkt am Zahnrad, Details in den Einstellungen, einmal kurz ein Hinweis.
   $('updDot').style.display = s.update ? 'block' : 'none';
   $('updField').style.display = s.update ? 'block' : 'none';
