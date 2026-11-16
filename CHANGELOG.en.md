@@ -6,6 +6,8 @@
   air time, distance and landing rate – plus totals (flights, air and block time, distance, airports, avg. landing
   rate) and a search. A click opens the flight with its track on the map, all data and the flight log. No airline
   or account needed. Test flights can be deleted right in the logbook. Idea by AeRodri.
+- **Own confirmation dialogs:** questions like "Delete flight?" or "Stop recording?" now appear in the Flarelog
+  style with clear buttons (e.g. "Delete"/"Cancel") instead of the system box saying "localhost:8080 says"
 
 ## 0.9.0-beta.7 – Safer quitting, automatic backup, tidier settings
 
