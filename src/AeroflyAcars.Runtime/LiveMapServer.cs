@@ -16,6 +16,7 @@ namespace AeroflyAcars.Runtime;
 /// POST /api/finish        → Bericht jetzt speichern
 /// POST /api/newflight     → neuen Flug beginnen
 /// POST /api/open-reports  → Berichtsordner im Explorer öffnen
+/// POST /api/report-folder → Berichtsordner ändern ({ path, move }; leerer Pfad = Standard)
 /// POST /api/logbook       → Logbuch: alle gespeicherten Flüge mit Summen
 /// POST /api/logbook/flight → ein Flug aus dem Logbuch mit Spur und Ablauf ({ id })
 /// POST /api/logbook/delete → einen gespeicherten Flug löschen ({ id })
@@ -163,6 +164,8 @@ public sealed class LiveMapServer : IDisposable
                 "/api/finish" => _engine.FinishFlight(),
                 "/api/newflight" => _engine.NewFlight(),
                 "/api/open-reports" => _engine.OpenReportFolder(),
+                "/api/report-folder" => _engine.SetReportFolder(
+                    JsonSerializer.Deserialize<ReportFolderRequest>(json, Json) ?? new ReportFolderRequest(null)),
                 "/api/logbook" => _engine.LogbookList(),
                 "/api/logbook/flight" => _engine.LogbookFlight(JsonSerializer.Deserialize<LogbookRequest>(json, Json)?.Id),
                 "/api/logbook/delete" => _engine.LogbookDelete(JsonSerializer.Deserialize<LogbookRequest>(json, Json)?.Id),

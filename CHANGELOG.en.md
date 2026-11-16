@@ -1,11 +1,17 @@
 # Changes
 
-## 0.9.0-beta.8 – Logbook
+## 0.9.0-beta.8 – Logbook, report folder, window position
 
 - **Logbook:** new icon in the left bar. Shows all your flights from the report folder with date, route, aircraft,
   air time, distance and landing rate – plus totals (flights, air and block time, distance, airports, avg. landing
   rate) and a search. A click opens the flight with its track on the map, all data and the flight log. No airline
   or account needed. Test flights can be deleted right in the logbook. Idea by AeRodri.
+- **Choose your report folder:** Settings → Flight reports: enter a path, "Apply" – existing reports can move
+  along. "Default" goes back to `Documents/Flarelog/Flights`. Requested by ApfelFlieger.
+- **Window position:** Flarelog opens where it was last (Windows and Mac). If that spot is no longer on any screen, it
+  opens centred. Requested by ApfelFlieger.
+- **Mac menu tidied up:** Copy and Paste are in the "Edit" menu, "Quit Flarelog" is the last line of the app menu –
+  like other Mac apps. Requested by ApfelFlieger.
 - **Own confirmation dialogs:** questions like "Delete flight?" or "Stop recording?" now appear in the Flarelog
   style with clear buttons (e.g. "Delete"/"Cancel") instead of the system box saying "localhost:8080 says"
 

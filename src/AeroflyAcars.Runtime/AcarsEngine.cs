@@ -17,6 +17,7 @@ public sealed record SettingsUpdate(string? SimBriefUser, bool? Voice, bool? Loa
 public sealed record SimBriefRequest(string? User);
 public sealed record WeatherRequest(string? Icao);
 public sealed record LogbookRequest(string? Id);
+public sealed record ReportFolderRequest(string? Path, bool Move = true);
 public sealed record ConditionsRequest(bool? RealTime, bool? RealWeather, string? WeatherIcao = null);
 public sealed record AirlineConnectRequest(string? Url, string? ApiKey);
 public sealed record BookingSelectRequest(string? FlightId);
@@ -1345,6 +1346,58 @@ public sealed class AcarsEngine : IDisposable
             phases = r.Phases.Select(e => new { time = e.Time.ToString("HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture), text = e.Text }),
             notes = r.Notes,
         });
+    }
+
+    /// <summary>
+    /// Berichtsordner ändern (leer = Standard). Mit <c>Move</c> ziehen vorhandene Berichte mit um – sonst bleiben sie im
+    /// alten Ordner und erscheinen nicht mehr im Logbuch.
+    /// </summary>
+    public ActionResult SetReportFolder(ReportFolderRequest req)
+    {
+        var raw = (req.Path ?? "").Trim().Trim('"');
+        if (raw.StartsWith("~/", StringComparison.Ordinal) || raw == "~")
+            raw = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), raw.Length > 2 ? raw[2..] : "");
+        string target;
+        try
+        {
+            target = raw.Length == 0 ? AcarsSettings.DefaultReportFolder : Path.GetFullPath(raw);
+            if (raw.Length > 0 && !Path.IsPathRooted(raw))
+                return new ActionResult(false, L("Bitte einen vollständigen Pfad angeben, z. B. ", "Please enter a full path, e.g. ") + AcarsSettings.DefaultReportFolder);
+            Directory.CreateDirectory(target);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return new ActionResult(false, L("Ordner kann nicht verwendet werden: ", "Folder cannot be used: ") + ex.Message);
+        }
+
+        var old = Settings.EffectiveReportFolder;
+        int moved = 0;
+        if (req.Move && !string.Equals(Path.GetFullPath(old).TrimEnd(Path.DirectorySeparatorChar), target.TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase)
+            && Directory.Exists(old))
+        {
+            lock (_gate)
+            {
+                foreach (var file in Directory.EnumerateFiles(old).Where(f => f.EndsWith(".json", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)).ToList())
+                {
+                    var dest = Path.Combine(target, Path.GetFileName(file));
+                    if (File.Exists(dest)) continue;
+                    try { File.Move(file, dest); if (file.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) moved++; }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+                }
+                // Läuft gerade eine Aufzeichnung, sichert sie ab jetzt im neuen Ordner weiter.
+                if (_reportBase is not null) _reportBase = Path.Combine(target, Path.GetFileName(_reportBase));
+            }
+        }
+
+        Settings.ReportFolder = raw.Length == 0 ? null : target;
+        try { Settings.Save(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new ActionResult(false, L("Einstellungen konnten nicht gespeichert werden: ", "Settings could not be saved: ") + ex.Message);
+        }
+        var msg = L("Berichtsordner: ", "Report folder: ") + target;
+        if (moved > 0) msg += L($" – {moved} Berichte verschoben.", $" – {moved} reports moved.");
+        return new ActionResult(true, msg);
     }
 
     public ActionResult OpenReportFolder()

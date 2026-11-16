@@ -32,6 +32,14 @@ public sealed class AcarsSettings
     public int UdpPort { get; set; } = ForeFlightProtocol.DefaultPort;
     public int DisplayPort { get; set; } = 8080;
     public string? ReportFolder { get; set; }
+    /// <summary>Letzte Fensterposition und -größe [links, oben, Breite, Höhe] – Flarelog öffnet dort wieder.</summary>
+    public int[]? WindowBounds { get; set; }
+    public bool WindowMaximized { get; set; }
+
+    /// <summary>Gespeicherte Fensterposition, wenn sie plausibel ist (sonst null → zentriert öffnen).</summary>
+    [JsonIgnore]
+    public (int X, int Y, int W, int H)? SavedWindow =>
+        WindowBounds is { Length: 4 } b && b[2] >= 600 && b[3] >= 400 && b[2] <= 20000 && b[3] <= 20000 ? (b[0], b[1], b[2], b[3]) : null;
 
     /// <summary>Adresse der phpVMS-Airline, z. B. https://www.meine-va.de</summary>
     public string? AirlineUrl { get; set; }

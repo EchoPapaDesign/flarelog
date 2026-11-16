@@ -428,8 +428,14 @@ public static class MapPage
     <hr>
     <div class="field">
       <label>Flugberichte</label>
+      <div class="row"><input type="text" id="setFolderPath" autocomplete="off" spellcheck="false"></div>
+      <label class="check"><input type="checkbox" id="setFolderMove" checked> Vorhandene Berichte in den neuen Ordner verschieben</label>
+      <div class="row" style="margin-top:10px"><button class="btn primary" id="btnFolderApply">Übernehmen</button>
+        <button class="btn" id="btnFolderDefault">Standard</button>
+        <button class="btn" id="btnFolder">Ordner öffnen</button></div>
+      <div class="hint" style="word-break:normal">Hier speichert Flarelog jeden Flug – das Logbuch zeigt die Flüge aus diesem Ordner.
+        Vollständigen Pfad eintragen, z. B. auch einen Cloud-Ordner.</div>
       <div class="hint" id="setFolder"></div>
-      <div class="row" style="margin-top:10px"><button class="btn" id="btnFolder">Ordner öffnen</button></div>
     </div>
     <hr>
     <div class="field">
@@ -662,6 +668,10 @@ const EN = {
 "Durchstarten": "Go-arounds",
 "Hinweise": "Notes",
 "Flug löschen": "Delete flight",
+"Vorhandene Berichte in den neuen Ordner verschieben": "Move existing reports to the new folder",
+"Übernehmen": "Apply",
+"Standard": "Default",
+"Hier speichert Flarelog jeden Flug – das Logbuch zeigt die Flüge aus diesem Ordner. Vollständigen Pfad eintragen, z. B. auch einen Cloud-Ordner.": "Flarelog saves every flight here – the logbook shows the flights from this folder. Enter a full path, a cloud folder works too.",
 "Abbrechen": "Cancel",
 "Verwerfen": "Discard",
 "Zurücksetzen": "Reset",
@@ -914,7 +924,8 @@ function openSettings() {
     $('setVoice').checked = st.voice;
     $('setCabin').checked = st.cabin;
     $('setSoundFolder').textContent = st.soundFolder;
-    $('setFolder').textContent = st.reportFolder;
+    $('setFolder').textContent = '';
+    $('setFolderPath').value = st.reportFolder;
     $('quitField').style.display = st.canQuit && !hostApp ? 'block' : 'none';
     $('setVersion').textContent = t('Flarelog {0} · ACARS für Aerofly FS 4 – Daten: OurAirports (gemeinfrei), OpenStreetMap-Mitwirkende, SimBrief.', st.version);
     $('setLang').value = st.language || 'auto';
@@ -961,6 +972,13 @@ $('newsOverlay').onclick = e => { if (e.target.id === 'newsOverlay') closeNews()
 $('btnClose').onclick = () => $('overlay').classList.remove('show');
 $('overlay').onclick = e => { if (e.target.id === 'overlay') $('overlay').classList.remove('show'); };
 $('btnFolder').onclick = () => post('/api/open-reports');
+async function setFolder(path) {
+  const res = await post('/api/report-folder', { path, move: $('setFolderMove').checked });
+  if (res.ok && lastState) { await tick(); $('setFolderPath').value = lastState.settings.reportFolder; }
+}
+$('btnFolderApply').onclick = () => setFolder($('setFolderPath').value);
+$('btnFolderDefault').onclick = () => setFolder('');
+$('setFolderPath').onkeydown = e => { if (e.key === 'Enter') setFolder($('setFolderPath').value); };
 $('btnVoiceTest').onclick = () => post('/api/voice-test');
 $('btnCabinTest').onclick = () => post('/api/cabin-test');
 $('btnSbClear').onclick = async () => { if (await ask(t('Geladenen SimBrief-Plan verwerfen?'), t('Verwerfen'))) { resetMap(); post('/api/simbrief-clear'); } };

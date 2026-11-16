@@ -1,11 +1,17 @@
 # Änderungen
 
-## 0.9.0-beta.8 – Logbuch
+## 0.9.0-beta.8 – Logbuch, Berichtsordner, Fensterposition
 
 - **Logbuch:** Neues Symbol in der linken Leiste. Zeigt alle bisherigen Flüge aus dem Berichtsordner mit Datum,
   Strecke, Flugzeug, Flugzeit, Distanz und Landerate – dazu Summen (Flüge, Flug- und Blockzeit, Distanz,
   Flughäfen, Ø Landerate) und eine Suche. Ein Klick öffnet den Flug mit Spur auf der Karte, allen Daten und dem
   Ablauf. Ganz ohne Airline oder Konto. Testflüge lassen sich direkt im Logbuch löschen. Idee von AeRodri.
+- **Berichtsordner frei wählbar:** Einstellungen → Flugberichte: Pfad eintragen, „Übernehmen“ – vorhandene Berichte
+  ziehen auf Wunsch mit um. „Standard“ führt zurück zu `Dokumente/Flarelog/Flights`. Wunsch von ApfelFlieger.
+- **Fensterposition:** Flarelog öffnet dort, wo es zuletzt war (Windows und Mac). Liegt die Stelle auf keinem
+  Bildschirm mehr, öffnet es mittig. Wunsch von ApfelFlieger.
+- **Mac-Menü aufgeräumt:** Kopieren und Einfügen stehen im Menü „Bearbeiten“, „Flarelog beenden“ als letzte Zeile im
+  Programm-Menü – wie bei anderen Mac-Programmen. Wunsch von ApfelFlieger.
 - **Eigene Rückfragen:** Fragen wie „Flug löschen?“ oder „Aufzeichnung beenden?“ erscheinen jetzt im Flarelog-Design
   mit klaren Knöpfen (z. B. „Löschen“/„Abbrechen“) statt im Windows-Fenster mit „localhost:8080 enthält“
 
