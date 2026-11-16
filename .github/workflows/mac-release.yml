@@ -1,0 +1,54 @@
+# Baut die Mac-Versionen für ein bestehendes Release nach und hängt sie an.
+#
+# Für den Fall, dass GitHub beim Veröffentlichen keinen Apple-Silicon-Mac frei hat („capacity constraints“) und der
+# Mac-Teil von release.yml abgebrochen wird: Actions → „Mac-Versionen nachbauen“ → Run workflow → Tag eingeben.
+# Läuft auf einem Intel-Mac (eigene, meist freie Warteschlange) und baut trotzdem beide Versionen.
+name: Mac-Versionen nachbauen
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release-Tag, z. B. v0.9.0-beta.8"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Version aus dem Tag
+        id: version
+        run: |
+          tag="${{ inputs.tag }}"
+          number="${tag#[vV]}"
+          number="${number#.}"
+          if ! [[ "$number" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Tag '$tag' ist keine Versionsnummer."
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Flarelog.app bauen (Apple Silicon und Intel)
+        run: |
+          ./build-mac.sh "${{ steps.version.outputs.number }}" osx-arm64
+          ./build-mac.sh "${{ steps.version.outputs.number }}" osx-x64
+
+      - name: Mac-Versionen an das Release hängen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: |
+            publish/Flarelog-macOS-AppleSilicon.zip
+            publish/Flarelog-macOS-Intel.zip
